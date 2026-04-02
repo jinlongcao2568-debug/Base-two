@@ -1,0 +1,40 @@
+version: "1.0"
+updated_at: "2026-04-02T20:45:00+08:00"
+description: 最小 owner 清单。当前仓库仍处于骨架期，owner 使用占位责任人；进入真实开发后必须替换为正式 owner。
+owners:
+  - path: src/stage3_parsing/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: src/stage4_validation/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: src/stage5_reporting/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: src/stage6_facts/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: src/domain/engineering/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: docs/baseline/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: docs/governance/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: docs/contracts/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner
+  - path: db/migrations/
+    business_owner: tbd_business_owner
+    tech_owner: tbd_tech_owner
+    backup_owner: tbd_backup_owner

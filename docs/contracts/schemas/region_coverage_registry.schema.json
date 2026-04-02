@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9s.local/contracts/region_coverage_registry.schema.json",
+  "title": "region_coverage_registry",
+  "type": "object",
+  "required": [
+    "version",
+    "updated_at",
+    "thresholds",
+    "fields_contract",
+    "regions"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "thresholds": {
+      "type": "object",
+      "required": [
+        "sellable_state_machine",
+        "sla"
+      ],
+      "properties": {
+        "sellable_state_machine": {
+          "type": "object",
+          "required": [
+            "states",
+            "default_state"
+          ],
+          "properties": {
+            "states": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "allOf": [
+                {
+                  "contains": {
+                    "const": "NOT_READY"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "VALIDATING"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "SELLABLE"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "RESTRICTED"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "SUSPENDED"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "RECOVERING"
+                  }
+                }
+              ]
+            },
+            "default_state": {
+              "type": "string",
+              "enum": [
+                "NOT_READY",
+                "VALIDATING",
+                "SELLABLE",
+                "RESTRICTED",
+                "SUSPENDED",
+                "RECOVERING"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "sla": {
+          "type": "object",
+          "required": [
+            "major_incident_downgrade_within_workdays",
+            "source_failure_downgrade_within_workdays",
+            "verification_expiry_action_within_workdays",
+            "recovery_requires_completed_revalidation"
+          ],
+          "properties": {
+            "major_incident_downgrade_within_workdays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "source_failure_downgrade_within_workdays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "verification_expiry_action_within_workdays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "recovery_requires_completed_revalidation": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "fields_contract": {
+      "type": "object",
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "sellable_state"
+              }
+            },
+            {
+              "contains": {
+                "const": "state_last_changed_at"
+              }
+            },
+            {
+              "contains": {
+                "const": "state_last_changed_by"
+              }
+            },
+            {
+              "contains": {
+                "const": "state_change_reason"
+              }
+            },
+            {
+              "contains": {
+                "const": "audit_chain_refs"
+              }
+            }
+          ]
+        },
+        "enums": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "region_code",
+          "owner",
+          "is_sellable",
+          "sellable_state",
+          "state_last_changed_at",
+          "state_last_changed_by",
+          "state_change_reason",
+          "last_incident_level",
+          "audit_chain_refs"
+        ],
+        "properties": {
+          "region_code": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "is_sellable": {
+            "type": "boolean"
+          },
+          "sellable_state": {
+            "type": "string",
+            "enum": [
+              "NOT_READY",
+              "VALIDATING",
+              "SELLABLE",
+              "RESTRICTED",
+              "SUSPENDED",
+              "RECOVERING"
+            ]
+          },
+          "state_last_changed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state_last_changed_by": {
+            "type": "string"
+          },
+          "state_change_reason": {
+            "type": "string"
+          },
+          "last_incident_level": {
+            "type": "string",
+            "enum": [
+              "none",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "recovery_due_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "audit_chain_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "audit_chain_template": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

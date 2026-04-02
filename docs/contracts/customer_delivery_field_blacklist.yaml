@@ -1,0 +1,80 @@
+version: '1.1'
+template_name: customer_delivery_field_blacklist
+updated_at: '2026-04-02T18:30:00+08:00'
+description: 客户交付版/演示版/导出版与对外 API 默认黑名单模板。 黑名单字段不得通过前端隐藏或文案省略替代正式拦截。
+rules:
+  blacklist_blocks_release: true
+  no_frontend_only_hiding: true
+  stricter_document_wins: true
+blacklist:
+  internal_identifiers:
+  - internal_id
+  - rule_hit_id
+  - request_id
+  - report_id
+  - project_manager_id
+  - credit_penalty_id
+  raw_artifacts_and_storage:
+  - raw_html_path
+  - raw_pdf_path
+  - html_snapshot_path
+  - pdf_path
+  - screenshot_path
+  - evidence_artifact_refs_full
+  - internal_storage_path
+  - crawl_log_path
+  high_risk_personal_fields:
+  - full_certificate_number
+  - project_manager_cert_no
+  - phone_number
+  - mobile_number
+  - id_number
+  - account_identifier
+  - email_address
+  internal_workflow_fields:
+  - internal_review_note
+  - draft_review_request_detail
+  - exception_id
+  - audit_log_detail
+  - owner_name
+  - approved_by_business
+  - approved_by_tech
+  intermediate_or_unreviewed_state:
+  - unreviewed_intermediate_result
+  - intermediate_fact_version
+  - draft_report_content
+  - temporary_rule_result
+  - uncommitted_fact_state
+  tenant_and_security_fields:
+  - tenant_internal_key
+  - access_token
+  - session_id
+  - security_policy_detail
+notes:
+- 如某字段同时出现在白名单与黑名单中，以黑名单为准。
+- 任何新增客户可见字段都必须同步更新白名单/黑名单模板与发布检查模板。
+- 如需例外外发黑名单字段，只能通过受控例外，且必须改为脱敏/摘要字段，不得直接外发原字段。
+approval_and_masking_dictionary:
+  policy.project_manager_cert_no:
+    classification: restricted_person_field
+    approval_required: true
+    approval_role: compliance_owner
+    masking_rule: partial_mask_last4
+    external_audit_required: true
+  policy.pm_public_profile_url:
+    classification: conditional_public_profile
+    approval_required: true
+    approval_role: delivery_owner
+    masking_rule: domain_only_or_signed_link
+    external_audit_required: true
+  policy.fact_summary:
+    classification: customer_visible_summary
+    approval_required: false
+    approval_role: null
+    masking_rule: none
+    external_audit_required: false
+release_blockers:
+- missing_policy_dictionary_for_conditional_field
+- conditional_field_without_approval_role
+- conditional_field_without_masking_rule
+- customer_visible_field_conflicts_with_blacklist

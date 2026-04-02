@@ -1,0 +1,196 @@
+version: '1.1'
+registry_name: region_coverage_registry
+updated_at: '2026-04-02T18:30:00+08:00'
+description: 地区覆盖与可售状态登记表。只有满足地区可售判定阈值并通过最近一次验证的地区， 才允许标记为 is_sellable=true 并进入首版可售包。
+thresholds:
+  coverage_level_min_for_sellable: L1
+  required_mvp_topics:
+  - project_manager_qualification_check
+  - real_competitor_identification
+  - public_coverage_check
+  minimum_golden_sample_count: 20
+  minimum_samples_per_required_topic: 5
+  region_verification_window_days: 45
+  customer_visible_source_verification_window_days: 30
+  blocking_incidents:
+  - major_customer_complaint_open
+  - major_compliance_incident_open
+  - major_tenant_isolation_incident_open
+  - high_severity_exception_open
+  automatic_downgrade_triggers:
+  - core_source_failed_more_than_7_days
+  - two_consecutive_significant_regression
+  - confirmed_customer_visible_output_issue
+  - person_field_leakage
+  - verification_window_expired
+  sellable_state_machine:
+    states:
+    - NOT_READY
+    - VALIDATING
+    - SELLABLE
+    - RESTRICTED
+    - SUSPENDED
+    - RECOVERING
+    default_state: NOT_READY
+  sla:
+    major_incident_downgrade_within_workdays: 1
+    source_failure_downgrade_within_workdays: 1
+    verification_expiry_action_within_workdays: 2
+    recovery_requires_completed_revalidation: true
+fields_contract:
+  required:
+  - region_code
+  - region_name
+  - coverage_level
+  - validated_topics
+  - validated_sources
+  - golden_sample_count
+  - is_sellable
+  - last_verified_at
+  - owner
+  - sellable_state
+  - state_last_changed_at
+  - state_last_changed_by
+  - state_change_reason
+  - last_incident_level
+  - recovery_due_at
+  - audit_chain_refs
+  enums:
+    coverage_level:
+    - L0
+    - L1
+    - L2
+    - L3
+    sellable_status:
+    - sellable
+    - restricted
+    - validation_only
+    - not_sellable
+    sellable_state:
+    - NOT_READY
+    - VALIDATING
+    - SELLABLE
+    - RESTRICTED
+    - SUSPENDED
+    - RECOVERING
+regions:
+- region_code: CN
+  region_name: 全国主链（通用入口）
+  coverage_level: L1
+  validated_topics:
+  - project_manager_qualification_check
+  - real_competitor_identification
+  - public_coverage_check
+  validated_sources:
+  - SRC-GGZY-NATIONAL-001
+  - SRC-MOHURD-PERSON-001
+  golden_sample_count: 28
+  per_topic_golden_sample_count:
+    project_manager_qualification_check: 10
+    real_competitor_identification: 9
+    public_coverage_check: 9
+  is_sellable: true
+  sellable_status: sellable
+  sellable_scope:
+  - 首版可售包
+  - 阶段2-6公开核查主链能力
+  restricted_scope:
+  - 地方深链增强
+  - 复杂履约/变更/停工区域化能力
+  last_verified_at: '2026-04-01T18:00:00+08:00'
+  validated_by: qa_owner_cn_mvp
+  owner: coverage_owner_cn
+  open_incidents: []
+  notes: 全国统一入口可售，地方增强能力仍以地区登记为准
+  sellable_state: SELLABLE
+  state_last_changed_at: '2026-04-01T18:00:00+08:00'
+  state_last_changed_by: coverage_owner_cn
+  state_change_reason: initial_seed
+  last_incident_level: none
+  recovery_due_at: null
+  audit_chain_refs: []
+- region_code: CN-3202
+  region_name: 江苏省无锡市
+  coverage_level: L2
+  validated_topics:
+  - project_manager_qualification_check
+  - real_competitor_identification
+  - public_coverage_check
+  - credit_penalty_check
+  validated_sources:
+  - SRC-GGZY-NATIONAL-001
+  - SRC-MOHURD-PERSON-001
+  - SRC-LOCAL-CREDIT-001
+  golden_sample_count: 24
+  per_topic_golden_sample_count:
+    project_manager_qualification_check: 6
+    real_competitor_identification: 6
+    public_coverage_check: 6
+    credit_penalty_check: 6
+  is_sellable: true
+  sellable_status: sellable
+  sellable_scope:
+  - 首版可售包
+  - 地方信用处罚增强
+  restricted_scope:
+  - 复杂附件深抽取
+  last_verified_at: '2026-03-31T20:00:00+08:00'
+  validated_by: regional_qa_owner_js_wx
+  owner: coverage_owner_js_wx
+  open_incidents: []
+  notes: 地方增强能力可售，但必须引用本地区覆盖登记说明
+  sellable_state: SELLABLE
+  state_last_changed_at: '2026-03-31T20:00:00+08:00'
+  state_last_changed_by: coverage_owner_js_wx
+  state_change_reason: initial_seed
+  last_incident_level: none
+  recovery_due_at: null
+  audit_chain_refs: []
+- region_code: CN-9999
+  region_name: 示例验证区
+  coverage_level: L1
+  validated_topics:
+  - project_manager_qualification_check
+  - public_coverage_check
+  validated_sources:
+  - SRC-GGZY-NATIONAL-001
+  golden_sample_count: 8
+  per_topic_golden_sample_count:
+    project_manager_qualification_check: 4
+    public_coverage_check: 4
+  is_sellable: false
+  sellable_status: validation_only
+  sellable_scope: []
+  restricted_scope:
+  - 全部客户可见承诺
+  last_verified_at: '2026-03-20T12:00:00+08:00'
+  validated_by: regional_qa_owner_demo
+  owner: coverage_owner_demo
+  open_incidents:
+  - verification_window_expired
+  - missing_required_topic_real_competitor_identification
+  notes: 验证中地区，不得进入正式售卖或演示承诺
+  sellable_state: NOT_READY
+  state_last_changed_at: '2026-03-20T12:00:00+08:00'
+  state_last_changed_by: coverage_owner_demo
+  state_change_reason: initial_seed
+  last_incident_level: none
+  recovery_due_at: null
+  audit_chain_refs: []
+audit_chain_template:
+  event_id: EVT-2026-001
+  region_code: '320200'
+  from_state: SELLABLE
+  to_state: SUSPENDED
+  trigger_type: major_customer_visible_output_issue
+  trigger_summary: 客户交付版发现违规字段
+  owner: ops_owner_x
+  approved_by: business_owner_y
+  occurred_at: '2026-04-02T10:00:00+08:00'
+  resolved_at: null
+  evidence_refs:
+  - AUDIT-001
+  post_action:
+  - update_registry
+  - suspend_sales
+  - notify_delivery

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9s.local/contracts/sources_registry.schema.json",
+  "title": "sources_registry",
+  "type": "object",
+  "required": [
+    "version",
+    "updated_at",
+    "fields_contract",
+    "sources"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "fields_contract": {
+      "type": "object",
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "contains": {
+            "const": "verification_sla_days"
+          }
+        },
+        "enums": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "source_name",
+          "is_public",
+          "collection_mode",
+          "coverage_regions",
+          "contains_person_fields",
+          "maturity_level",
+          "last_verified_at",
+          "owner",
+          "risk_note",
+          "verification_sla_days",
+          "incident_escalation_level",
+          "audit_owner",
+          "state_audit_enabled",
+          "customer_visible_use_requires_latest_verification"
+        ],
+        "properties": {
+          "source_id": {
+            "type": "string"
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "is_public": {
+            "type": "boolean"
+          },
+          "collection_mode": {
+            "type": "string"
+          },
+          "coverage_regions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "contains_person_fields": {
+            "type": "boolean"
+          },
+          "maturity_level": {
+            "type": "string"
+          },
+          "last_verified_at": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "risk_note": {
+            "type": "string"
+          },
+          "verification_sla_days": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "incident_escalation_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "audit_owner": {
+            "type": "string"
+          },
+          "state_audit_enabled": {
+            "type": "boolean"
+          },
+          "customer_visible_use_requires_latest_verification": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,129 @@
+version: '1.1'
+registry_name: sources_registry
+updated_at: '2026-04-02T18:30:00+08:00'
+default_timezone: Asia/Shanghai
+maintainer: engineering-domain-owner
+description: 建设工程域公开源登记表。未登记的公开源不得进入正式可售能力； 未完成最近一次有效验证的源不得用于客户可见增强能力。
+fields_contract:
+  required:
+  - source_id
+  - source_name
+  - is_public
+  - collection_mode
+  - coverage_regions
+  - contains_person_fields
+  - maturity_level
+  - last_verified_at
+  - owner
+  - risk_note
+  - verification_sla_days
+  - incident_escalation_level
+  - audit_owner
+  enums:
+    collection_mode:
+    - api
+    - html
+    - pdf
+    - file_feed
+    - manual_upload
+    - hybrid
+    maturity_level:
+    - MVP
+    - EXPANDED
+    - EXPERIMENTAL
+    - DEPRECATED
+    status:
+    - active
+    - limited
+    - suspended
+    - retired
+sources:
+- source_id: SRC-GGZY-NATIONAL-001
+  source_name: 全国公共资源交易平台
+  source_homepage: https://www.ggzy.gov.cn/
+  source_type: public_tender_platform
+  is_public: true
+  collection_mode: html
+  coverage_regions:
+  - CN
+  contains_person_fields: false
+  maturity_level: MVP
+  status: active
+  sellable_capabilities:
+  - announcement_chain
+  - opening_record
+  - result_publication
+  - clarification_tracking
+  evidence_types:
+  - html_snapshot
+  - pdf_attachment
+  - source_url
+  customer_visible: true
+  last_verified_at: '2026-04-01T10:00:00+08:00'
+  owner: source_owner_ggzy
+  verifier: qa_owner_cn_mvp
+  legal_basis: public_web_information
+  rate_limit_note: respect robots and source-side throttling
+  risk_note: 地方子站结构差异较大，需配合地区化回归
+  verification_sla_days: 30
+  incident_escalation_level: medium
+  audit_owner: source_owner_ggzy
+  state_audit_enabled: true
+  customer_visible_use_requires_latest_verification: true
+- source_id: SRC-MOHURD-PERSON-001
+  source_name: 住建侧公开人员/企业资格查询入口
+  source_homepage: https://jzsc.mohurd.gov.cn/
+  source_type: public_construction_registry
+  is_public: true
+  collection_mode: hybrid
+  coverage_regions:
+  - CN
+  contains_person_fields: true
+  maturity_level: MVP
+  status: active
+  sellable_capabilities:
+  - project_manager_qualification_check
+  - entity_registration_check
+  evidence_types:
+  - html_snapshot
+  - source_url
+  customer_visible: true
+  last_verified_at: '2026-04-01T10:00:00+08:00'
+  owner: source_owner_mohurd
+  verifier: qa_owner_cn_mvp
+  legal_basis: lawfully_public_professional_information
+  rate_limit_note: 必须启用请求频率控制与访问审计
+  risk_note: 涉及自然人职业信息，客户交付时必须走最小化展示与白名单控制
+  verification_sla_days: 30
+  incident_escalation_level: medium
+  audit_owner: source_owner_mohurd
+  state_audit_enabled: true
+  customer_visible_use_requires_latest_verification: true
+- source_id: SRC-LOCAL-CREDIT-001
+  source_name: 地方住建信用处罚栏目（示例）
+  source_homepage: https://example.gov.cn/credit
+  source_type: local_credit_penalty
+  is_public: true
+  collection_mode: html
+  coverage_regions:
+  - CN-3202
+  contains_person_fields: true
+  maturity_level: EXPANDED
+  status: limited
+  sellable_capabilities:
+  - credit_penalty_check
+  evidence_types:
+  - html_snapshot
+  - source_url
+  customer_visible: false
+  last_verified_at: '2026-03-28T16:00:00+08:00'
+  owner: source_owner_local_credit
+  verifier: regional_qa_owner_js_wx
+  legal_basis: lawfully_public_government_information
+  rate_limit_note: 地方栏目稳定性波动较大
+  risk_note: 仅在登记地区和已验证专题内可见；未验证前不得用于正式可售承诺
+  verification_sla_days: 30
+  incident_escalation_level: medium
+  audit_owner: source_owner_local_credit
+  state_audit_enabled: true
+  customer_visible_use_requires_latest_verification: true

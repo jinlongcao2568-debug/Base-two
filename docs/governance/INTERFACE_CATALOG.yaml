@@ -1,0 +1,17 @@
+version: "1.0"
+updated_at: "2026-04-02T20:45:00+08:00"
+description: >
+  机器可读接口清单 seed。当前仓库尚未进入接口实现阶段，
+  因此先保留 catalog 外壳；后续新增正式接口时必须登记。
+catalog_rules:
+  required_fields:
+    - name
+    - owner
+    - source_stage
+    - target_stage
+    - input_contract
+    - output_contract
+    - version
+    - breaking_change
+    - last_changed_by_task
+interfaces: []
