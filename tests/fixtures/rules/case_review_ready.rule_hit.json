@@ -1,0 +1,16 @@
+{
+  "rule_hit_id": "rule-hit-review-001",
+  "project_id": "project-cn-review-001",
+  "rule_code": "REAL_COMPETITOR_IDENTIFIED",
+  "severity": "MEDIUM",
+  "confidence": 0.82,
+  "result_type": "CLUE",
+  "why_hit": "A competitor cluster was detected from public tender results.",
+  "boundary_note": "Public evidence is traceable but still requires manual review before promotion to OPEN.",
+  "evidence_refs": [
+    "evidence:evidence-review-001"
+  ],
+  "target_entity_type": "bidder",
+  "target_entity_id": "bidder-review-001",
+  "review_status": "PENDING"
+}

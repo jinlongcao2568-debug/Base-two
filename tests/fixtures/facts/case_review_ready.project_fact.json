@@ -1,0 +1,27 @@
+{
+  "object_type": "project_fact",
+  "project_id": "project-cn-review-001",
+  "fact_version": 1,
+  "fact_refresh_trigger": "RULE_PIPELINE_REFRESH",
+  "fact_source_summary": "Derived from review-ready project_base, rule_hit, and report_record.",
+  "project_base_ref": "project_base:project-cn-review-001",
+  "rule_hit_refs": [
+    "rule_hit:rule-hit-review-001"
+  ],
+  "report_record_ref": "report_record:report-review-001",
+  "public_chain_status": "COMPLETE",
+  "rule_hit_summary": "One medium-risk clue remains open.",
+  "clue_summary": "Competitor clue is still pending manual confirmation.",
+  "sale_gate_status": "REVIEW",
+  "real_competitor_count": 3,
+  "serviceable_competitor_count": 2,
+  "competitor_quality_grade": "B",
+  "price_cluster_score": 68,
+  "price_gradient_pattern": "NARROW_BAND",
+  "fact_summary": "Project is sellable after review of the remaining competitor clue.",
+  "risk_summary": "Manual review is still required before promotion to OPEN.",
+  "review_status": "PENDING",
+  "manual_override_status": "PENDING",
+  "report_status": "READY",
+  "last_fact_refreshed_at": "2026-04-04T18:00:00+08:00"
+}

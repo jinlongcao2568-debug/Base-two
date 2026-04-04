@@ -1,0 +1,8 @@
+{
+  "scenario_id": "case_open_issued",
+  "project_id": "project-cn-open-001",
+  "region_code": "CN-330100",
+  "source_family": "ggzy_national",
+  "source_type": "public_result_notice",
+  "notice_state": "open_issued"
+}

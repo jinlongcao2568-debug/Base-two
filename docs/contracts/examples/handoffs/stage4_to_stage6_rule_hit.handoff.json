@@ -1,0 +1,13 @@
+{
+  "handoff_id": "stage4-to-stage6-rule_hit",
+  "producer_stage": "stage4_validation",
+  "consumer_stage": "stage6_facts",
+  "payload_object": "rule_hit",
+  "payload_schema": "docs/contracts/schemas/stage4_rule_hit.schema.json",
+  "payload_example": "docs/contracts/examples/rule_hit.example.json",
+  "lineage_fields": ["project_id", "rule_hit_id"],
+  "required_payload_fields": ["rule_hit_id", "project_id", "rule_code", "result_type", "boundary_note", "evidence_refs", "review_status"],
+  "consumer_boundary": "formal_stage_input",
+  "customer_visible": false,
+  "authority_source_section": "4.4"
+}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .helpers import CHECK_REPO_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
+from .helpers import CHECK_REPO_SCRIPT, TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
 
 
 def test_check_repo_passes_on_clean_repo(tmp_path: Path) -> None:
@@ -101,6 +101,62 @@ def test_check_repo_fails_when_task_file_status_drifts(tmp_path: Path) -> None:
     result = run_python(CHECK_REPO_SCRIPT, repo)
     assert result.returncode == 1
     assert "task file mismatch for field status" in result.stdout
+
+
+def test_check_repo_allows_review_state_with_in_scope_candidate_changes(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    finish = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-BASE-001",
+        "--summary",
+        "candidate ready",
+        "--tests",
+        "pytest tests/base -q",
+    )
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    (repo / "src/base/review_candidate.py").write_text("candidate = True\n", encoding="utf-8")
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_check_repo_fails_when_task_narrative_assertions_missing(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    task_file = repo / "docs/governance/tasks/TASK-BASE-001.md"
+    task_file.write_text(
+        task_file.read_text(encoding="utf-8").replace(
+            "## Narrative Assertions\n\n"
+            "- `narrative_status`: `doing`\n"
+            "- `closeout_state`: `not_ready`\n"
+            "- `blocking_state`: `clear`\n"
+            "- `completed_scope`: `active_progress`\n"
+            "- `remaining_scope`: `active_work_remaining`\n"
+            "- `next_gate`: `validation_pending`\n\n",
+            "",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "missing section: ## Narrative Assertions" in result.stdout
+
+
+def test_check_repo_fails_when_runlog_narrative_assertions_drift(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    runlog = repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md"
+    runlog.write_text(
+        runlog.read_text(encoding="utf-8").replace(
+            "- `next_gate`: `validation_pending`",
+            "- `next_gate`: `closeout_decision`",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "runlog narrative assertions mismatch for field next_gate" in result.stdout
 
 
 def test_check_repo_fails_when_execution_touches_reserved_path(tmp_path: Path) -> None:

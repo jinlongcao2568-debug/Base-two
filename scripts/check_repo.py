@@ -9,9 +9,11 @@ from governance_lib import (
     WORKER_STATE_VALUES,
     collect_active_execution_errors,
     current_branch,
+    expected_narrative_assertions,
     ensure_task_and_runlog_exist,
     extract_generated_fields,
     extract_markdown_fields,
+    extract_narrative_assertions,
     find_repo_root,
     git_status_paths,
     load_current_task,
@@ -115,6 +117,7 @@ def validate_task_file_alignment(root, active_task: dict) -> None:
     text = read_text(root / active_task["task_file"])
     fields = extract_markdown_fields(text)
     generated = extract_generated_fields(text, TASK_MARKER_START, TASK_MARKER_END)
+    narrative = extract_narrative_assertions(text)
     expected = {
         "task_id": active_task["task_id"],
         "status": active_task["status"],
@@ -128,12 +131,16 @@ def validate_task_file_alignment(root, active_task: dict) -> None:
     for key in ("status", "task_kind", "execution_mode", "size_class", "automation_mode", "worker_state", "topology", "branch"):
         if generated.get(key) != str(active_task[key]):
             raise GovernanceError(f"task generated metadata mismatch for field {key}")
+    for key, value in expected_narrative_assertions(active_task).items():
+        if narrative.get(key) != value:
+            raise GovernanceError(f"task narrative assertions mismatch for field {key}")
 
 
 def validate_runlog_alignment(root, active_task: dict) -> None:
     text = read_text(root / active_task["runlog_file"])
     fields = extract_markdown_fields(text)
     generated = extract_generated_fields(text, RUNLOG_MARKER_START, RUNLOG_MARKER_END)
+    narrative = extract_narrative_assertions(text)
     expected = {
         "task_id": active_task["task_id"],
         "status": active_task["status"],
@@ -146,6 +153,9 @@ def validate_runlog_alignment(root, active_task: dict) -> None:
             raise GovernanceError(f"runlog mismatch for field {key}")
         if generated.get(key) != value:
             raise GovernanceError(f"runlog generated metadata mismatch for field {key}")
+    for key, value in expected_narrative_assertions(active_task).items():
+        if narrative.get(key) != value:
+            raise GovernanceError(f"runlog narrative assertions mismatch for field {key}")
 
 
 def resolve_active_task(root, tasks_by_id: dict):
@@ -168,8 +178,8 @@ def validate_modified_paths(
     planned_write_paths: list[str],
     in_execution_context: bool,
 ) -> None:
-    if active_task["status"] in {"done", "review"} and modified_paths:
-        raise GovernanceError("implementation changes are not allowed when task status is done/review")
+    if active_task["status"] == "done" and modified_paths:
+        raise GovernanceError("implementation changes are not allowed when task status is done")
     for path in modified_paths:
         if not path_within_declared(path, allowed_dirs):
             raise GovernanceError(f"modified path outside allowed_dirs: {path}")

@@ -1,0 +1,27 @@
+{
+  "object_type": "project_fact",
+  "project_id": "project-cn-block-001",
+  "fact_version": 4,
+  "fact_refresh_trigger": "HIGH_RISK_RULE_HIT",
+  "fact_source_summary": "Derived from high-risk project_base, rule_hit, and draft report_record.",
+  "project_base_ref": "project_base:project-cn-block-001",
+  "rule_hit_refs": [
+    "rule_hit:rule-hit-block-001"
+  ],
+  "report_record_ref": "report_record:report-block-001",
+  "public_chain_status": "COMPLETE",
+  "rule_hit_summary": "A high-risk auto-hit blocks the project.",
+  "clue_summary": "No soft clue path remains; the project is in a blocking state.",
+  "sale_gate_status": "BLOCK",
+  "real_competitor_count": 5,
+  "serviceable_competitor_count": 0,
+  "competitor_quality_grade": "D",
+  "price_cluster_score": 14,
+  "price_gradient_pattern": "COLLUSION_PATTERN",
+  "fact_summary": "Project is blocked by a confirmed high-risk public hit.",
+  "risk_summary": "A confirmed high-risk hit blocks sales and delivery until explicit resolution.",
+  "review_status": "CONFIRMED",
+  "manual_override_status": "BLOCK_CONFIRMED",
+  "report_status": "DRAFT",
+  "last_fact_refreshed_at": "2026-04-04T18:40:00+08:00"
+}

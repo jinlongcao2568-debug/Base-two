@@ -1,0 +1,21 @@
+{
+  "evidence_id": "evidence-block-001",
+  "project_id": "project-cn-block-001",
+  "source_url": "https://ggzy.example.cn/block/result",
+  "source_type": "public_result_notice",
+  "capture_type": "pdf_snapshot",
+  "capture_time": "2026-04-04T17:50:00+08:00",
+  "page_title": "High-risk result notice",
+  "snippet": "Public result notice and pricing pattern indicate a high-risk collusion signal.",
+  "evidence_artifact_refs": [
+    "artifact://block/result-notice.pdf"
+  ],
+  "structured_field_refs": [
+    "field://project-cn-block-001/invalid_bid_count"
+  ],
+  "consumed_by_rule_codes": [
+    "BID_COLLUSION_HIGH_RISK"
+  ],
+  "evidence_grade": "A",
+  "evidence_hash": "sha256:evidence-block-001"
+}

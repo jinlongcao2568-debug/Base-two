@@ -12,7 +12,6 @@
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
-
 ## Primary Goals
 
 - Land the first automation control-plane baseline on the main coordination worktree.
@@ -75,5 +74,14 @@
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
-- `updated_at`: `2026-04-04T18:50:22+08:00`
+- `updated_at`: `2026-04-04T21:07:18+08:00`
 <!-- generated:task-meta:end -->
+
+## Narrative Assertions
+
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
+- `blocking_state`: `clear`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`

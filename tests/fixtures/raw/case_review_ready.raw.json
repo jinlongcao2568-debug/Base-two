@@ -1,0 +1,8 @@
+{
+  "scenario_id": "case_review_ready",
+  "project_id": "project-cn-review-001",
+  "region_code": "CN-320100",
+  "source_family": "ggzy_national",
+  "source_type": "public_result_notice",
+  "notice_state": "review_ready"
+}

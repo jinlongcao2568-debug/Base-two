@@ -1,0 +1,11 @@
+{
+  "case_id": "case_open_issued",
+  "expected_project_base_ref": "project_base:project-cn-open-001",
+  "expected_rule_hit_ref": "rule_hit:rule-hit-open-001",
+  "expected_report_record_ref": "report_record:report-open-001",
+  "expected_public_chain_status": "COMPLETE",
+  "expected_sale_gate_status": "OPEN",
+  "expected_review_status": "CONFIRMED",
+  "expected_report_status": "ISSUED",
+  "expected_evidence_grade": "A"
+}

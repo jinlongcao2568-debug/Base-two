@@ -5,14 +5,13 @@
 - `task_id`: `TASK-GOV-001`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `authority-consistency-hardening`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
-
 ## Primary Goals
 
 - Eliminate live-task drift across current task, registry, worktree registry, task files, runlogs, and roadmap.
@@ -87,17 +86,25 @@
 - Revert governance entry files, contracts assets, tests, and scripts changed under this task.
 - Restore `CURRENT_TASK.yaml`, `TASK_REGISTRY.yaml`, and `WORKTREE_REGISTRY.yaml` to the previous committed state if the hardening task must be abandoned.
 
+## Narrative Assertions
+
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
+- `blocking_state`: `clear`
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `review`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `updated_at`: `2026-04-04T19:38:06+08:00`
+- `updated_at`: `2026-04-04T21:25:19+08:00`
 <!-- generated:task-meta:end -->

@@ -1,0 +1,14 @@
+{
+  "request_id": "review-request-open-001",
+  "project_id": "project-cn-open-001",
+  "request_type": "CLOSEOUT_CONFIRMATION",
+  "reason": "Final closeout confirmation is recorded even though no blocking clue remains.",
+  "public_basis": "Public result notice and report evidence are already confirmed.",
+  "requested_materials": [
+    "final report brief"
+  ],
+  "priority": "LOW",
+  "source_rule_codes": [
+    "PUBLIC_CHAIN_CONFIRMED"
+  ]
+}

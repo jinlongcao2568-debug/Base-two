@@ -1,0 +1,15 @@
+{
+  "request_id": "review-request-block-001",
+  "project_id": "project-cn-block-001",
+  "request_type": "LEGAL_REVIEW",
+  "reason": "A high-risk public hit requires formal legal and analyst review before any release.",
+  "public_basis": "Public result notice and evidence excerpt indicate a high-risk collusion pattern.",
+  "requested_materials": [
+    "full evidence pack",
+    "pricing review memo"
+  ],
+  "priority": "HIGH",
+  "source_rule_codes": [
+    "BID_COLLUSION_HIGH_RISK"
+  ]
+}

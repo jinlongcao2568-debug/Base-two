@@ -1,0 +1,8 @@
+{
+  "scenario_id": "case_hold_incomplete_chain",
+  "project_id": "project-cn-hold-001",
+  "region_code": "CN-340100",
+  "source_family": "ggzy_national",
+  "source_type": "public_chain_notice",
+  "notice_state": "hold_incomplete_chain"
+}

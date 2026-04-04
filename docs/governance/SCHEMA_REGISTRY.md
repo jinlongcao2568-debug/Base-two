@@ -75,13 +75,43 @@ The live formal stage-6 contract is:
 - Any aggregate field in `project_fact` must remain traceable to the formal stage-3, stage-4, stage-5, or review-state inputs.
 - Page, API, sales, and later-stage consumers must not rebuild top-level judgment outside `project_fact`.
 
-## 4. Current Interface And Schema State
+## 4. Live Expanded Formal Contracts
+
+The current repo-expansion set now includes the following execution-grade assets:
+
+- `project_base`
+  - schema: `docs/contracts/schemas/stage3_project_base.schema.json`
+  - example: `docs/contracts/examples/project_base.example.json`
+  - field semantics: `docs/contracts/field_semantics/project_base.fields.yaml`
+- `rule_hit`
+  - schema: `docs/contracts/schemas/stage4_rule_hit.schema.json`
+  - example: `docs/contracts/examples/rule_hit.example.json`
+  - field semantics: `docs/contracts/field_semantics/rule_hit.fields.yaml`
+- `evidence`
+  - schema: `docs/contracts/schemas/stage4_evidence.schema.json`
+  - example: `docs/contracts/examples/evidence.example.json`
+  - field semantics: `docs/contracts/field_semantics/evidence.fields.yaml`
+- `review_request`
+  - schema: `docs/contracts/schemas/stage4_review_request.schema.json`
+  - example: `docs/contracts/examples/review_request.example.json`
+  - field semantics: `docs/contracts/field_semantics/review_request.fields.yaml`
+- `report_record`
+  - schema: `docs/contracts/schemas/stage5_report_record.schema.json`
+  - example: `docs/contracts/examples/report_record.example.json`
+  - field semantics: `docs/contracts/field_semantics/report_record.fields.yaml`
+- `project_fact`
+  - schema: `docs/contracts/schemas/stage6_project_fact.schema.json`
+  - example: `docs/contracts/examples/project_fact.example.json`
+  - field semantics: `docs/contracts/field_semantics/project_fact.fields.yaml`
+
+## 5. Current Interface And Schema State
 
 - No public business API contract is registered yet; `INTERFACE_CATALOG.yaml` remains the control point for future external or customer-facing interfaces.
-- `project_fact` is now the only stage-6 object with schema, example, and field-level execution semantics fully expanded in the repo.
-- Other formal objects remain authority-defined and must be expanded before they are allowed to become new customer-visible or integration-critical contracts.
+- `project_fact` remains the only stage-6 unified fact object and the only top-level judgment surface.
+- `docs/contracts/handoff_catalog.yaml` is now the machine-readable handoff control point for the live authority-critical chain and the `stage6 -> stage7/8/9` downstream inputs.
+- Formal objects outside the six live expanded contracts above remain authority-defined and must still be expanded before they are allowed to become new customer-visible or integration-critical contracts.
 
-## 5. Change Discipline
+## 6. Change Discipline
 
 - Change a formal object: update the authority source first, then this registry, then the contract assets, then tests.
 - Change a formal field or enum: update this registry, `docs/contracts/`, and tests in the same task.

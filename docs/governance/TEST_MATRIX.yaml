@@ -54,6 +54,29 @@ authority_critical_chains:
       - pytest tests/stage4 -q
       - pytest tests/stage6 -q
       - pytest tests/integration -q
+  stage4_stage5_stage6_case_matrix:
+    description: Stage 4 formal objects, stage 5 report_record, and stage 6 project_fact must remain aligned across the live multi-sample regression matrix.
+    formal_objects:
+      - project_base
+      - rule_hit
+      - evidence
+      - review_request
+      - report_record
+      - project_fact
+    fixture_paths:
+      - tests/fixtures/raw/case_*.raw.json
+      - tests/fixtures/normalized/case_*.project_base.json
+      - tests/fixtures/rules/case_*.rule_hit.json
+      - tests/fixtures/rules/case_*.evidence.json
+      - tests/fixtures/rules/case_*.review_request.json
+      - tests/fixtures/reports/case_*.report_record.json
+      - tests/fixtures/facts/case_*.project_fact.json
+      - tests/fixtures/golden/case_*.stage_chain.json
+    required_tests:
+      - pytest tests/contracts -q
+      - pytest tests/stage4 -q
+      - pytest tests/stage6 -q
+      - pytest tests/integration -q
 modules:
   governance_control_plane:
     micro:

@@ -7,7 +7,6 @@
 - `stage`: `automation-control-plane-v1`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
 - `worker_state`: `completed`
-
 ## Execution Log
 
 - `2026-04-04T17:10:00+08:00`: created the first automation control-plane task package and governance entry set.
@@ -42,3 +41,12 @@
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
 - `worker_state`: `completed`
 <!-- generated:runlog-meta:end -->
+
+## Narrative Assertions
+
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
+- `blocking_state`: `clear`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`

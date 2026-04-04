@@ -1,0 +1,27 @@
+{
+  "object_type": "project_fact",
+  "project_id": "project-cn-open-001",
+  "fact_version": 2,
+  "fact_refresh_trigger": "REPORT_WRITEBACK",
+  "fact_source_summary": "Derived from open-issued project_base, rule_hit, and issued report_record.",
+  "project_base_ref": "project_base:project-cn-open-001",
+  "rule_hit_refs": [
+    "rule_hit:rule-hit-open-001"
+  ],
+  "report_record_ref": "report_record:report-open-001",
+  "public_chain_status": "COMPLETE",
+  "rule_hit_summary": "Public chain confirmation has been fully confirmed.",
+  "clue_summary": "No unresolved clue remains.",
+  "sale_gate_status": "OPEN",
+  "real_competitor_count": 1,
+  "serviceable_competitor_count": 1,
+  "competitor_quality_grade": "A",
+  "price_cluster_score": 82,
+  "price_gradient_pattern": "STABLE_SPREAD",
+  "fact_summary": "Project is open for standard downstream sales and delivery consumption.",
+  "risk_summary": "No blocking or hold condition remains after confirmation.",
+  "review_status": "CONFIRMED",
+  "manual_override_status": "NONE",
+  "report_status": "ISSUED",
+  "last_fact_refreshed_at": "2026-04-04T18:20:00+08:00"
+}

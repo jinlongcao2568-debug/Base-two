@@ -1,0 +1,15 @@
+{
+  "request_id": "review-request-hold-001",
+  "project_id": "project-cn-hold-001",
+  "request_type": "PUBLIC_CHAIN_COMPLETION",
+  "reason": "The public chain is incomplete and must be completed before the project can proceed.",
+  "public_basis": "The latest public chain notice shows that required public records are missing.",
+  "requested_materials": [
+    "opening record",
+    "result publication notice"
+  ],
+  "priority": "HIGH",
+  "source_rule_codes": [
+    "PUBLIC_CHAIN_INCOMPLETE"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "handoff_id": "stage3-to-stage4-project_base",
+  "producer_stage": "stage3_parsing",
+  "consumer_stage": "stage4_validation",
+  "payload_object": "project_base",
+  "payload_schema": "docs/contracts/schemas/stage3_project_base.schema.json",
+  "payload_example": "docs/contracts/examples/project_base.example.json",
+  "lineage_fields": ["project_id", "region_code"],
+  "required_payload_fields": ["project_id", "source_family", "region_code", "public_chain_status"],
+  "consumer_boundary": "formal_stage_input",
+  "customer_visible": false,
+  "authority_source_section": "4.3"
+}

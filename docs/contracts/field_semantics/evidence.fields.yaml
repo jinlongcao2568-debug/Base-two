@@ -1,0 +1,90 @@
+object_name: evidence
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_sections:
+  - '5.10'
+schema_file: docs/contracts/schemas/stage4_evidence.schema.json
+example_file: docs/contracts/examples/evidence.example.json
+description: 正式 stage4 证据对象，支撑 rule_hit、review_request 和后续报告/交付的证据追溯。
+fields:
+  - name: evidence_id
+    required: true
+    type: string
+    source_stage: stage4
+    consumer_surfaces: [rule_engine, evidence, governance]
+    notes: Stable formal evidence identity.
+  - name: project_id
+    required: true
+    type: string
+    source_stage: stage3
+    consumer_surfaces: [rule_engine, evidence, governance]
+    notes: Stable project identity carried into the evidence object.
+  - name: source_url
+    required: true
+    type: string
+    source_stage: stage2
+    consumer_surfaces: [evidence, governance]
+    notes: Public source URL used to trace the evidence.
+  - name: source_type
+    required: true
+    type: string
+    source_stage: stage2
+    consumer_surfaces: [evidence, governance]
+    notes: Formal source family or source-type label.
+  - name: capture_type
+    required: true
+    type: string
+    source_stage: stage2
+    consumer_surfaces: [evidence, governance]
+    notes: Capture mechanism for the evidence artifact.
+  - name: capture_time
+    required: true
+    type: datetime
+    source_stage: stage2
+    consumer_surfaces: [evidence, governance]
+    notes: Capture timestamp required for evidence traceability.
+  - name: page_title
+    required: true
+    type: string
+    source_stage: stage2
+    consumer_surfaces: [evidence, delivery]
+    notes: Human-readable page title associated with the source.
+  - name: snippet
+    required: true
+    type: string
+    source_stage: stage4
+    consumer_surfaces: [evidence, delivery]
+    notes: Approved evidence snippet or excerpt.
+  - name: evidence_artifact_refs
+    required: true
+    type: array[string]
+    source_stage: stage2
+    consumer_surfaces: [evidence, governance]
+    notes: References to stored evidence artifacts.
+  - name: structured_field_refs
+    required: true
+    type: array[string]
+    source_stage: stage3
+    consumer_surfaces: [rule_engine, evidence]
+    notes: Structured fields bound to this evidence item.
+  - name: consumed_by_rule_codes
+    required: true
+    type: array[string]
+    source_stage: stage4
+    consumer_surfaces: [rule_engine, governance]
+    notes: Formal rule codes that consume this evidence.
+  - name: evidence_grade
+    required: true
+    type: string
+    enum:
+      - A
+      - B
+      - C
+    source_stage: stage4
+    consumer_surfaces: [rule_engine, evidence, delivery]
+    notes: Formal evidence-grade enum pinned to the authority document.
+  - name: evidence_hash
+    required: true
+    type: string
+    source_stage: stage4
+    consumer_surfaces: [evidence, governance]
+    notes: Stable fingerprint used to detect drift or duplication.

@@ -1,6 +1,6 @@
 current_task_id: TASK-GOV-001
 title: 权威一致性收口与控制面硬化
-status: doing
+status: review
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
@@ -8,9 +8,9 @@ stage: authority-consistency-hardening
 branch: feat/TASK-GOV-001-authority-consistency-hardening
 size_class: heavy
 automation_mode: manual
-worker_state: running
+worker_state: review_pending
 blocked_reason: null
-last_reported_at: '2026-04-04T19:38:06+08:00'
+last_reported_at: '2026-04-04T21:25:19+08:00'
 topology: single_worker
 allowed_dirs:
 - README.md
@@ -64,5 +64,5 @@ required_tests:
 - pytest -q
 task_file: docs/governance/tasks/TASK-GOV-001.md
 runlog_file: docs/governance/runlogs/TASK-GOV-001-RUNLOG.md
-next_action: worker 正在推进，等待进一步回报。
-updated_at: '2026-04-04T19:38:06+08:00'
+next_action: worker 已完成候选交付；等待自动收口或评审。
+updated_at: '2026-04-04T21:25:19+08:00'

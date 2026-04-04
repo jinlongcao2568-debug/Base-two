@@ -1,0 +1,16 @@
+{
+  "rule_hit_id": "rule-hit-hold-001",
+  "project_id": "project-cn-hold-001",
+  "rule_code": "PUBLIC_CHAIN_INCOMPLETE",
+  "severity": "HIGH",
+  "confidence": 0.88,
+  "result_type": "CLUE",
+  "why_hit": "The public chain is incomplete and opening records are missing.",
+  "boundary_note": "The project cannot move to OPEN until the public chain is complete.",
+  "evidence_refs": [
+    "evidence:evidence-hold-001"
+  ],
+  "target_entity_type": "project",
+  "target_entity_id": "project-cn-hold-001",
+  "review_status": "PENDING"
+}

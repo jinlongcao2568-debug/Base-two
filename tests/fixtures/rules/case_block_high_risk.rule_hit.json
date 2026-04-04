@@ -1,0 +1,16 @@
+{
+  "rule_hit_id": "rule-hit-block-001",
+  "project_id": "project-cn-block-001",
+  "rule_code": "BID_COLLUSION_HIGH_RISK",
+  "severity": "HIGH",
+  "confidence": 0.97,
+  "result_type": "AUTO_HIT",
+  "why_hit": "Public tender results and evidence indicate a high-risk collusion pattern.",
+  "boundary_note": "The project must remain BLOCK until the high-risk hit is resolved or overturned.",
+  "evidence_refs": [
+    "evidence:evidence-block-001"
+  ],
+  "target_entity_type": "bidder",
+  "target_entity_id": "bidder-block-001",
+  "review_status": "CONFIRMED"
+}

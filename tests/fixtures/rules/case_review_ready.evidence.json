@@ -1,0 +1,21 @@
+{
+  "evidence_id": "evidence-review-001",
+  "project_id": "project-cn-review-001",
+  "source_url": "https://ggzy.example.cn/review/result",
+  "source_type": "public_result_notice",
+  "capture_type": "html_snapshot",
+  "capture_time": "2026-04-04T17:20:00+08:00",
+  "page_title": "Review ready notice",
+  "snippet": "Public result notice confirms a competitor clue that still needs manual review.",
+  "evidence_artifact_refs": [
+    "artifact://review/result-notice.html"
+  ],
+  "structured_field_refs": [
+    "field://project-cn-review-001/public_chain_status"
+  ],
+  "consumed_by_rule_codes": [
+    "REAL_COMPETITOR_IDENTIFIED"
+  ],
+  "evidence_grade": "B",
+  "evidence_hash": "sha256:evidence-review-001"
+}

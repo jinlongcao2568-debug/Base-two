@@ -1,0 +1,21 @@
+{
+  "evidence_id": "evidence-open-001",
+  "project_id": "project-cn-open-001",
+  "source_url": "https://ggzy.example.cn/open/result",
+  "source_type": "public_result_notice",
+  "capture_type": "html_snapshot",
+  "capture_time": "2026-04-04T17:30:00+08:00",
+  "page_title": "Open issued notice",
+  "snippet": "Public result notice confirms a clean, fully traceable public chain.",
+  "evidence_artifact_refs": [
+    "artifact://open/result-notice.html"
+  ],
+  "structured_field_refs": [
+    "field://project-cn-open-001/public_chain_status"
+  ],
+  "consumed_by_rule_codes": [
+    "PUBLIC_CHAIN_CONFIRMED"
+  ],
+  "evidence_grade": "A",
+  "evidence_hash": "sha256:evidence-open-001"
+}

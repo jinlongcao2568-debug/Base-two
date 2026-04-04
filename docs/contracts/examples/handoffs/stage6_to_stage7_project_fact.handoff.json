@@ -1,0 +1,13 @@
+{
+  "handoff_id": "stage6-to-stage7-project_fact",
+  "producer_stage": "stage6_facts",
+  "consumer_stage": "stage7_sales",
+  "payload_object": "project_fact",
+  "payload_schema": "docs/contracts/schemas/stage6_project_fact.schema.json",
+  "payload_example": "docs/contracts/examples/project_fact.example.json",
+  "lineage_fields": ["project_id", "fact_version"],
+  "required_payload_fields": ["project_id", "fact_version", "sale_gate_status", "real_competitor_count", "serviceable_competitor_count", "competitor_quality_grade", "price_cluster_score", "review_status"],
+  "consumer_boundary": "downstream_consumer_input",
+  "customer_visible": false,
+  "authority_source_section": "4.7"
+}

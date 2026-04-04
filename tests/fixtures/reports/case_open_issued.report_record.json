@@ -1,0 +1,11 @@
+{
+  "report_id": "report-open-001",
+  "project_id": "project-cn-open-001",
+  "brief_path": "reports/open-issued/brief.md",
+  "evidence_pack_path": "reports/open-issued/evidence-pack.zip",
+  "objection_draft_path": "reports/open-issued/objection-draft.md",
+  "review_request_list_path": "reports/open-issued/review-requests.json",
+  "review_task_status": "COMPLETED",
+  "report_status": "ISSUED",
+  "written_back_at": "2026-04-04T18:20:00+08:00"
+}

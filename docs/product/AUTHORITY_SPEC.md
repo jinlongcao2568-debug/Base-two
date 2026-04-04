@@ -28,6 +28,9 @@ Conflict rule:
 
 - `project_base`
 - `rule_hit`
+- `evidence`
+- `review_request`
+- `report_record`
 - `project_fact`
 
 ## Formal Enums Currently Enforced In Repo Contracts
@@ -36,6 +39,7 @@ Conflict rule:
 - `review_status`: `PENDING / CONFIRMED / REJECTED / OVERRIDDEN`
 - `report_status`: `DRAFT / READY / ISSUED / REVOKED`
 - `competitor_quality_grade`: `A / B / C / D`
+- `evidence_grade`: `A / B / C`
 - `result_type`: `AUTO_HIT / CLUE / OBSERVATION`
 - `severity`: `HIGH / MEDIUM / LOW`
 
@@ -50,3 +54,6 @@ Conflict rule:
 - Formal contracts live in `docs/contracts/`.
 - Formal field and enum registry lives in `docs/governance/SCHEMA_REGISTRY.md`.
 - Authority-critical regression proof currently covers `stage3 -> stage4 -> stage6`.
+- The live formal contract set now covers `project_base`, `rule_hit`, `evidence`, `review_request`, `report_record`, and `project_fact`.
+- The live handoff contract set now covers `stage3 -> stage4`, `stage4 -> stage6`, `stage5 -> stage6`, and `stage6 -> stage7/8/9`.
+- Multi-sample regression proof now covers `case_review_ready`, `case_open_issued`, `case_hold_incomplete_chain`, and `case_block_high_risk`.

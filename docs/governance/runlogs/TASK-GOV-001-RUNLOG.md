@@ -3,11 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-001`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `authority-consistency-hardening`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `worker_state`: `running`
-
+- `worker_state`: `review_pending`
 ## Execution Log
 
 - `2026-04-04T18:43:48+08:00`: created the governance hardening task package.
@@ -15,27 +14,24 @@
 
 ## Test Log
 
-- Pending first hardening rerun:
-  - `python scripts/check_repo.py`
-  - `python scripts/check_hygiene.py`
-  - `pytest tests/governance -q`
+- Latest validation moved to the appended execution/test records below; the live task remains open for phase-2 hardening follow-up work.
 
-## Risks And Blockers
+## Narrative Assertions
 
-- The repository is currently on the new governance hardening branch, but downstream contracts, integration, and product/governance expansion are still missing.
-
-## Closeout Decision
-
-- Not ready to close. The task remains active until all hardening batches pass.
-
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
+- `blocking_state`: `clear`
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-001`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `authority-consistency-hardening`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 <!-- generated:runlog-meta:end -->
 
 ## 执行记录
@@ -46,6 +42,9 @@
 - `2026-04-04T19:10:20+08:00`：batch4 completed: product and governance execution docs professionalized, seed wording removed, live indexes aligned
 - `2026-04-04T19:38:06+08:00`：batch5 completed: authority alignment scoring added, TASK_POLICY yaml normalized, DIRECTORY_MAP contracts root declared
 - `2026-04-04T19:38:06+08:00`：final validation round1 and round2 passed with identical authority scores at 100 across all categories
+- `2026-04-04T21:02:45+08:00`：batch4 completed: control-plane complexity hotspots reduced via helper modules and wrapper entry surfaces
+- `2026-04-04T21:03:12+08:00`：worker-finish `phase2 hardening complete: narrative gate, handoff contracts, expanded formal objects, multi-case regression net, and control-plane complexity reduction all validated`
+- `2026-04-04T21:25:19+08:00`：worker-finish `final double validation rerun passed identically after review-state gate fix`
 ## 测试记录
 
 - `python scripts/check_repo.py`
@@ -67,6 +66,31 @@
 - `python scripts/validate_contracts.py`
 - `pytest tests/governance -q`
 - `pytest tests/contracts -q`
+- `pytest -q`
+- `python scripts/check_authority_alignment.py`
+- `python scripts/validate_contracts.py`
+- `python scripts/check_repo.py`
+- `python scripts/check_hygiene.py`
+- `pytest tests/contracts -q`
+- `pytest tests/governance -q`
+- `pytest tests/automation -q`
+- `pytest tests/integration -q`
+- `pytest -q`
+- `python scripts/check_repo.py`
+- `python scripts/check_hygiene.py`
+- `python scripts/validate_contracts.py`
+- `pytest tests/governance -q`
+- `pytest tests/contracts -q`
+- `pytest tests/automation -q`
+- `pytest -q`
+- `python scripts/check_authority_alignment.py`
+- `python scripts/validate_contracts.py`
+- `python scripts/check_repo.py`
+- `python scripts/check_hygiene.py`
+- `pytest tests/contracts -q`
+- `pytest tests/governance -q`
+- `pytest tests/automation -q`
+- `pytest tests/integration -q`
 - `pytest -q`
 - `python scripts/check_authority_alignment.py`
 - `python scripts/validate_contracts.py`

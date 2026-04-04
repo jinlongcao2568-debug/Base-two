@@ -1,0 +1,121 @@
+version: '1.0'
+updated_at: '2026-04-04T20:25:00+08:00'
+handoffs:
+  - handoff_id: stage3-to-stage4-project_base
+    producer_stage: stage3_parsing
+    consumer_stage: stage4_validation
+    payload_object: project_base
+    payload_schema: docs/contracts/schemas/stage3_project_base.schema.json
+    payload_example: docs/contracts/examples/project_base.example.json
+    lineage_fields:
+      - project_id
+      - region_code
+    required_payload_fields:
+      - project_id
+      - source_family
+      - region_code
+      - public_chain_status
+    consumer_boundary: formal_stage_input
+    customer_visible: false
+    authority_source_section: '4.3'
+  - handoff_id: stage4-to-stage6-rule_hit
+    producer_stage: stage4_validation
+    consumer_stage: stage6_facts
+    payload_object: rule_hit
+    payload_schema: docs/contracts/schemas/stage4_rule_hit.schema.json
+    payload_example: docs/contracts/examples/rule_hit.example.json
+    lineage_fields:
+      - project_id
+      - rule_hit_id
+    required_payload_fields:
+      - rule_hit_id
+      - project_id
+      - rule_code
+      - result_type
+      - boundary_note
+      - evidence_refs
+      - review_status
+    consumer_boundary: formal_stage_input
+    customer_visible: false
+    authority_source_section: '4.4'
+  - handoff_id: stage5-to-stage6-report_record
+    producer_stage: stage5_reporting
+    consumer_stage: stage6_facts
+    payload_object: report_record
+    payload_schema: docs/contracts/schemas/stage5_report_record.schema.json
+    payload_example: docs/contracts/examples/report_record.example.json
+    lineage_fields:
+      - project_id
+      - report_id
+    required_payload_fields:
+      - report_id
+      - project_id
+      - review_task_status
+      - report_status
+      - written_back_at
+    consumer_boundary: formal_stage_input
+    customer_visible: false
+    authority_source_section: '4.5'
+  - handoff_id: stage6-to-stage7-project_fact
+    producer_stage: stage6_facts
+    consumer_stage: stage7_sales
+    payload_object: project_fact
+    payload_schema: docs/contracts/schemas/stage6_project_fact.schema.json
+    payload_example: docs/contracts/examples/project_fact.example.json
+    lineage_fields:
+      - project_id
+      - fact_version
+    required_payload_fields:
+      - project_id
+      - fact_version
+      - sale_gate_status
+      - real_competitor_count
+      - serviceable_competitor_count
+      - competitor_quality_grade
+      - price_cluster_score
+      - review_status
+    consumer_boundary: downstream_consumer_input
+    customer_visible: false
+    authority_source_section: '4.7'
+  - handoff_id: stage6-to-stage8-project_fact
+    producer_stage: stage6_facts
+    consumer_stage: stage8_contact
+    payload_object: project_fact
+    payload_schema: docs/contracts/schemas/stage6_project_fact.schema.json
+    payload_example: docs/contracts/examples/project_fact.example.json
+    lineage_fields:
+      - project_id
+      - fact_version
+    required_payload_fields:
+      - project_id
+      - fact_version
+      - public_chain_status
+      - sale_gate_status
+      - fact_summary
+      - risk_summary
+      - review_status
+      - manual_override_status
+    consumer_boundary: downstream_consumer_input
+    customer_visible: false
+    authority_source_section: '4.8'
+  - handoff_id: stage6-to-stage9-project_fact
+    producer_stage: stage6_facts
+    consumer_stage: stage9_delivery
+    payload_object: project_fact
+    payload_schema: docs/contracts/schemas/stage6_project_fact.schema.json
+    payload_example: docs/contracts/examples/project_fact.example.json
+    lineage_fields:
+      - project_id
+      - fact_version
+    required_payload_fields:
+      - project_id
+      - fact_version
+      - sale_gate_status
+      - review_status
+      - report_status
+      - report_record_ref
+      - fact_summary
+      - risk_summary
+    consumer_boundary: downstream_consumer_input
+    customer_visible: true
+    authority_source_section: '4.9'

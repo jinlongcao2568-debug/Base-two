@@ -1,0 +1,80 @@
+object_name: handoff_catalog
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_sections:
+  - '4.3'
+  - '4.4'
+  - '4.5'
+  - '4.6'
+schema_file: docs/contracts/schemas/handoff_catalog.schema.json
+example_file: docs/contracts/examples/handoffs/
+description: 机器可读的正式承接目录，约束 authority-critical chain 及 stage6 向下游阶段的输入合同。
+fields:
+  - name: handoff_id
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, integration, governance]
+    notes: Stable identity for a single producer-consumer contract edge.
+  - name: producer_stage
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Formal producing stage for the payload.
+  - name: consumer_stage
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Formal consuming stage or downstream consumer for the payload.
+  - name: payload_object
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Formal object handed across the stage boundary.
+  - name: payload_schema
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Canonical schema path that validates the handoff payload.
+  - name: payload_example
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Canonical example path that demonstrates the handoff payload shape.
+  - name: lineage_fields
+    required: true
+    type: array[string]
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Minimal lineage fields needed for cross-stage traceability.
+  - name: required_payload_fields
+    required: true
+    type: array[string]
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Fields a consumer is allowed to rely on when reading the handoff payload.
+  - name: consumer_boundary
+    required: true
+    type: string
+    enum:
+      - formal_stage_input
+      - downstream_consumer_input
+    source_stage: governance
+    consumer_surfaces: [contracts, integration]
+    notes: Distinguishes stage-input edges from downstream consumer-only edges.
+  - name: customer_visible
+    required: true
+    type: boolean
+    source_stage: governance
+    consumer_surfaces: [contracts, delivery]
+    notes: Reveals whether the handoff feeds a customer-visible surface.
+  - name: authority_source_section
+    required: true
+    type: string
+    source_stage: governance
+    consumer_surfaces: [contracts, governance]
+    notes: Baseline authority section governing this handoff edge.

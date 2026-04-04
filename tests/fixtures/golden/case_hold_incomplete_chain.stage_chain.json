@@ -1,0 +1,11 @@
+{
+  "case_id": "case_hold_incomplete_chain",
+  "expected_project_base_ref": "project_base:project-cn-hold-001",
+  "expected_rule_hit_ref": "rule_hit:rule-hit-hold-001",
+  "expected_report_record_ref": "report_record:report-hold-001",
+  "expected_public_chain_status": "INCOMPLETE",
+  "expected_sale_gate_status": "HOLD",
+  "expected_review_status": "PENDING",
+  "expected_report_status": "DRAFT",
+  "expected_evidence_grade": "B"
+}

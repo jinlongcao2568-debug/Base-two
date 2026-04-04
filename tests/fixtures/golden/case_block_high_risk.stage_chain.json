@@ -1,0 +1,11 @@
+{
+  "case_id": "case_block_high_risk",
+  "expected_project_base_ref": "project_base:project-cn-block-001",
+  "expected_rule_hit_ref": "rule_hit:rule-hit-block-001",
+  "expected_report_record_ref": "report_record:report-block-001",
+  "expected_public_chain_status": "COMPLETE",
+  "expected_sale_gate_status": "BLOCK",
+  "expected_review_status": "CONFIRMED",
+  "expected_report_status": "DRAFT",
+  "expected_evidence_grade": "A"
+}

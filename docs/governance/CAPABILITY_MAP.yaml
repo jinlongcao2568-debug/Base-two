@@ -40,6 +40,32 @@ capabilities:
       - pytest tests/stage4 -q
       - pytest tests/stage6 -q
       - pytest tests/integration -q
+  - capability_id: formal_handoff_catalog
+    status: implemented
+    source_of_truth:
+      - docs/contracts/handoff_catalog.yaml
+      - docs/contracts/schemas/handoff_catalog.schema.json
+      - docs/contracts/field_semantics/handoff_catalog.fields.yaml
+    scripts:
+      - scripts/validate_contracts.py
+    tests:
+      - pytest tests/contracts -q
+      - pytest tests/integration -q
+  - capability_id: stage4_stage5_stage6_extended_chain
+    status: implemented
+    source_of_truth:
+      - docs/contracts/schemas/stage4_evidence.schema.json
+      - docs/contracts/schemas/stage4_review_request.schema.json
+      - docs/contracts/schemas/stage5_report_record.schema.json
+      - docs/contracts/schemas/stage6_project_fact.schema.json
+      - docs/governance/TEST_MATRIX.yaml
+    scripts:
+      - scripts/validate_contracts.py
+    tests:
+      - pytest tests/contracts -q
+      - pytest tests/stage4 -q
+      - pytest tests/stage6 -q
+      - pytest tests/integration -q
   - capability_id: stage7_to_stage9_business_automation
     status: not_implemented
     source_of_truth:

@@ -72,19 +72,28 @@ REQUIRED_AUTOMATION_TESTS = [
 ]
 REQUIRED_QUALITY_TESTS = [
     "tests/contracts/test_project_fact_contract.py",
+    "tests/contracts/test_report_record_contract.py",
+    "tests/contracts/test_stage4_formal_objects.py",
+    "tests/contracts/test_handoff_catalog.py",
     "tests/contracts/test_stage_chain_contracts.py",
     "tests/integration/test_stage3_stage4_stage6_minimal_flow.py",
+    "tests/integration/test_handoff_catalog_consumption.py",
+    "tests/integration/test_stage_chain_case_matrix.py",
     "tests/stage3/test_stage3_project_base_contract.py",
     "tests/stage4/test_stage4_rule_hit_contract.py",
+    "tests/stage4/test_stage4_formal_case_matrix.py",
     "tests/stage6/test_stage6_project_fact_contract.py",
+    "tests/stage6/test_stage6_case_matrix.py",
 ]
 FIXTURE_DIRS = [
     "tests/fixtures/raw",
     "tests/fixtures/normalized",
     "tests/fixtures/rules",
+    "tests/fixtures/reports",
     "tests/fixtures/facts",
     "tests/fixtures/golden",
 ]
+KEY_FORMAL_OBJECTS = ("project_base", "rule_hit", "evidence", "review_request", "report_record", "project_fact")
 
 
 @dataclass
@@ -262,7 +271,7 @@ def _evaluate_authority(
     glossary = _load_text(root, "docs/product/GLOSSARY.md", errors)
     _append_authority_doc_checks(authority_spec, mvp_scope, product_boundaries, glossary, errors)
     errors.extend(authority_enum_errors)
-    for object_name in ("project_base", "rule_hit", "project_fact"):
+    for object_name in KEY_FORMAL_OBJECTS:
         if bundle_statuses.get(object_name) != "对齐":
             errors.append(f"formal object not aligned: {object_name}={bundle_statuses.get(object_name, '缺失')}")
     return errors
@@ -467,6 +476,8 @@ def _evaluate_structure_layer(root: Path) -> list[str]:
         "governance_control_plane",
         "contracts_registry_validation",
         "stage3_stage4_stage6_minimal_chain",
+        "formal_handoff_catalog",
+        "stage4_stage5_stage6_extended_chain",
     ):
         if capability_id not in capability_ids:
             errors.append(f"CAPABILITY_MAP missing capability: {capability_id}")
@@ -474,6 +485,8 @@ def _evaluate_structure_layer(root: Path) -> list[str]:
     chains = test_matrix.get("authority_critical_chains", {})
     if "stage3_stage4_stage6_minimal" not in chains:
         errors.append("TEST_MATRIX missing authority-critical chain: stage3_stage4_stage6_minimal")
+    if "stage4_stage5_stage6_case_matrix" not in chains:
+        errors.append("TEST_MATRIX missing authority-critical chain: stage4_stage5_stage6_case_matrix")
     return errors
 
 
@@ -574,7 +587,7 @@ def main() -> int:
     comprehensive_score = round(sum(result.score for result in layer_results) / len(layer_results))
 
     print("关键对象状态:")
-    for object_name in ("project_base", "rule_hit", "project_fact"):
+    for object_name in KEY_FORMAL_OBJECTS:
         status = bundle_statuses.get(object_name, "缺失")
         print(f"- {object_name}: {status}")
     print("")

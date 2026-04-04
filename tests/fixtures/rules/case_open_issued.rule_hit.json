@@ -1,0 +1,16 @@
+{
+  "rule_hit_id": "rule-hit-open-001",
+  "project_id": "project-cn-open-001",
+  "rule_code": "PUBLIC_CHAIN_CONFIRMED",
+  "severity": "LOW",
+  "confidence": 0.96,
+  "result_type": "AUTO_HIT",
+  "why_hit": "Public chain and competition evidence are complete and consistent.",
+  "boundary_note": "All public evidence has been confirmed and no unresolved clue remains.",
+  "evidence_refs": [
+    "evidence:evidence-open-001"
+  ],
+  "target_entity_type": "project",
+  "target_entity_id": "project-cn-open-001",
+  "review_status": "CONFIRMED"
+}

@@ -1,0 +1,13 @@
+{
+  "project_id": "project-cn-review-001",
+  "source_family": "ggzy_national",
+  "region_code": "CN-320100",
+  "project_name": "Review Ready Project",
+  "project_type_raw": "building",
+  "engineering_domain": "building_construction",
+  "bid_control_price": 18000000,
+  "bid_eval_method": "comprehensive",
+  "public_chain_status": "COMPLETE",
+  "opening_record_count": 1,
+  "invalid_bid_count": 0
+}

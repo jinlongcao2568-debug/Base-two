@@ -1,0 +1,21 @@
+{
+  "evidence_id": "evidence-hold-001",
+  "project_id": "project-cn-hold-001",
+  "source_url": "https://ggzy.example.cn/hold/public-chain",
+  "source_type": "public_chain_notice",
+  "capture_type": "html_snapshot",
+  "capture_time": "2026-04-04T17:40:00+08:00",
+  "page_title": "Incomplete chain notice",
+  "snippet": "Public chain notice shows that an opening record is still unavailable.",
+  "evidence_artifact_refs": [
+    "artifact://hold/public-chain.html"
+  ],
+  "structured_field_refs": [
+    "field://project-cn-hold-001/public_chain_status"
+  ],
+  "consumed_by_rule_codes": [
+    "PUBLIC_CHAIN_INCOMPLETE"
+  ],
+  "evidence_grade": "B",
+  "evidence_hash": "sha256:evidence-hold-001"
+}

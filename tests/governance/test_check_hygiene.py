@@ -40,3 +40,18 @@ def test_check_hygiene_blocks_cross_stage_imports(tmp_path: Path) -> None:
     result = run_python(CHECK_HYGIENE_SCRIPT, repo)
     assert result.returncode == 1
     assert "cross-stage imports" in result.stdout
+
+
+def test_check_hygiene_no_longer_flags_control_plane_hotspots(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    result = run_python(
+        CHECK_HYGIENE_SCRIPT,
+        repo,
+        "scripts/governance_lib.py",
+        "scripts/task_ops.py",
+        "scripts/validate_contracts.py",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "scripts/governance_lib.py" not in result.stdout
+    assert "scripts/task_ops.py" not in result.stdout
+    assert "scripts/validate_contracts.py" not in result.stdout

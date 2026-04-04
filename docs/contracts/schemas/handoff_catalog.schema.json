@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/handoff_catalog.schema.json",
+  "title": "AX9 Handoff Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated_at", "handoffs"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "handoffs": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "$ref": "#/$defs/handoff"
+      }
+    }
+  },
+  "$defs": {
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoff_id",
+        "producer_stage",
+        "consumer_stage",
+        "payload_object",
+        "payload_schema",
+        "payload_example",
+        "lineage_fields",
+        "required_payload_fields",
+        "consumer_boundary",
+        "customer_visible",
+        "authority_source_section"
+      ],
+      "properties": {
+        "handoff_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_stage": {
+          "type": "string",
+          "enum": [
+            "stage3_parsing",
+            "stage4_validation",
+            "stage5_reporting",
+            "stage6_facts"
+          ]
+        },
+        "consumer_stage": {
+          "type": "string",
+          "enum": [
+            "stage4_validation",
+            "stage6_facts",
+            "stage7_sales",
+            "stage8_contact",
+            "stage9_delivery"
+          ]
+        },
+        "payload_object": {
+          "type": "string",
+          "enum": [
+            "project_base",
+            "rule_hit",
+            "report_record",
+            "project_fact"
+          ]
+        },
+        "payload_schema": {
+          "type": "string",
+          "pattern": "^docs/contracts/schemas/.+\\.json$"
+        },
+        "payload_example": {
+          "type": "string",
+          "pattern": "^docs/contracts/examples/.+\\.(json|ya?ml)$"
+        },
+        "lineage_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_payload_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "consumer_boundary": {
+          "type": "string",
+          "enum": [
+            "formal_stage_input",
+            "downstream_consumer_input"
+          ]
+        },
+        "customer_visible": {
+          "type": "boolean"
+        },
+        "authority_source_section": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

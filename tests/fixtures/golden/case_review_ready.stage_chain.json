@@ -1,0 +1,11 @@
+{
+  "case_id": "case_review_ready",
+  "expected_project_base_ref": "project_base:project-cn-review-001",
+  "expected_rule_hit_ref": "rule_hit:rule-hit-review-001",
+  "expected_report_record_ref": "report_record:report-review-001",
+  "expected_public_chain_status": "COMPLETE",
+  "expected_sale_gate_status": "REVIEW",
+  "expected_review_status": "PENDING",
+  "expected_report_status": "READY",
+  "expected_evidence_grade": "B"
+}

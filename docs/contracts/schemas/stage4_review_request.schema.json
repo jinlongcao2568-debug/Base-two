@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/stage4_review_request.schema.json",
+  "title": "AX9 Stage 4 Review Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "project_id",
+    "request_type",
+    "reason",
+    "public_basis",
+    "requested_materials",
+    "priority",
+    "source_rule_codes"
+  ],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "public_basis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requested_materials": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "priority": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_rule_codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

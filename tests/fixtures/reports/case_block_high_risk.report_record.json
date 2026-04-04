@@ -1,0 +1,11 @@
+{
+  "report_id": "report-block-001",
+  "project_id": "project-cn-block-001",
+  "brief_path": "reports/block-high-risk/brief.md",
+  "evidence_pack_path": "reports/block-high-risk/evidence-pack.zip",
+  "objection_draft_path": "reports/block-high-risk/objection-draft.md",
+  "review_request_list_path": "reports/block-high-risk/review-requests.json",
+  "review_task_status": "LEGAL_REVIEW_PENDING",
+  "report_status": "DRAFT",
+  "written_back_at": "2026-04-04T18:40:00+08:00"
+}

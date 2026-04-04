@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-04T19:38:06+08:00'
+updated_at: '2026-04-04T21:25:19+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -68,7 +68,7 @@ tasks:
   closed_at: '2026-04-04T14:04:17+08:00'
 - task_id: TASK-GOV-001
   title: 权威一致性收口与控制面硬化
-  status: doing
+  status: review
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -76,9 +76,9 @@ tasks:
   branch: feat/TASK-GOV-001-authority-consistency-hardening
   size_class: heavy
   automation_mode: manual
-  worker_state: running
+  worker_state: review_pending
   blocked_reason: null
-  last_reported_at: '2026-04-04T19:38:06+08:00'
+  last_reported_at: '2026-04-04T21:25:19+08:00'
   topology: single_worker
   allowed_dirs:
   - README.md

@@ -1,0 +1,8 @@
+{
+  "scenario_id": "case_block_high_risk",
+  "project_id": "project-cn-block-001",
+  "region_code": "CN-350100",
+  "source_family": "ggzy_national",
+  "source_type": "public_result_notice",
+  "notice_state": "block_high_risk"
+}

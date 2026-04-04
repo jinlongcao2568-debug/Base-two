@@ -1,0 +1,13 @@
+{
+  "project_id": "project-cn-open-001",
+  "source_family": "ggzy_national",
+  "region_code": "CN-330100",
+  "project_name": "Open Issued Project",
+  "project_type_raw": "municipal",
+  "engineering_domain": "municipal_engineering",
+  "bid_control_price": 26000000,
+  "bid_eval_method": "lowest_price",
+  "public_chain_status": "COMPLETE",
+  "opening_record_count": 1,
+  "invalid_bid_count": 0
+}

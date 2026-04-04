@@ -1,0 +1,15 @@
+{
+  "request_id": "review-request-review-001",
+  "project_id": "project-cn-review-001",
+  "request_type": "MANUAL_COMPETITOR_CONFIRMATION",
+  "reason": "A medium-risk competitor clue must be confirmed before the project can move to OPEN.",
+  "public_basis": "Public result notice is complete but the competitor signal still needs analyst confirmation.",
+  "requested_materials": [
+    "public result notice",
+    "opening record excerpt"
+  ],
+  "priority": "MEDIUM",
+  "source_rule_codes": [
+    "REAL_COMPETITOR_IDENTIFIED"
+  ]
+}

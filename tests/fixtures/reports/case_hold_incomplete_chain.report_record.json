@@ -1,0 +1,11 @@
+{
+  "report_id": "report-hold-001",
+  "project_id": "project-cn-hold-001",
+  "brief_path": "reports/hold-incomplete/brief.md",
+  "evidence_pack_path": "reports/hold-incomplete/evidence-pack.zip",
+  "objection_draft_path": "reports/hold-incomplete/objection-draft.md",
+  "review_request_list_path": "reports/hold-incomplete/review-requests.json",
+  "review_task_status": "WAITING_CHAIN_COMPLETION",
+  "report_status": "DRAFT",
+  "written_back_at": "2026-04-04T18:30:00+08:00"
+}

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python, write_yaml
+from .helpers import CHECK_REPO_SCRIPT, TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
 
 
 def test_pause_moves_active_task_to_paused(tmp_path: Path) -> None:
@@ -33,6 +33,29 @@ def test_can_close_requires_required_tests_in_runlog(tmp_path: Path) -> None:
     result = run_python(TASK_OPS_SCRIPT, repo, "can-close")
     assert result.returncode == 1
     assert "required tests missing from runlog" in result.stdout
+
+
+def test_new_task_templates_include_narrative_assertions(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    result = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-COORD-002",
+        "--title",
+        "coordination task",
+        "--stage",
+        "coord-stage",
+        "--planned-write-paths",
+        "docs/governance/",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    task_file = (repo / "docs/governance/tasks/TASK-COORD-002.md").read_text(encoding="utf-8")
+    runlog = (repo / "docs/governance/runlogs/TASK-COORD-002-RUNLOG.md").read_text(encoding="utf-8")
+    assert "## Narrative Assertions" in task_file
+    assert "## Narrative Assertions" in runlog
+    assert "- `narrative_status`: `queued`" in task_file
+    assert "- `next_gate`: `activation_pending`" in runlog
 
 
 def test_activate_rejects_execution_task_in_main_worktree(tmp_path: Path) -> None:
@@ -213,9 +236,12 @@ def test_worker_state_transitions(tmp_path: Path) -> None:
     )
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     task = registry["tasks"][0]
+    git_commit_all(repo, "worker-finish sync")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
     assert start.returncode == 0
     assert report.returncode == 0
     assert finish.returncode == 0
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
     assert task["status"] == "review"
     assert task["worker_state"] == "review_pending"
 

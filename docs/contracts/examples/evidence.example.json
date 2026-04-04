@@ -1,0 +1,21 @@
+{
+  "evidence_id": "evidence-cn-example-001",
+  "project_id": "project-cn-example-001",
+  "source_url": "https://ggzy.example.cn/project-cn-example-001/result",
+  "source_type": "public_result_notice",
+  "capture_type": "html_snapshot",
+  "capture_time": "2026-04-04T17:20:00+08:00",
+  "page_title": "Public result notice",
+  "snippet": "Public result notice confirms a competitor cluster in the tender result.",
+  "evidence_artifact_refs": [
+    "artifact://evidence/project-cn-example-001/result-notice.html"
+  ],
+  "structured_field_refs": [
+    "field://project-cn-example-001/public_chain_status"
+  ],
+  "consumed_by_rule_codes": [
+    "REAL_COMPETITOR_IDENTIFIED"
+  ],
+  "evidence_grade": "A",
+  "evidence_hash": "sha256:evidence-cn-example-001"
+}

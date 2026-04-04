@@ -1,0 +1,27 @@
+{
+  "object_type": "project_fact",
+  "project_id": "project-cn-hold-001",
+  "fact_version": 3,
+  "fact_refresh_trigger": "PUBLIC_CHAIN_REFRESH",
+  "fact_source_summary": "Derived from incomplete-chain project_base, rule_hit, and draft report_record.",
+  "project_base_ref": "project_base:project-cn-hold-001",
+  "rule_hit_refs": [
+    "rule_hit:rule-hit-hold-001"
+  ],
+  "report_record_ref": "report_record:report-hold-001",
+  "public_chain_status": "INCOMPLETE",
+  "rule_hit_summary": "Public chain completeness is still unresolved.",
+  "clue_summary": "The project remains on hold until public records are complete.",
+  "sale_gate_status": "HOLD",
+  "real_competitor_count": 0,
+  "serviceable_competitor_count": 0,
+  "competitor_quality_grade": "C",
+  "price_cluster_score": 41,
+  "price_gradient_pattern": "UNCERTAIN",
+  "fact_summary": "Project cannot progress while the public chain remains incomplete.",
+  "risk_summary": "Incomplete public chain keeps the project on HOLD.",
+  "review_status": "PENDING",
+  "manual_override_status": "PENDING",
+  "report_status": "DRAFT",
+  "last_fact_refreshed_at": "2026-04-04T18:30:00+08:00"
+}

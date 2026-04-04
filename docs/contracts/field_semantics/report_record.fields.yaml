@@ -1,0 +1,67 @@
+object_name: report_record
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_sections:
+  - '5.13'
+schema_file: docs/contracts/schemas/stage5_report_record.schema.json
+example_file: docs/contracts/examples/report_record.example.json
+description: 正式 stage5 报告对象，作为 stage6 事实刷新和交付侧的可追溯报告写回记录。
+fields:
+  - name: report_id
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [governance, stage6, delivery]
+    notes: Formal report identity used for write-back traceability.
+  - name: project_id
+    required: true
+    type: string
+    source_stage: stage3
+    consumer_surfaces: [governance, stage6, delivery]
+    notes: Stable project identity carried into the report record.
+  - name: brief_path
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [stage6, delivery]
+    notes: Path to the internal or customer-facing project brief artifact.
+  - name: evidence_pack_path
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [stage6, delivery]
+    notes: Path to the evidence package artifact referenced by downstream delivery.
+  - name: objection_draft_path
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [delivery]
+    notes: Historical objection draft path field retained as the formal delivery artifact reference.
+  - name: review_request_list_path
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [stage6, delivery]
+    notes: Path to the formal review-request list associated with the report.
+  - name: review_task_status
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [governance, stage6]
+    notes: Tracks whether review follow-up work remains open before final delivery.
+  - name: report_status
+    required: true
+    type: string
+    enum:
+      - DRAFT
+      - READY
+      - ISSUED
+      - REVOKED
+    source_stage: stage5
+    consumer_surfaces: [stage6, delivery]
+    notes: Formal report state pinned to the authority enum.
+  - name: written_back_at
+    required: true
+    type: datetime
+    source_stage: stage5
+    consumer_surfaces: [governance, stage6]
+    notes: Timestamp for the latest durable write-back of the report record.

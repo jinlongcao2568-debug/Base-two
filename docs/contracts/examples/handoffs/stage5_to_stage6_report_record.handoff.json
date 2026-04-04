@@ -1,0 +1,13 @@
+{
+  "handoff_id": "stage5-to-stage6-report_record",
+  "producer_stage": "stage5_reporting",
+  "consumer_stage": "stage6_facts",
+  "payload_object": "report_record",
+  "payload_schema": "docs/contracts/schemas/stage5_report_record.schema.json",
+  "payload_example": "docs/contracts/examples/report_record.example.json",
+  "lineage_fields": ["project_id", "report_id"],
+  "required_payload_fields": ["report_id", "project_id", "review_task_status", "report_status", "written_back_at"],
+  "consumer_boundary": "formal_stage_input",
+  "customer_visible": false,
+  "authority_source_section": "4.5"
+}
