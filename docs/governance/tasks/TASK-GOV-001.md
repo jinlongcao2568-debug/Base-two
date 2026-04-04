@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-001`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `authority-consistency-hardening`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 ## Primary Goals
 
@@ -88,23 +88,23 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `review`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `updated_at`: `2026-04-04T21:25:19+08:00`
+- `updated_at`: `2026-04-04T21:53:59+08:00`
 <!-- generated:task-meta:end -->
