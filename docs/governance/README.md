@@ -24,7 +24,7 @@ Conflict rule:
 - `TEST_MATRIX.yaml`
   - machine-readable gates by size class, module, and authority-critical chain
 - `TASK_POLICY.yaml`
-  - task sizing, topology, automation mode, and stop conditions
+  - task sizing, topology, automation mode, stop conditions, and blueprints
 - `AUTOMATION_OPERATING_MODEL.md`
   - runner semantics and control-plane behavior
 - `CODE_HYGIENE_POLICY.md`
@@ -54,5 +54,6 @@ Conflict rule:
 - No public business API is registered yet; the interface catalog stays in an explicit zero-state until one exists.
 - Continuation now has two formal entry points:
   - `continue-current` resumes only the live current task.
-  - `continue-roadmap` closes a review-ready live task and resolves the next valid governance successor.
-- v1 roadmap continuation can generate only governance automation successors; it does not auto-pick business implementation work.
+  - `continue-roadmap` closes a review-ready live task and resolves the next valid successor.
+- Roadmap continuation can now generate only `stage1-stage6` business successor rounds after governance continuation is in place.
+- `stage7-stage9` remain deferred manual stages and must not be auto-generated or auto-activated.

@@ -24,25 +24,25 @@
 - `pytest -q`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 ## Task Status
 
 - `task_id`: `TASK-AUTO-002`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `automation-roadmap-continuation-v1`
 - `branch`: `feat/TASK-AUTO-002-roadmap-autopilot-continuation`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-AUTO-002`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `automation-roadmap-continuation-v1`
 - `branch`: `feat/TASK-AUTO-002-roadmap-autopilot-continuation`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 <!-- generated:runlog-meta:end -->

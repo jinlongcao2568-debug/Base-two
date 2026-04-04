@@ -119,6 +119,21 @@ def test_check_repo_fails_when_next_recommended_task_is_missing(tmp_path: Path) 
     assert "next_recommended_task_id" in result.stdout
 
 
+def test_check_repo_fails_when_business_policy_is_invalid(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("business_automation_enabled: false", "business_automation_enabled: true", 1)
+    roadmap = roadmap.replace(
+        "business_automation_scope: stage1_to_stage6",
+        "business_automation_scope: stage1_to_stage9",
+        1,
+    )
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "business_automation_scope" in result.stdout
+
+
 def test_check_repo_fails_when_task_file_status_drifts(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     task_file = repo / "docs/governance/tasks/TASK-BASE-001.md"

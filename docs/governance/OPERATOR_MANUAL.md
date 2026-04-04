@@ -41,10 +41,20 @@ Conflict rule:
   - never selects a successor
 - `python scripts/task_ops.py continue-roadmap`
   - closes a review-ready live task when the worktree starts clean
-  - then resolves the next unique successor from roadmap policy or the approved governance blueprint
-- `python scripts/automation_runner.py once --continue-roadmap`
+  - then resolves the next unique successor from roadmap policy or approved blueprints
+- `python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees`
   - runs the normal repository gates first
-  - then executes `continue-roadmap`
+  - executes `continue-roadmap`
+  - prepares child worktrees and review-bundle closeout when the live task is a `parallel_parent`
+
+## Business Autopilot Limits
+
+- Automatic business successor generation is limited to `stage1-stage6`.
+- The formal implementation truth for business automation is:
+  - baseline authority
+  - formal contracts
+  - the generated task package
+- `stage7-stage9` must not be auto-generated or auto-activated in this phase.
 
 ## Closeout Rules
 
@@ -52,7 +62,7 @@ Conflict rule:
 - Use `python scripts/task_ops.py can-close` before closing.
 - Do not leave the live current task in `done`; either keep it `doing` while work continues or move it to `review` when implementation is complete and no new writes are expected.
 - Do not auto-switch to a successor when the worktree is dirty.
-- Do not auto-generate business implementation tasks from the roadmap in v1.
+- Autonomous child closeout is allowed only after the full review bundle passes.
 
 ## Exception Rule
 

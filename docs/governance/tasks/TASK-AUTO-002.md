@@ -5,12 +5,12 @@
 - `task_id`: `TASK-AUTO-002`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `automation-roadmap-continuation-v1`
 - `branch`: `feat/TASK-AUTO-002-roadmap-autopilot-continuation`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 ## Primary Goals
 
@@ -67,23 +67,23 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `review`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-AUTO-002-roadmap-autopilot-continuation`
-- `updated_at`: `2026-04-04T22:26:50+08:00`
+- `updated_at`: `2026-04-04T23:15:26+08:00`
 <!-- generated:task-meta:end -->

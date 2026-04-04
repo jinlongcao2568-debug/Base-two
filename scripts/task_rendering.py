@@ -23,49 +23,59 @@ from governance_lib import (
 
 def render_list(items: list[str]) -> str:
     if not items:
-        return "- 待补充"
+        return "- to-be-filled"
     return "\n".join(f"- `{item}`" for item in items)
+
+
+def render_optional_section(heading: str, items: list[str] | None) -> str:
+    if not items:
+        return ""
+    return f"\n## {heading}\n\n{render_list(items)}\n"
 
 
 def render_task_markdown(task: dict) -> str:
     return f"""# {task['task_id']} {task['title']}
 
-## 任务基线
+## Task Baseline
 
-- 任务编号：`{task['task_id']}`
-- 任务类型：`{task['task_kind']}`
-- 执行模式：`{task['execution_mode']}`
-- 当前状态：`{task['status']}`
-- 所属阶段：`{task['stage']}`
-- 任务分支：`{task['branch']}`
-- 任务大小：`{task['size_class']}`
-- 自动化模式：`{task['automation_mode']}`
-- 拓扑：`{task['topology']}`
+- `task_id`: `{task['task_id']}`
+- `task_kind`: `{task['task_kind']}`
+- `execution_mode`: `{task['execution_mode']}`
+- `status`: `{task['status']}`
+- `stage`: `{task['stage']}`
+- `branch`: `{task['branch']}`
+- `size_class`: `{task['size_class']}`
+- `automation_mode`: `{task['automation_mode']}`
+- `worker_state`: `{task['worker_state']}`
+- `topology`: `{task['topology']}`
 
-## 主目标
+## Primary Goals
 
-- 待补充
+- to-be-filled
 
-## 不做什么
+## Explicitly Not Doing
 
-- 待补充
+- to-be-filled
 
-## 允许修改目录
+## Allowed Dirs
 
 {render_list(task.get('allowed_dirs', []))}
 
-## 拟修改文件清单
+## Planned Write Paths
 
 {render_list(task.get('planned_write_paths', []))}
 
-## planned test paths
+## Planned Test Paths
 
 {render_list(task.get('planned_test_paths', []))}
 
-## reserved paths
+## Required Tests
 
-{render_list(task.get('reserved_paths', []))}
+{render_list(task.get('required_tests', []))}
 
+## Reserved Paths
+
+{render_list(task.get('reserved_paths', []))}{render_optional_section('Authority Inputs', task.get('authority_inputs'))}{render_optional_section('Contract Inputs', task.get('contract_inputs'))}{render_optional_section('Module Scope', task.get('module_scope'))}{render_optional_section('Review Policy', task.get('review_policy'))}
 ## Narrative Assertions
 
 {render_narrative_assertions_block(task)}
@@ -75,21 +85,21 @@ def render_task_markdown(task: dict) -> str:
 def render_runlog_markdown(task: dict) -> str:
     return f"""# {task['task_id']} RUNLOG
 
-## 任务状态
+## Task Status
 
-- `task_id`：`{task['task_id']}`
-- `status`：`{task['status']}`
-- `stage`：`{task['stage']}`
-- `branch`：`{task['branch']}`
-- `worker_state`：`{task['worker_state']}`
+- `task_id`: `{task['task_id']}`
+- `status`: `{task['status']}`
+- `stage`: `{task['stage']}`
+- `branch`: `{task['branch']}`
+- `worker_state`: `{task['worker_state']}`
 
-## 执行记录
+## Execution Log
 
-- `{iso_now()}`：创建任务包
+- `{iso_now()}`: task package created
 
-## 测试记录
+## Test Log
 
-- 待补充
+- to-be-filled
 
 ## Narrative Assertions
 
@@ -125,7 +135,11 @@ def update_current_task_if_active(root: Path, task: dict, next_action: str) -> N
 def enforce_execution_split_guards(registry: dict, task: dict) -> None:
     if task["task_kind"] != "execution" or not task.get("parent_task_id"):
         return
-    siblings = [item for item in registry.get("tasks", []) if item.get("parent_task_id") == task["parent_task_id"] and item["task_kind"] == "execution"]
+    siblings = [
+        item
+        for item in registry.get("tasks", [])
+        if item.get("parent_task_id") == task["parent_task_id"] and item["task_kind"] == "execution"
+    ]
     errors = [message for message in collect_split_errors(siblings) if task["task_id"] in message]
     if errors:
         task["status"] = "blocked"
@@ -152,7 +166,20 @@ def upsert_coordination_entry(worktrees: dict, task: dict, root: Path) -> None:
             entry["status"] = "paused"
     current_entry = worktree_map(worktrees).get(task["task_id"])
     if current_entry is None:
-        entries.append({"task_id": task["task_id"], "work_mode": "coordination", "parent_task_id": task.get("parent_task_id"), "branch": task["branch"], "path": display_path(root), "status": "active", "cleanup_state": "not_needed", "cleanup_attempts": 0, "last_cleanup_error": None, "worker_owner": "coordinator"})
+        entries.append(
+            {
+                "task_id": task["task_id"],
+                "work_mode": "coordination",
+                "parent_task_id": task.get("parent_task_id"),
+                "branch": task["branch"],
+                "path": display_path(root),
+                "status": "active",
+                "cleanup_state": "not_needed",
+                "cleanup_attempts": 0,
+                "last_cleanup_error": None,
+                "worker_owner": "coordinator",
+            }
+        )
         return
     current_entry["status"] = "active"
     current_entry["branch"] = task["branch"]
@@ -161,10 +188,24 @@ def upsert_coordination_entry(worktrees: dict, task: dict, root: Path) -> None:
     current_entry["worker_owner"] = "coordinator"
 
 
-def persist_activation_state(root: Path, registry: dict, worktrees: dict, task: dict, roadmap_frontmatter: dict, roadmap_body: str, touched_tasks: list[str]) -> None:
+def persist_activation_state(
+    root: Path,
+    registry: dict,
+    worktrees: dict,
+    task: dict,
+    roadmap_frontmatter: dict,
+    roadmap_body: str,
+    touched_tasks: list[str],
+) -> None:
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "按任务包推进当前任务；如需切换，先保持工作树干净。"))
+    dump_yaml(
+        root / CURRENT_TASK_FILE,
+        build_current_task_payload(
+            task,
+            "Implement the live task package and keep branch/control-plane state aligned.",
+        ),
+    )
     roadmap_frontmatter["current_task_id"] = task["task_id"]
     roadmap_frontmatter["current_phase"] = task["stage"]
     write_roadmap(root, roadmap_frontmatter, roadmap_body)
@@ -185,8 +226,8 @@ def resolve_query_task(root: Path, task_id: str | None) -> tuple[dict, dict, dic
 def record_blocked_split(root: Path, registry: dict, task: dict) -> None:
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    update_current_task_if_active(root, task, "任务 blocked；等待人工处理边界冲突。")
-    append_runlog_bullets(root, task, "风险与阻塞", [f"`{iso_now()}`：{task['blocked_reason']}"])
+    update_current_task_if_active(root, task, "Task blocked; waiting for manual scope-conflict resolution.")
+    append_runlog_bullets(root, task, "Risk and Blockers", [f"`{iso_now()}`: {task['blocked_reason']}"])
     sync_task_artifacts(root, registry, [task["task_id"]])
 
 

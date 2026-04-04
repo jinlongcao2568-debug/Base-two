@@ -4,6 +4,12 @@ import argparse
 import re
 from typing import Any
 
+from business_autopilot import (
+    BUSINESS_AUTOPILOT_CAPABILITY_ID,
+    build_business_successor_round,
+    capability_is_open,
+    load_business_policy,
+)
 from governance_lib import (
     GovernanceError,
     branch_exists,
@@ -71,6 +77,8 @@ def _load_continuation_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
         raise GovernanceError("roadmap priority_order must not contain duplicates")
     if not isinstance(policy["business_automation_enabled"], bool):
         raise GovernanceError("roadmap business_automation_enabled must be a boolean")
+    if policy["business_automation_enabled"]:
+        load_business_policy(frontmatter)
     return policy
 
 
@@ -267,6 +275,7 @@ def _build_generated_task(registry: dict[str, Any], blueprint: dict[str, Any], c
 
 
 def _resolve_generated_successor(
+    root,
     registry: dict[str, Any],
     capability_map: dict[str, Any],
     task_policy: dict[str, Any],
@@ -278,13 +287,23 @@ def _resolve_generated_successor(
     for gap_type in policy["priority_order"]:
         if gap_type == "business_automation" and not policy["business_automation_enabled"]:
             continue
-        if gap_type != "governance_automation" or not _autopilot_gap_open(capability_map):
-            continue
-        blueprint = _find_blueprint(task_policy, AUTOPILOT_BLUEPRINT_ID)
-        task = _build_generated_task(registry, blueprint, current_task_id)
-        registry.setdefault("tasks", []).append(task)
-        _mark_capability_in_progress(capability_map)
-        return task
+        if gap_type == "governance_automation" and _autopilot_gap_open(capability_map):
+            blueprint = _find_blueprint(task_policy, AUTOPILOT_BLUEPRINT_ID)
+            task = _build_generated_task(registry, blueprint, current_task_id)
+            registry.setdefault("tasks", []).append(task)
+            _mark_capability_in_progress(capability_map)
+            return task
+        if gap_type == "business_automation" and not capability_is_open(
+            capability_map, BUSINESS_AUTOPILOT_CAPABILITY_ID
+        ):
+            generated = build_business_successor_round(root, registry, task_policy)
+            if generated is None:
+                continue
+            parent_task, child_tasks, _ = generated
+            parent_task["depends_on_task_ids"] = [current_task_id]
+            registry.setdefault("tasks", []).append(parent_task)
+            registry.setdefault("tasks", []).extend(child_tasks)
+            return parent_task
     return None
 
 
@@ -337,6 +356,7 @@ def _close_review_task_if_needed(root, current_task: dict[str, Any], worktrees: 
 
 
 def _resolve_roadmap_successor(
+    root,
     registry: dict[str, Any],
     capability_map: dict[str, Any],
     task_policy: dict[str, Any],
@@ -348,6 +368,7 @@ def _resolve_roadmap_successor(
     if successor is not None:
         return successor, "explicit"
     successor = _resolve_generated_successor(
+        root,
         registry,
         capability_map,
         task_policy,
@@ -377,6 +398,13 @@ def _activate_successor(
     if current_task["task_id"] not in touched_task_ids:
         touched_task_ids.append(current_task["task_id"])
     _activate_task(successor)
+    update_task_file(root, successor)
+    update_runlog_file(root, successor)
+    for child_task_id in successor.get("child_task_ids", []):
+        child_task = tasks_by_id[child_task_id]
+        update_task_file(root, child_task)
+        update_runlog_file(root, child_task)
+        touched_task_ids.append(child_task_id)
     upsert_coordination_entry(worktrees, successor, root)
     frontmatter["next_recommended_task_id"] = successor["task_id"]
     _persist_activation(
@@ -444,6 +472,7 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
     frontmatter, body = _read_roadmap_state(root)
     _close_review_task_if_needed(root, current_task, worktrees)
     successor, source = _resolve_roadmap_successor(
+        root,
         registry,
         capability_map,
         task_policy,

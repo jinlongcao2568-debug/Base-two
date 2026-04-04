@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import yaml
 
+from business_autopilot import load_business_policy
 from governance_lib import (
     CURRENT_TASK_FILE,
     EXECUTION_CONTEXT_FILE,
@@ -130,6 +131,8 @@ def validate_roadmap_alignment(root, active_task: dict, tasks_by_id: dict[str, d
         raise GovernanceError("roadmap priority_order must not contain duplicates")
     if not isinstance(roadmap_frontmatter.get("business_automation_enabled"), bool):
         raise GovernanceError("roadmap business_automation_enabled must be a boolean")
+    if roadmap_frontmatter.get("business_automation_enabled"):
+        load_business_policy(roadmap_frontmatter)
     next_task_id = roadmap_frontmatter.get("next_recommended_task_id")
     if next_task_id is not None and next_task_id not in tasks_by_id:
         raise GovernanceError("roadmap next_recommended_task_id missing from registry")

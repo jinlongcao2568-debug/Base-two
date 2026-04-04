@@ -62,7 +62,6 @@ def prepare_parallel_worktrees(root: Path, current_task_id: str, worktree_root: 
 
 def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, continue_roadmap: bool) -> int:
     current_task = load_current_task(root)
-    gate = runner_action_gate(current_task)
     results = [
         python_script(root, "check_repo.py"),
         python_script(root, "check_hygiene.py"),
@@ -78,6 +77,17 @@ def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, 
     if exit_code != 0:
         return exit_code
 
+    if continue_roadmap and exit_code == 0:
+        continuation = task_ops(root, "continue-roadmap")
+        if continuation.stdout.strip():
+            print(continuation.stdout.strip())
+        if continuation.stderr.strip():
+            print(continuation.stderr.strip())
+        if continuation.returncode != 0:
+            exit_code = continuation.returncode
+        current_task = load_current_task(root)
+
+    gate = runner_action_gate(current_task)
     if prepare_worktrees and current_task["topology"] == "parallel_parent" and gate["prepare_worktrees"]:
         created = prepare_parallel_worktrees(root, current_task["current_task_id"], worktree_root)
         for task_id in created:
@@ -95,15 +105,6 @@ def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, 
             exit_code = result.returncode
     elif current_task["topology"] == "parallel_parent":
         print(f"[SKIP] auto-close-children skipped: {gate['reason']}")
-
-    if continue_roadmap and exit_code == 0:
-        continuation = task_ops(root, "continue-roadmap")
-        if continuation.stdout.strip():
-            print(continuation.stdout.strip())
-        if continuation.stderr.strip():
-            print(continuation.stderr.strip())
-        if continuation.returncode != 0:
-            exit_code = continuation.returncode
     cleanup = task_ops(root, "cleanup-orphans")
     if cleanup.stdout.strip():
         print(cleanup.stdout.strip())

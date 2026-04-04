@@ -1,5 +1,5 @@
 version: '1.1'
-updated_at: '2026-04-04T19:20:00+08:00'
+updated_at: '2026-04-04T23:20:00+08:00'
 size_class_gates:
   micro:
     preflight:
@@ -100,6 +100,28 @@ modules:
         - pytest tests/contracts -q
         - pytest tests/automation -q
         - pytest -q
+  stage1_orchestration:
+    micro:
+      required_tests:
+        - pytest tests/stage1 -q
+    standard:
+      required_tests:
+        - pytest tests/stage1 -q
+    heavy:
+      required_tests:
+        - pytest tests/stage1 -q
+        - pytest -q
+  stage2_ingestion:
+    micro:
+      required_tests:
+        - pytest tests/stage2 -q
+    standard:
+      required_tests:
+        - pytest tests/stage2 -q
+    heavy:
+      required_tests:
+        - pytest tests/stage2 -q
+        - pytest -q
   stage3_parsing:
     micro:
       required_tests:
@@ -124,6 +146,19 @@ modules:
     heavy:
       required_tests:
         - pytest tests/stage4 -q
+        - pytest tests/integration -q
+        - pytest -q
+  stage5_reporting:
+    micro:
+      required_tests:
+        - pytest tests/stage5 -q
+    standard:
+      required_tests:
+        - pytest tests/stage5 -q
+        - pytest tests/integration -q
+    heavy:
+      required_tests:
+        - pytest tests/stage5 -q
         - pytest tests/integration -q
         - pytest -q
   stage6_facts:
@@ -163,5 +198,18 @@ modules:
     heavy:
       required_tests:
         - pytest tests/stage8 -q
+        - pytest tests/integration -q
+        - pytest -q
+  stage9_delivery:
+    micro:
+      required_tests:
+        - pytest tests/stage9 -q
+    standard:
+      required_tests:
+        - pytest tests/stage9 -q
+        - pytest tests/integration -q
+    heavy:
+      required_tests:
+        - pytest tests/stage9 -q
         - pytest tests/integration -q
         - pytest -q

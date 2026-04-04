@@ -71,6 +71,26 @@ def mark_review_ready(repo: Path) -> None:
     git_commit_all(repo, "prepare roadmap continuation")
 
 
+def enable_business_autopilot(repo: Path) -> None:
+    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
+    for capability in capability_map["capabilities"]:
+        if capability["capability_id"] in {"roadmap_autopilot_continuation", "stage1_to_stage6_business_automation"}:
+            capability["status"] = "implemented"
+    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("business_automation_enabled: false", "business_automation_enabled: true", 1)
+    roadmap = roadmap.replace("  stage1: not_established", "  stage1: bootstrap_required", 1)
+    roadmap = roadmap.replace("  stage2: not_established", "  stage2: bootstrap_required", 1)
+    roadmap = roadmap.replace("  stage3: not_established", "  stage3: implementation_ready", 1)
+    roadmap = roadmap.replace("  stage4: not_established", "  stage4: implementation_ready", 1)
+    roadmap = roadmap.replace("  stage5: not_established", "  stage5: bootstrap_required", 1)
+    roadmap = roadmap.replace("  stage6: not_established", "  stage6: implementation_ready", 1)
+    roadmap = roadmap.replace("  stage7: not_established", "  stage7: deferred_manual", 1)
+    roadmap = roadmap.replace("  stage8: not_established", "  stage8: deferred_manual", 1)
+    roadmap = roadmap.replace("  stage9: not_established", "  stage9: deferred_manual", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+
+
 def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
@@ -362,3 +382,83 @@ def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
     assert result.returncode == 1
     assert "no successor" in result.stdout
+
+
+def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    enable_business_autopilot(repo)
+    mark_review_ready(repo)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap", "--prepare-worktrees")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    parent = next(task for task in registry["tasks"] if task["task_id"] == current_task["current_task_id"])
+    children = [task for task in registry["tasks"] if task.get("parent_task_id") == parent["task_id"]]
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert parent["topology"] == "parallel_parent"
+    assert len(children) == 1
+    child_entry = next(entry for entry in worktrees["entries"] if entry["task_id"] == children[0]["task_id"])
+    assert child_entry["status"] == "active"
+    assert "[OK] prepared worktree for" in result.stdout
+
+
+def test_runner_blocks_lane_when_review_bundle_fails(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    current_task["size_class"] = "heavy"
+    current_task["topology"] = "parallel_parent"
+    current_task["automation_mode"] = "autonomous"
+    current_task["required_tests"] = ["pytest tests/base -q"]
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"][0]["size_class"] = "heavy"
+    registry["tasks"][0]["topology"] = "parallel_parent"
+    registry["tasks"][0]["automation_mode"] = "autonomous"
+    registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
+
+    create = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-FAIL",
+        "--title",
+        "execution fail",
+        "--stage",
+        "parallel-stage",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--parent-task-id",
+        "TASK-BASE-001",
+        "--size-class",
+        "standard",
+        "--required-tests",
+        "pytest tests/missing -q",
+        "--planned-write-paths",
+        "src/exec_fail/",
+    )
+    assert create.returncode == 0, create.stdout + create.stderr
+    finish = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-EXEC-FAIL",
+        "--summary",
+        "candidate ready",
+        "--tests",
+        "pytest tests/missing -q",
+    )
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-FAIL")
+
+    assert result.returncode == 1
+    assert child["status"] == "blocked"
+    assert "review_bundle_failed" in child["blocked_reason"]

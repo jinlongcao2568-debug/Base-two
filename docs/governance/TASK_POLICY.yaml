@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-04T19:45:00+08:00'
+updated_at: '2026-04-04T23:20:00+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 operator_source: docs/governance/OPERATOR_MANUAL.md
 size_classes:
@@ -34,10 +34,12 @@ stop_conditions:
   - hygiene hard failure
   - integration chain failure on authority-critical paths
   - branch mismatch for the live current task
+  - review bundle failure on an autonomous execution child
 closeout_rules:
   - required_tests must appear in the runlog
   - task status must not remain doing after formal closeout
   - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied
+  - child execution auto-close requires the full review bundle to pass inside the execution worktree
 task_blueprints:
   - blueprint_id: roadmap_autopilot_continuation
     title: 路线图自动推进编排层
@@ -68,3 +70,58 @@ task_blueprints:
       - pytest tests/automation -q
       - pytest -q
     branch_template: feat/{task_id}-roadmap-autopilot-continuation
+  - blueprint_id: business_parallel_parent_stage1_to_stage6
+    title: Stage1-Stage6 业务自动推进轮次
+    task_kind: coordination
+    execution_mode: shared_coordination
+    stage: business-stage1-stage6-round
+    size_class: heavy
+    automation_mode: autonomous
+    topology: parallel_parent
+    allowed_dirs:
+      - docs/governance/
+      - scripts/
+      - tests/governance/
+      - tests/automation/
+      - docs/contracts/
+      - tests/integration/
+    planned_write_paths:
+      - docs/governance/
+      - scripts/
+      - tests/governance/
+      - tests/automation/
+      - docs/contracts/
+      - tests/integration/
+    planned_test_paths:
+      - tests/governance/
+      - tests/automation/
+      - tests/contracts/
+      - tests/integration/
+    required_tests:
+      - python scripts/check_authority_alignment.py
+      - python scripts/validate_contracts.py
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+      - pytest tests/contracts -q
+      - pytest tests/integration -q
+    branch_template: feat/{task_id}-stage1-stage6-business-round
+  - blueprint_id: business_stage_bootstrap_execution
+    title: Stage bootstrap lane
+    task_kind: execution
+    execution_mode: isolated_worktree
+    stage: business-bootstrap-lane
+    size_class: standard
+    automation_mode: autonomous
+    topology: single_worker
+    branch_template: feat/{task_id}-{module_slug}-bootstrap
+  - blueprint_id: business_stage_implementation_execution
+    title: Stage implementation lane
+    task_kind: execution
+    execution_mode: isolated_worktree
+    stage: business-implementation-lane
+    size_class: standard
+    automation_mode: autonomous
+    topology: single_worker
+    branch_template: feat/{task_id}-{module_slug}-implementation

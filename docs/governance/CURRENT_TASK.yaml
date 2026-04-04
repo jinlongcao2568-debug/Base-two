@@ -1,39 +1,48 @@
-current_task_id: TASK-AUTO-002
-title: 路线图自动推进编排层
+current_task_id: TASK-AUTO-003
+title: Stage1-Stage6 业务自动推进与并行评审层
 status: review
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: automation-roadmap-continuation-v1
-branch: feat/TASK-AUTO-002-roadmap-autopilot-continuation
+stage: automation-business-autopilot-stage1-stage6-v1
+branch: feat/TASK-AUTO-003-business-autopilot-stage1-stage6
 size_class: heavy
 automation_mode: manual
 worker_state: review_pending
 blocked_reason: null
-last_reported_at: '2026-04-04T22:26:50+08:00'
+last_reported_at: '2026-04-04T23:49:40+08:00'
 topology: single_worker
 allowed_dirs:
 - docs/governance/
 - scripts/
 - tests/governance/
 - tests/automation/
+- docs/contracts/
+- tests/integration/
 reserved_paths: []
 planned_write_paths:
 - docs/governance/
 - scripts/
 - tests/governance/
 - tests/automation/
+- docs/contracts/
+- tests/integration/
 planned_test_paths:
 - tests/governance/
 - tests/automation/
+- tests/contracts/
+- tests/integration/
 required_tests:
 - python scripts/check_authority_alignment.py
+- python scripts/validate_contracts.py
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
 - pytest tests/governance -q
 - pytest tests/automation -q
+- pytest tests/contracts -q
+- pytest tests/integration -q
 - pytest -q
-task_file: docs/governance/tasks/TASK-AUTO-002.md
-runlog_file: docs/governance/runlogs/TASK-AUTO-002-RUNLOG.md
-next_action: worker 已完成候选交付；等待自动收口或评审。
-updated_at: '2026-04-04T22:26:50+08:00'
+task_file: docs/governance/tasks/TASK-AUTO-003.md
+runlog_file: docs/governance/runlogs/TASK-AUTO-003-RUNLOG.md
+next_action: worker 宸插畬鎴愬€欓€変氦浠橈紱绛夊緟鑷姩鏀跺彛鎴栬瘎瀹°€?
+updated_at: '2026-04-04T23:49:40+08:00'

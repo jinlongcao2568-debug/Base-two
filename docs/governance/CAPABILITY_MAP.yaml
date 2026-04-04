@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-04T19:45:00+08:00'
+updated_at: '2026-04-04T23:20:00+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 capabilities:
   - capability_id: governance_control_plane
@@ -27,6 +27,21 @@ capabilities:
     scripts:
       - scripts/task_ops.py
       - scripts/task_continuation_ops.py
+      - scripts/automation_runner.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+  - capability_id: stage1_to_stage6_business_automation
+    status: implemented
+    source_of_truth:
+      - docs/governance/DEVELOPMENT_ROADMAP.md
+      - docs/governance/TASK_POLICY.yaml
+      - docs/governance/MODULE_MAP.yaml
+      - docs/governance/TEST_MATRIX.yaml
+    scripts:
+      - scripts/business_autopilot.py
+      - scripts/task_continuation_ops.py
+      - scripts/task_worker_ops.py
       - scripts/automation_runner.py
     tests:
       - pytest tests/governance -q
@@ -81,7 +96,7 @@ capabilities:
       - pytest tests/stage6 -q
       - pytest tests/integration -q
   - capability_id: stage7_to_stage9_business_automation
-    status: not_implemented
+    status: deferred_manual
     source_of_truth:
       - docs/product/MVP_SCOPE.md
       - docs/governance/DEVELOPMENT_ROADMAP.md

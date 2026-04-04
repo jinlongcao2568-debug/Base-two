@@ -248,6 +248,7 @@ def test_worker_state_transitions(tmp_path: Path) -> None:
 
 def test_auto_close_children_closes_review_tasks(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-001"
     create_parent = run_python(
         TASK_OPS_SCRIPT,
         repo,
@@ -287,6 +288,15 @@ def test_auto_close_children_closes_review_tasks(tmp_path: Path) -> None:
     )
     assert create_parent.returncode == 0
     assert create_child.returncode == 0
+    create_worktree = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worktree-create",
+        "TASK-EXEC-001",
+        "--path",
+        str(destination),
+    )
+    assert create_worktree.returncode == 0, create_worktree.stdout + create_worktree.stderr
     finished = run_python(
         TASK_OPS_SCRIPT,
         repo,

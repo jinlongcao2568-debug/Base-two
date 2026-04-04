@@ -2,11 +2,11 @@
 
 ## Scope
 
-- The live automation layer does not auto-invent business implementation work.
-- The live automation layer now supports two continuation semantics:
+- The live automation layer now supports:
   - `continue-current`
   - `continue-roadmap`
-- v1 roadmap continuation may only auto-advance governance scheduling work. It must not auto-select stage7-stage9 business work.
+  - dependency-aware `stage1-stage6` business successor generation
+- The live automation layer must not auto-generate `stage7-stage9` business work.
 
 ## Continuation Semantics
 
@@ -29,14 +29,14 @@
 - The roadmap frontmatter is the only live continuation policy source.
 - Resolution order is:
   1. use `next_recommended_task_id` when it exists and is valid;
-  2. otherwise generate a successor only when roadmap policy allows it and the highest-priority gap is a governance automation gap;
-  3. otherwise stop with a no-successor report.
-- A successor is valid only when:
-  - it exists in `TASK_REGISTRY.yaml` or can be generated from `TASK_POLICY.yaml`;
-  - it is unique among open top-level coordination tasks;
-  - its dependencies are already satisfied;
-  - its `allowed_dirs`, `planned_write_paths`, and `required_tests` are all explicit;
-  - it does not remain blocked or already done.
+  2. otherwise generate a governance successor when the governance automation gap is still open;
+  3. otherwise generate a `stage1-stage6` business successor round when business automation is enabled and the business autopilot capability is implemented;
+  4. otherwise stop with a no-successor report.
+- A generated business successor round must:
+  - stay within `stage1-stage6`;
+  - obey `MODULE_MAP.yaml` dependency order;
+  - select at most 2 child execution lanes;
+  - declare authority inputs, contract inputs, module scope, and review policy on each child task.
 
 ## Branch Switching Rules
 
@@ -46,15 +46,27 @@
   - existing branch: `git switch`
   - missing branch: `git switch -c`
 
+## Review Bundle Rules
+
+- Autonomous child closeout is allowed only after the review bundle passes inside the execution worktree.
+- The review bundle must include:
+  - `python scripts/check_repo.py`
+  - `python scripts/check_hygiene.py`
+  - `python scripts/validate_contracts.py` when the child touches contracts or formal objects
+  - module tests from `TEST_MATRIX.yaml`
+  - authority-critical integration tests when the child touches the live stage chain
+- Review bundle failure must block only the failing lane unless every remaining lane is also closed or blocked.
+
 ## Automation Runner
 
-- `python scripts/automation_runner.py once --continue-roadmap` now means:
+- `python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees` now means:
   1. run `check_repo.py`;
   2. run `check_hygiene.py`;
-  3. run the existing worktree cleanup logic;
-  4. call `task_ops continue-roadmap`.
+  3. execute `continue-roadmap` when requested;
+  4. prepare worktrees for the live `parallel_parent` task when allowed by automation mode;
+  5. run `auto-close-children` for review-ready child lanes when allowed by automation mode;
+  6. run the existing orphan cleanup logic.
 - The runner still honors `manual`, `assisted`, and `autonomous` gating for parallel worktree preparation and child closeout.
-- `--continue-roadmap` does not bypass any existing gate.
 
 ## Stop Conditions
 
@@ -65,3 +77,4 @@
 - multiple open top-level coordination successors
 - unmet successor dependency
 - incomplete successor boundary declaration
+- review bundle failure on an autonomous child lane
