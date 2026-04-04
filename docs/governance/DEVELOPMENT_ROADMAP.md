@@ -1,23 +1,23 @@
 ---
-current_phase: automation-business-autopilot-stage1-stage6-v1
-current_task_id: TASK-AUTO-003
+current_phase: governance-test-maintainability-hardening-v1
+current_task_id: TASK-GOV-002
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
 branch_switch_policy: create_or_switch_if_clean
 priority_order:
-  - governance_automation
-  - authority_chain
-  - business_automation
+- governance_automation
+- authority_chain
+- business_automation
 business_automation_enabled: true
 business_automation_scope: stage1_to_stage6
 parallel_strategy: dependency_aware_disjoint_writes
 max_parallel_workers: 2
 spec_source_policy: baseline_contracts_task_package
 business_gap_priority:
-  - bootstrap_required
-  - implementation_ready
-  - integration_expansion
+- bootstrap_required
+- implementation_ready
+- integration_expansion
 stage_establishment:
   stage1: bootstrap_required
   stage2: bootstrap_required
@@ -35,7 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-AUTO-003`: extend the live control plane so automation can generate dependency-aware `stage1-stage6` business successors, parallel child tasks, and review-bundle closeout.
+- `TASK-GOV-002`: reduce the current automation/governance test warning hotspots by introducing reusable scenario builders and a hygiene regression guard.
 
 ## Recently Closed
 
@@ -45,23 +45,23 @@ automation_foundation: in_progress
 
 ## Current Phase Goal
 
-- Add machine-readable `stage1-stage6` business automation policy to the live roadmap.
-- Let automation resolve business successors from real stage gaps, module boundaries, and dependency order.
-- Reuse the existing `parallel_parent + worktree + auto-close-children` base for business child execution and review-bundle closeout.
+- Remove the current automation/governance test hotspot warnings without loosening hygiene thresholds.
+- Consolidate repetitive task/worktree setup behind reusable scenario builders so new review-bundle and continuation tests do not keep growing long setup bodies.
+- Add a hygiene regression guard that keeps the current hotspot files out of future warning output.
 
 ## Explicitly Out Of Scope
 
-- Do not auto-generate or auto-activate `stage7-stage9` business tasks.
-- Do not relax the clean-worktree requirement before switching or creating a successor branch.
-- Do not create a second task ledger or second roadmap source.
+- Do not change `check_hygiene.py` thresholds or warning semantics.
+- Do not refactor runtime scripts or business implementation code.
+- Do not chase low-value warnings outside the current hotspot test files.
 
 ## Exit Criteria For Current Phase
 
-- `continue-roadmap` can generate a `stage1-stage6` business parent successor when governance successor generation is exhausted.
-- Generated business parents carry dependency-aware child execution tasks with explicit scope, contracts, authority inputs, and review bundle tests.
-- `automation_runner.py once --continue-roadmap --prepare-worktrees` can prepare child worktrees and auto-close only those children whose review bundle passes.
-- `stage7-stage9` remain deferred manual stages in both roadmap policy and generated successor selection.
+- `check_hygiene.py` no longer reports warnings for `tests/automation/test_automation_runner.py`.
+- `check_hygiene.py` no longer reports warnings for `tests/governance/fixture_payloads.py`, `tests/governance/test_check_repo.py`, and `tests/governance/test_task_ops.py`.
+- Governance and automation tests keep passing after scenario-builder extraction and builder-backed assertions.
+- A dedicated regression test fails if those hotspot files reappear in future hygiene warning output.
 
 ## Next Candidate
 
-- After this phase, roadmap continuation may auto-generate only `stage1-stage6` business successor rounds; `stage7-stage9` stay manual until a separate downstream blueprint phase lands.
+- After this phase closes, roadmap continuation can resume `stage1-stage6` business successor generation on top of a cleaner automation/governance test base.

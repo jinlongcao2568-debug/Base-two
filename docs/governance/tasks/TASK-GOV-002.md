@@ -5,20 +5,24 @@
 - `task_id`: `TASK-GOV-002`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-test-maintainability-hardening-v1`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 ## Primary Goals
 
-- to-be-filled
+- Remove the current hygiene warning hotspots in automation/governance tests without changing runtime behavior.
+- Introduce stable scenario builders and assertion helpers so repeated task/worktree setup does not keep inflating individual test functions.
+- Add a regression guard that keeps the current hotspot files out of future `check_hygiene.py` warning output.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not change `scripts/check_hygiene.py` thresholds.
+- Do not refactor runtime scripts or business implementation code.
+- Do not chase low-value warnings outside the current hotspot files.
 
 ## Allowed Dirs
 
@@ -39,6 +43,7 @@
 
 ## Required Tests
 
+- `python scripts/check_authority_alignment.py`
 - `python scripts/check_repo.py`
 - `python scripts/check_hygiene.py`
 - `pytest tests/governance/test_check_hygiene.py -q`
@@ -48,27 +53,29 @@
 
 ## Reserved Paths
 
-- to-be-filled
+- `src/`
+- `docs/contracts/`
+- `tests/integration/`
+- `scripts/check_hygiene.py`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `review`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
-- `reserved_paths`: `[]`
+- `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
-- `updated_at`: `2026-04-05T07:06:56+08:00`
+- `updated_at`: `2026-04-05T07:21:48+08:00`
 <!-- generated:task-meta:end -->

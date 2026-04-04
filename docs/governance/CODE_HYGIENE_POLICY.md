@@ -66,3 +66,9 @@
 
 - 第一版不会自动重构超长文件
 - 第一版不会自动判断复杂设计层面的职责拆分，只提供硬阈值和明显越界检测
+
+## 测试侧执行口径
+
+- automation/governance 场景测试优先提取 builder 或 helper，避免把 registry、worktree 和 review bundle setup 直接堆进单个测试函数。
+- 不允许通过放宽 `check_hygiene.py` 阈值来消除测试 warning。
+- 当前热点文件采用 `warning 清零 + 防回归测试` 策略；后续若重新出现同类 warning，优先抽取场景 builder，而不是接受长期噪音。

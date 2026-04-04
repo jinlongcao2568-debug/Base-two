@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .helpers import CHECK_REPO_SCRIPT, TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
+from .scenario_builders import create_cleanup_orphan, create_review_ready_child
 
 
 def test_pause_moves_active_task_to_paused(tmp_path: Path) -> None:
@@ -248,7 +249,6 @@ def test_worker_state_transitions(tmp_path: Path) -> None:
 
 def test_auto_close_children_closes_review_tasks(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-001"
     create_parent = run_python(
         TASK_OPS_SCRIPT,
         repo,
@@ -266,48 +266,17 @@ def test_auto_close_children_closes_review_tasks(tmp_path: Path) -> None:
         "src/base/",
         "tests/base/",
     )
-    create_child = run_python(
-        TASK_OPS_SCRIPT,
-        repo,
-        "new",
-        "TASK-EXEC-001",
-        "--title",
-        "execution task",
-        "--stage",
-        "parallel-stage",
-        "--task-kind",
-        "execution",
-        "--execution-mode",
-        "isolated_worktree",
-        "--parent-task-id",
-        "TASK-PARENT-001",
-        "--required-tests",
-        "pytest tests/base -q",
-        "--planned-write-paths",
-        "src/exec1/",
-    )
     assert create_parent.returncode == 0
-    assert create_child.returncode == 0
-    create_worktree = run_python(
-        TASK_OPS_SCRIPT,
+    create_review_ready_child(
         repo,
-        "worktree-create",
         "TASK-EXEC-001",
-        "--path",
-        str(destination),
+        write_path="src/exec1/",
+        title="execution task",
+        parent_task_id="TASK-PARENT-001",
+        summary="done",
+        tmp_path=tmp_path,
+        with_worktree=True,
     )
-    assert create_worktree.returncode == 0, create_worktree.stdout + create_worktree.stderr
-    finished = run_python(
-        TASK_OPS_SCRIPT,
-        repo,
-        "worker-finish",
-        "TASK-EXEC-001",
-        "--summary",
-        "done",
-        "--tests",
-        "pytest tests/base -q",
-    )
-    assert finished.returncode == 0
     close = run_python(TASK_OPS_SCRIPT, repo, "auto-close-children", "TASK-PARENT-001")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-001")
@@ -412,54 +381,7 @@ def test_cleanup_orphans_marks_blocked_when_remove_fails(tmp_path: Path) -> None
     repo = init_governance_repo(tmp_path)
     blocked_dir = tmp_path / "blocked.worktree"
     blocked_dir.mkdir()
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"].append(
-        {
-            "task_id": "TASK-EXEC-009",
-            "title": "closed child",
-            "status": "done",
-            "task_kind": "execution",
-            "execution_mode": "isolated_worktree",
-            "parent_task_id": "TASK-BASE-001",
-            "stage": "pilot",
-            "branch": "feat/TASK-EXEC-009",
-            "size_class": "standard",
-            "automation_mode": "autonomous",
-            "worker_state": "completed",
-            "blocked_reason": None,
-            "last_reported_at": "2026-04-04T00:00:00+08:00",
-            "topology": "single_worker",
-            "allowed_dirs": ["src/exec9/"],
-            "reserved_paths": [],
-            "planned_write_paths": ["src/exec9/"],
-            "planned_test_paths": [],
-            "required_tests": [],
-            "task_file": "docs/governance/tasks/TASK-EXEC-009.md",
-            "runlog_file": "docs/governance/runlogs/TASK-EXEC-009-RUNLOG.md",
-            "created_at": "2026-04-04T00:00:00+08:00",
-            "activated_at": "2026-04-04T00:00:00+08:00",
-            "closed_at": "2026-04-04T00:00:00+08:00",
-        }
-    )
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    (repo / "docs/governance/tasks/TASK-EXEC-009.md").write_text("# task\n", encoding="utf-8")
-    (repo / "docs/governance/runlogs/TASK-EXEC-009-RUNLOG.md").write_text("# runlog\n", encoding="utf-8")
-    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
-    worktrees["entries"].append(
-        {
-            "task_id": "TASK-EXEC-009",
-            "work_mode": "execution",
-            "parent_task_id": "TASK-BASE-001",
-            "branch": "feat/TASK-EXEC-009",
-            "path": str(blocked_dir).replace("\\", "/"),
-            "status": "closed",
-            "cleanup_state": "pending",
-            "cleanup_attempts": 0,
-            "last_cleanup_error": None,
-            "worker_owner": "worker-a",
-        }
-    )
-    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    create_cleanup_orphan(repo, blocked_dir)
     result = run_python(TASK_OPS_SCRIPT, repo, "cleanup-orphans")
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
     entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-009")

@@ -56,56 +56,60 @@ def _capability(
     }
 
 
+def _capability_entries() -> list[dict[str, Any]]:
+    return [
+        _capability(
+            "governance_control_plane",
+            "implemented",
+            [
+                "docs/governance/CURRENT_TASK.yaml",
+                "docs/governance/TASK_REGISTRY.yaml",
+                "docs/governance/WORKTREE_REGISTRY.yaml",
+            ],
+            ["scripts/task_ops.py", "scripts/automation_runner.py"],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+        _capability(
+            "roadmap_autopilot_continuation",
+            "not_implemented",
+            [
+                "docs/governance/DEVELOPMENT_ROADMAP.md",
+                "docs/governance/TASK_POLICY.yaml",
+                "docs/governance/CAPABILITY_MAP.yaml",
+            ],
+            [
+                "scripts/task_ops.py",
+                "scripts/task_continuation_ops.py",
+                "scripts/automation_runner.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+        _capability(
+            "stage1_to_stage6_business_automation",
+            "not_implemented",
+            [
+                "docs/governance/DEVELOPMENT_ROADMAP.md",
+                "docs/governance/TASK_POLICY.yaml",
+                "docs/governance/MODULE_MAP.yaml",
+                "docs/governance/TEST_MATRIX.yaml",
+            ],
+            [
+                "scripts/business_autopilot.py",
+                "scripts/task_continuation_ops.py",
+                "scripts/task_worker_ops.py",
+                "scripts/automation_runner.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+    ]
+
+
 def capability_map_payload() -> dict[str, Any]:
     return {
         "version": "1.0",
         "updated_at": "2026-04-04T00:00:00+08:00",
         "authority_source": "docs/product/AUTHORITY_SPEC.md",
-        "capabilities": [
-            _capability(
-                "governance_control_plane",
-                "implemented",
-                [
-                    "docs/governance/CURRENT_TASK.yaml",
-                    "docs/governance/TASK_REGISTRY.yaml",
-                    "docs/governance/WORKTREE_REGISTRY.yaml",
-                ],
-                ["scripts/task_ops.py", "scripts/automation_runner.py"],
-                ["pytest tests/governance -q", "pytest tests/automation -q"],
-            ),
-            _capability(
-                "roadmap_autopilot_continuation",
-                "not_implemented",
-                [
-                    "docs/governance/DEVELOPMENT_ROADMAP.md",
-                    "docs/governance/TASK_POLICY.yaml",
-                    "docs/governance/CAPABILITY_MAP.yaml",
-                ],
-                [
-                    "scripts/task_ops.py",
-                    "scripts/task_continuation_ops.py",
-                    "scripts/automation_runner.py",
-                ],
-                ["pytest tests/governance -q", "pytest tests/automation -q"],
-            ),
-            _capability(
-                "stage1_to_stage6_business_automation",
-                "not_implemented",
-                [
-                    "docs/governance/DEVELOPMENT_ROADMAP.md",
-                    "docs/governance/TASK_POLICY.yaml",
-                    "docs/governance/MODULE_MAP.yaml",
-                    "docs/governance/TEST_MATRIX.yaml",
-                ],
-                [
-                    "scripts/business_autopilot.py",
-                    "scripts/task_continuation_ops.py",
-                    "scripts/task_worker_ops.py",
-                    "scripts/automation_runner.py",
-                ],
-                ["pytest tests/governance -q", "pytest tests/automation -q"],
-            ),
-        ],
+        "capabilities": _capability_entries(),
     }
 
 

@@ -55,3 +55,20 @@ def test_check_hygiene_no_longer_flags_control_plane_hotspots(tmp_path: Path) ->
     assert "scripts/governance_lib.py" not in result.stdout
     assert "scripts/task_ops.py" not in result.stdout
     assert "scripts/validate_contracts.py" not in result.stdout
+
+
+def test_check_hygiene_no_longer_flags_test_hotspot_files(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    result = run_python(
+        CHECK_HYGIENE_SCRIPT,
+        repo,
+        "tests/automation/test_automation_runner.py",
+        "tests/governance/fixture_payloads.py",
+        "tests/governance/test_check_repo.py",
+        "tests/governance/test_task_ops.py",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "tests/automation/test_automation_runner.py" not in result.stdout
+    assert "tests/governance/fixture_payloads.py" not in result.stdout
+    assert "tests/governance/test_check_repo.py" not in result.stdout
+    assert "tests/governance/test_task_ops.py" not in result.stdout

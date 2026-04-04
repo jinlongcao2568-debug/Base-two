@@ -1,48 +1,42 @@
-current_task_id: TASK-AUTO-003
-title: Stage1-Stage6 业务自动推进与并行评审层
-status: done
+current_task_id: TASK-GOV-002
+title: 测试热点 warning 预防性收口
+status: review
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: automation-business-autopilot-stage1-stage6-v1
-branch: feat/TASK-AUTO-003-business-autopilot-stage1-stage6
-size_class: heavy
+stage: governance-test-maintainability-hardening-v1
+branch: feat/TASK-GOV-002-test-maintainability-hardening
+size_class: standard
 automation_mode: manual
-worker_state: completed
+worker_state: review_pending
 blocked_reason: null
-last_reported_at: '2026-04-05T07:06:48+08:00'
+last_reported_at: '2026-04-05T07:17:24+08:00'
 topology: single_worker
 allowed_dirs:
-- docs/governance/
-- scripts/
 - tests/governance/
 - tests/automation/
+- docs/governance/
+reserved_paths:
+- src/
 - docs/contracts/
 - tests/integration/
-reserved_paths: []
+- scripts/check_hygiene.py
 planned_write_paths:
-- docs/governance/
-- scripts/
 - tests/governance/
 - tests/automation/
-- docs/contracts/
-- tests/integration/
+- docs/governance/
 planned_test_paths:
 - tests/governance/
 - tests/automation/
-- tests/contracts/
-- tests/integration/
 required_tests:
 - python scripts/check_authority_alignment.py
-- python scripts/validate_contracts.py
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
+- pytest tests/governance/test_check_hygiene.py -q
 - pytest tests/governance -q
 - pytest tests/automation -q
-- pytest tests/contracts -q
-- pytest tests/integration -q
 - pytest -q
-task_file: docs/governance/tasks/TASK-AUTO-003.md
-runlog_file: docs/governance/runlogs/TASK-AUTO-003-RUNLOG.md
-next_action: 等待显式切换到下一个任务
-updated_at: '2026-04-05T07:06:48+08:00'
+task_file: docs/governance/tasks/TASK-GOV-002.md
+runlog_file: docs/governance/runlogs/TASK-GOV-002-RUNLOG.md
+next_action: worker 宸插畬鎴愬€欓€変氦浠橈紱绛夊緟鑷姩鏀跺彛鎴栬瘎瀹°€?
+updated_at: '2026-04-05T07:17:24+08:00'

@@ -104,7 +104,7 @@
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
-- `reserved_paths`: `[]`
+- `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `updated_at`: `2026-04-04T23:15:26+08:00`
+- `updated_at`: `2026-04-05T07:21:48+08:00`
 <!-- generated:task-meta:end -->

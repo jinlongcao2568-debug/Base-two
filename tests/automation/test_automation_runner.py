@@ -3,12 +3,20 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 HELPERS_PATH = Path(__file__).resolve().parents[1] / "governance" / "helpers.py"
 SPEC = importlib.util.spec_from_file_location("gov_helpers", HELPERS_PATH)
 HELPERS = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(HELPERS)
+
+BUILDERS_PATH = Path(__file__).resolve().parents[1] / "governance" / "scenario_builders.py"
+BUILDERS_SPEC = importlib.util.spec_from_file_location("gov_builders", BUILDERS_PATH)
+BUILDERS = importlib.util.module_from_spec(BUILDERS_SPEC)
+assert BUILDERS_SPEC.loader is not None
+BUILDERS_SPEC.loader.exec_module(BUILDERS)
 
 AUTOMATION_RUNNER_SCRIPT = HELPERS.AUTOMATION_RUNNER_SCRIPT
 TASK_OPS_SCRIPT = HELPERS.TASK_OPS_SCRIPT
@@ -91,6 +99,32 @@ def enable_business_autopilot(repo: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
 
 
+def _task_status_map(repo: Path, task_ids: list[str]) -> dict[str, str]:
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    tasks = {task["task_id"]: task["status"] for task in registry["tasks"]}
+    return {task_id: tasks[task_id] for task_id in task_ids}
+
+
+def _setup_parallel_parent(repo: Path, automation_mode: str) -> list[str]:
+    task_ids = ["TASK-EXEC-00A", "TASK-EXEC-00B"]
+    BUILDERS.set_live_task_mode(repo, automation_mode=automation_mode)
+    BUILDERS.create_review_ready_children(repo, task_ids, write_path_prefix="src/exec")
+    return task_ids
+
+
+def _setup_review_bundle_failure(repo: Path) -> str:
+    task_id = "TASK-EXEC-FAIL"
+    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous")
+    BUILDERS.create_review_ready_child(
+        repo,
+        task_id,
+        write_path="src/exec_fail/",
+        title="execution fail",
+        required_test="pytest tests/missing -q",
+    )
+    return task_id
+
+
 def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
@@ -111,241 +145,40 @@ def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_runner_manual_mode_skips_parallel_actions(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("automation_mode", "expected_status", "prepare_message", "close_message"),
+    [
+        ("manual", "review", "[SKIP] prepare-worktrees skipped", "[SKIP] auto-close-children skipped"),
+        ("assisted", "review", "[OK] prepared worktree for TASK-EXEC-00A", "[SKIP] auto-close-children skipped"),
+        ("autonomous", "done", "[OK] prepared worktree for TASK-EXEC-00A", "[OK] auto-closed children: TASK-EXEC-00A, TASK-EXEC-00B"),
+    ],
+)
+def test_runner_heavy_parent_modes(
+    tmp_path: Path,
+    automation_mode: str,
+    expected_status: str,
+    prepare_message: str,
+    close_message: str,
+) -> None:
     repo = init_governance_repo(tmp_path)
-    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
-    current_task["size_class"] = "heavy"
-    current_task["topology"] = "parallel_parent"
-    current_task["automation_mode"] = "manual"
-    current_task["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"][0]["size_class"] = "heavy"
-    registry["tasks"][0]["topology"] = "parallel_parent"
-    registry["tasks"][0]["automation_mode"] = "manual"
-    registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    sync_task_artifacts(repo)
-
-    for suffix in ("A", "B"):
-        create = run_python(
-            TASK_OPS_SCRIPT,
-            repo,
-            "new",
-            f"TASK-EXEC-00{suffix}",
-            "--title",
-            f"execution {suffix}",
-            "--stage",
-            "parallel-stage",
-            "--task-kind",
-            "execution",
-            "--execution-mode",
-            "isolated_worktree",
-            "--parent-task-id",
-            "TASK-BASE-001",
-            "--size-class",
-            "standard",
-            "--required-tests",
-            "pytest tests/base -q",
-            "--planned-write-paths",
-            f"src/exec{suffix.lower()}/",
-        )
-        assert create.returncode == 0, create.stdout + create.stderr
-        finish = run_python(
-            TASK_OPS_SCRIPT,
-            repo,
-            "worker-finish",
-            f"TASK-EXEC-00{suffix}",
-            "--summary",
-            "candidate ready",
-            "--tests",
-            "pytest tests/base -q",
-        )
-        assert finish.returncode == 0, finish.stdout + finish.stderr
-
+    task_ids = _setup_parallel_parent(repo, automation_mode)
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    statuses = _task_status_map(repo, task_ids)
+
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "[SKIP] prepare-worktrees skipped" in result.stdout
-    assert "[SKIP] auto-close-children skipped" in result.stdout
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    tasks = {task["task_id"]: task for task in registry["tasks"]}
-    assert tasks["TASK-EXEC-00A"]["status"] == "review"
-    assert tasks["TASK-EXEC-00B"]["status"] == "review"
-
-
-def test_runner_assisted_mode_prepares_but_does_not_close_children(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
-    current_task["size_class"] = "heavy"
-    current_task["topology"] = "parallel_parent"
-    current_task["automation_mode"] = "assisted"
-    current_task["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"][0]["size_class"] = "heavy"
-    registry["tasks"][0]["topology"] = "parallel_parent"
-    registry["tasks"][0]["automation_mode"] = "assisted"
-    registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    sync_task_artifacts(repo)
-
-    for suffix in ("A", "B"):
-        create = run_python(
-            TASK_OPS_SCRIPT,
-            repo,
-            "new",
-            f"TASK-EXEC-A{suffix}",
-            "--title",
-            f"execution {suffix}",
-            "--stage",
-            "parallel-stage",
-            "--task-kind",
-            "execution",
-            "--execution-mode",
-            "isolated_worktree",
-            "--parent-task-id",
-            "TASK-BASE-001",
-            "--size-class",
-            "standard",
-            "--required-tests",
-            "pytest tests/base -q",
-            "--planned-write-paths",
-            f"src/assist_{suffix.lower()}/",
-        )
-        assert create.returncode == 0, create.stdout + create.stderr
-        finish = run_python(
-            TASK_OPS_SCRIPT,
-            repo,
-            "worker-finish",
-            f"TASK-EXEC-A{suffix}",
-            "--summary",
-            "candidate ready",
-            "--tests",
-            "pytest tests/base -q",
-        )
-        assert finish.returncode == 0, finish.stdout + finish.stderr
-
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert "[OK] prepared worktree for TASK-EXEC-AA" in result.stdout
-    assert "[SKIP] auto-close-children skipped" in result.stdout
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    tasks = {task["task_id"]: task for task in registry["tasks"]}
-    assert tasks["TASK-EXEC-AA"]["status"] == "review"
-    assert tasks["TASK-EXEC-AB"]["status"] == "review"
-
-
-def test_runner_prepares_and_closes_heavy_children(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
-    current_task["size_class"] = "heavy"
-    current_task["topology"] = "parallel_parent"
-    current_task["automation_mode"] = "autonomous"
-    current_task["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"][0]["size_class"] = "heavy"
-    registry["tasks"][0]["topology"] = "parallel_parent"
-    registry["tasks"][0]["automation_mode"] = "autonomous"
-    registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    sync_task_artifacts(repo)
-
-    for suffix in ("A", "B"):
-        create = run_python(
-            TASK_OPS_SCRIPT,
-            repo,
-            "new",
-            f"TASK-EXEC-00{suffix}",
-            "--title",
-            f"execution {suffix}",
-            "--stage",
-            "parallel-stage",
-            "--task-kind",
-            "execution",
-            "--execution-mode",
-            "isolated_worktree",
-            "--parent-task-id",
-            "TASK-BASE-001",
-            "--size-class",
-            "standard",
-            "--required-tests",
-            "pytest tests/base -q",
-            "--planned-write-paths",
-            f"src/exec{suffix.lower()}/",
-        )
-        assert create.returncode == 0, create.stdout + create.stderr
-        finish = run_python(
-            TASK_OPS_SCRIPT,
-            repo,
-            "worker-finish",
-            f"TASK-EXEC-00{suffix}",
-            "--summary",
-            "candidate ready",
-            "--tests",
-            "pytest tests/base -q",
-        )
-        assert finish.returncode == 0, finish.stdout + finish.stderr
-
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
-    assert result.returncode == 0, result.stdout + result.stderr
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    tasks = {task["task_id"]: task for task in registry["tasks"]}
-    assert tasks["TASK-EXEC-00A"]["status"] == "done"
-    assert tasks["TASK-EXEC-00B"]["status"] == "done"
+    assert prepare_message in result.stdout
+    assert close_message in result.stdout
+    assert statuses == {task_id: expected_status for task_id in task_ids}
 
 
 def test_runner_reports_cleanup_blocked(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     blocked_dir = tmp_path / "blocked.worktree"
     blocked_dir.mkdir()
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"].append(
-        {
-            "task_id": "TASK-EXEC-BLOCK",
-            "title": "blocked cleanup child",
-            "status": "done",
-            "task_kind": "execution",
-            "execution_mode": "isolated_worktree",
-            "parent_task_id": "TASK-BASE-001",
-            "stage": "parallel-stage",
-            "branch": "feat/TASK-EXEC-BLOCK",
-            "size_class": "standard",
-            "automation_mode": "autonomous",
-            "worker_state": "completed",
-            "blocked_reason": None,
-            "last_reported_at": "2026-04-04T00:00:00+08:00",
-            "topology": "single_worker",
-            "allowed_dirs": ["src/exec_block/"],
-            "reserved_paths": [],
-            "planned_write_paths": ["src/exec_block/"],
-            "planned_test_paths": [],
-            "required_tests": [],
-            "task_file": "docs/governance/tasks/TASK-EXEC-BLOCK.md",
-            "runlog_file": "docs/governance/runlogs/TASK-EXEC-BLOCK-RUNLOG.md",
-            "created_at": "2026-04-04T00:00:00+08:00",
-            "activated_at": "2026-04-04T00:00:00+08:00",
-            "closed_at": "2026-04-04T00:00:00+08:00",
-        }
-    )
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    (repo / "docs/governance/tasks/TASK-EXEC-BLOCK.md").write_text("# task\n", encoding="utf-8")
-    (repo / "docs/governance/runlogs/TASK-EXEC-BLOCK-RUNLOG.md").write_text("# runlog\n", encoding="utf-8")
+    BUILDERS.create_cleanup_orphan(repo, blocked_dir, task_id="TASK-EXEC-BLOCK")
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
-    worktrees["entries"].append(
-        {
-            "task_id": "TASK-EXEC-BLOCK",
-            "work_mode": "execution",
-            "parent_task_id": "TASK-BASE-001",
-            "branch": "feat/TASK-EXEC-BLOCK",
-            "path": str(blocked_dir).replace("\\", "/"),
-            "status": "closed",
-            "cleanup_state": "pending",
-            "cleanup_attempts": 2,
-            "last_cleanup_error": None,
-            "worker_owner": "worker-a",
-        }
-    )
+    blocked_entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-BLOCK")
+    blocked_entry["cleanup_attempts"] = 2
     write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once")
     assert result.returncode == 1
@@ -406,58 +239,10 @@ def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree
 
 def test_runner_blocks_lane_when_review_bundle_fails(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
-    current_task["size_class"] = "heavy"
-    current_task["topology"] = "parallel_parent"
-    current_task["automation_mode"] = "autonomous"
-    current_task["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"][0]["size_class"] = "heavy"
-    registry["tasks"][0]["topology"] = "parallel_parent"
-    registry["tasks"][0]["automation_mode"] = "autonomous"
-    registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    sync_task_artifacts(repo)
-
-    create = run_python(
-        TASK_OPS_SCRIPT,
-        repo,
-        "new",
-        "TASK-EXEC-FAIL",
-        "--title",
-        "execution fail",
-        "--stage",
-        "parallel-stage",
-        "--task-kind",
-        "execution",
-        "--execution-mode",
-        "isolated_worktree",
-        "--parent-task-id",
-        "TASK-BASE-001",
-        "--size-class",
-        "standard",
-        "--required-tests",
-        "pytest tests/missing -q",
-        "--planned-write-paths",
-        "src/exec_fail/",
-    )
-    assert create.returncode == 0, create.stdout + create.stderr
-    finish = run_python(
-        TASK_OPS_SCRIPT,
-        repo,
-        "worker-finish",
-        "TASK-EXEC-FAIL",
-        "--summary",
-        "candidate ready",
-        "--tests",
-        "pytest tests/missing -q",
-    )
-    assert finish.returncode == 0, finish.stdout + finish.stderr
-
+    task_id = _setup_review_bundle_failure(repo)
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-FAIL")
+    child = next(task for task in registry["tasks"] if task["task_id"] == task_id)
 
     assert result.returncode == 1
     assert child["status"] == "blocked"
