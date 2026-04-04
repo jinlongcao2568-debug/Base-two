@@ -1,0 +1,74 @@
+# TASK-GOV-002 测试热点 warning 预防性收口
+
+## Task Baseline
+
+- `task_id`: `TASK-GOV-002`
+- `task_kind`: `coordination`
+- `execution_mode`: `shared_coordination`
+- `status`: `queued`
+- `stage`: `governance-test-maintainability-hardening-v1`
+- `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
+- `size_class`: `standard`
+- `automation_mode`: `manual`
+- `worker_state`: `idle`
+- `topology`: `single_worker`
+## Primary Goals
+
+- to-be-filled
+
+## Explicitly Not Doing
+
+- to-be-filled
+
+## Allowed Dirs
+
+- `tests/governance/`
+- `tests/automation/`
+- `docs/governance/`
+
+## Planned Write Paths
+
+- `tests/governance/`
+- `tests/automation/`
+- `docs/governance/`
+
+## Planned Test Paths
+
+- `tests/governance/`
+- `tests/automation/`
+
+## Required Tests
+
+- `python scripts/check_repo.py`
+- `python scripts/check_hygiene.py`
+- `pytest tests/governance/test_check_hygiene.py -q`
+- `pytest tests/governance -q`
+- `pytest tests/automation -q`
+- `pytest -q`
+
+## Reserved Paths
+
+- to-be-filled
+## Narrative Assertions
+
+- `narrative_status`: `queued`
+- `closeout_state`: `not_ready`
+- `blocking_state`: `clear`
+- `completed_scope`: `not_started`
+- `remaining_scope`: `active_work_remaining`
+- `next_gate`: `activation_pending`
+
+<!-- generated:task-meta:start -->
+## Generated Metadata
+
+- `status`: `queued`
+- `task_kind`: `coordination`
+- `execution_mode`: `shared_coordination`
+- `size_class`: `standard`
+- `automation_mode`: `manual`
+- `worker_state`: `idle`
+- `topology`: `single_worker`
+- `reserved_paths`: `[]`
+- `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
+- `updated_at`: `2026-04-05T07:06:56+08:00`
+<!-- generated:task-meta:end -->
