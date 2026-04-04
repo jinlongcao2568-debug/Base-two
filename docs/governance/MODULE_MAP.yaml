@@ -1,0 +1,307 @@
+version: '1.0'
+updated_at: '2026-04-04T17:10:00+08:00'
+modules:
+- module_id: stage1_orchestration
+  owner_stage: stage1
+  inputs:
+  - source scheduling requests
+  outputs:
+  - ingestion jobs
+  depends_on: []
+  allowed_dirs:
+  - src/stage1_orchestration/
+  - tests/stage1/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage2_ingestion
+  required_tests:
+  - pytest tests/stage1 -q
+- module_id: stage2_ingestion
+  owner_stage: stage2
+  inputs:
+  - ingestion jobs
+  outputs:
+  - raw source payloads
+  depends_on:
+  - stage1_orchestration
+  allowed_dirs:
+  - src/stage2_ingestion/
+  - tests/stage2/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage3_parsing
+  required_tests:
+  - pytest tests/stage2 -q
+- module_id: stage3_parsing
+  owner_stage: stage3
+  inputs:
+  - raw source payloads
+  outputs:
+  - normalized records
+  depends_on:
+  - stage2_ingestion
+  allowed_dirs:
+  - src/stage3_parsing/
+  - tests/stage3/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage4_validation
+  required_tests:
+  - pytest tests/stage3 -q
+- module_id: stage4_validation
+  owner_stage: stage4
+  inputs:
+  - normalized records
+  outputs:
+  - validated findings
+  depends_on:
+  - stage3_parsing
+  allowed_dirs:
+  - src/stage4_validation/
+  - tests/stage4/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage5_reporting
+  - stage6_facts
+  required_tests:
+  - pytest tests/stage4 -q
+- module_id: stage5_reporting
+  owner_stage: stage5
+  inputs:
+  - validated findings
+  outputs:
+  - report artifacts
+  depends_on:
+  - stage4_validation
+  allowed_dirs:
+  - src/stage5_reporting/
+  - tests/stage5/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage6_facts
+  required_tests:
+  - pytest tests/stage5 -q
+- module_id: stage6_facts
+  owner_stage: stage6
+  inputs:
+  - validated findings
+  - report artifacts
+  outputs:
+  - project_fact
+  depends_on:
+  - stage4_validation
+  - stage5_reporting
+  allowed_dirs:
+  - src/stage6_facts/
+  - tests/stage6/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage7_sales
+  - stage8_contact
+  - stage9_delivery
+  required_tests:
+  - pytest tests/stage6 -q
+- module_id: stage7_sales
+  owner_stage: stage7
+  inputs:
+  - project_fact
+  outputs:
+  - sales_context
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/stage7_sales/
+  - tests/stage7/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - src/stage6_facts/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - tests/integration/
+  required_tests:
+  - pytest tests/stage7 -q
+- module_id: stage8_contact
+  owner_stage: stage8
+  inputs:
+  - project_fact
+  outputs:
+  - contact_context
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/stage8_contact/
+  - tests/stage8/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - src/stage6_facts/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - tests/integration/
+  required_tests:
+  - pytest tests/stage8 -q
+- module_id: stage9_delivery
+  owner_stage: stage9
+  inputs:
+  - project_fact
+  - downstream contexts
+  outputs:
+  - delivery payloads
+  depends_on:
+  - stage6_facts
+  - stage7_sales
+  - stage8_contact
+  allowed_dirs:
+  - src/stage9_delivery/
+  - tests/stage9/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - tests/integration/
+  required_tests:
+  - pytest tests/stage9 -q
+- module_id: domain_public_chain
+  owner_stage: consumer
+  inputs:
+  - project_fact
+  outputs:
+  - page and api public-check views
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/domain/engineering/public_chain/
+  - tests/contracts/
+  - tests/integration/
+  reserved_paths:
+  - docs/governance/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage6_facts
+  required_tests:
+  - pytest tests/contracts -q
+- module_id: domain_project_manager
+  owner_stage: consumer
+  inputs:
+  - project_fact
+  outputs:
+  - project manager views
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/domain/engineering/project_manager/
+  - tests/integration/
+  reserved_paths:
+  - docs/governance/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage6_facts
+  required_tests:
+  - pytest tests/integration -q
+- module_id: domain_competitor_analysis
+  owner_stage: consumer
+  inputs:
+  - project_fact
+  outputs:
+  - competitor analysis views
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/domain/engineering/competitor_analysis/
+  - tests/integration/
+  reserved_paths:
+  - docs/governance/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage6_facts
+  required_tests:
+  - pytest tests/integration -q
+- module_id: domain_evidence
+  owner_stage: consumer
+  inputs:
+  - project_fact
+  outputs:
+  - evidence views
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/domain/engineering/evidence/
+  - tests/integration/
+  reserved_paths:
+  - docs/governance/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage6_facts
+  required_tests:
+  - pytest tests/integration -q
+- module_id: domain_review_requests
+  owner_stage: consumer
+  inputs:
+  - project_fact
+  outputs:
+  - review request views
+  depends_on:
+  - stage6_facts
+  allowed_dirs:
+  - src/domain/engineering/review_requests/
+  - tests/integration/
+  reserved_paths:
+  - docs/governance/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  integration_points:
+  - stage6_facts
+  required_tests:
+  - pytest tests/integration -q
+- module_id: governance_control_plane
+  owner_stage: governance
+  inputs:
+  - CURRENT_TASK
+  - TASK_REGISTRY
+  - WORKTREE_REGISTRY
+  - DEVELOPMENT_ROADMAP
+  outputs:
+  - task lifecycle decisions
+  - worktree lifecycle decisions
+  depends_on: []
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - tests/contracts/
+  reserved_paths:
+  - src/stage1_orchestration/
+  - src/stage2_ingestion/
+  - src/stage3_parsing/
+  - src/stage4_validation/
+  - src/stage5_reporting/
+  - src/stage6_facts/
+  - src/stage7_sales/
+  - src/stage8_contact/
+  - src/stage9_delivery/
+  integration_points:
+  - tests/governance/
+  - tests/automation/
+  required_tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q

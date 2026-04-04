@@ -1,0 +1,92 @@
+version: '1.0'
+updated_at: '2026-04-04T17:10:00+08:00'
+size_class_gates:
+  micro:
+    preflight:
+    - python scripts/check_repo.py
+    - python scripts/check_hygiene.py
+    worker:
+    - module unit tests
+    closeout:
+    - pytest tests/governance -q
+  standard:
+    preflight:
+    - python scripts/check_repo.py
+    - python scripts/check_hygiene.py
+    worker:
+    - module unit tests
+    - targeted integration smoke tests
+    closeout:
+    - pytest tests/governance -q
+  heavy:
+    preflight:
+    - python scripts/check_repo.py
+    - python scripts/check_hygiene.py
+    - python scripts/task_ops.py decide-topology TASK-ID
+    worker:
+    - child module unit tests
+    - shared integration smoke tests
+    closeout:
+    - pytest tests/governance -q
+    - pytest -q
+modules:
+  governance_control_plane:
+    micro:
+      required_tests:
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - pytest tests/governance -q
+    standard:
+      required_tests:
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - pytest tests/governance -q
+      - pytest tests/contracts -q
+      - pytest tests/automation -q
+    heavy:
+      required_tests:
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - pytest tests/governance -q
+      - pytest tests/contracts -q
+      - pytest tests/automation -q
+      - pytest -q
+  stage6_facts:
+    micro:
+      required_tests:
+      - pytest tests/stage6 -q
+    standard:
+      required_tests:
+      - pytest tests/stage6 -q
+      - pytest tests/integration -q
+    heavy:
+      required_tests:
+      - pytest tests/stage6 -q
+      - pytest tests/integration -q
+      - pytest -q
+  stage7_sales:
+    micro:
+      required_tests:
+      - pytest tests/stage7 -q
+    standard:
+      required_tests:
+      - pytest tests/stage7 -q
+      - pytest tests/integration -q
+    heavy:
+      required_tests:
+      - pytest tests/stage7 -q
+      - pytest tests/integration -q
+      - pytest -q
+  stage8_contact:
+    micro:
+      required_tests:
+      - pytest tests/stage8 -q
+    standard:
+      required_tests:
+      - pytest tests/stage8 -q
+      - pytest tests/integration -q
+    heavy:
+      required_tests:
+      - pytest tests/stage8 -q
+      - pytest tests/integration -q
+      - pytest -q
