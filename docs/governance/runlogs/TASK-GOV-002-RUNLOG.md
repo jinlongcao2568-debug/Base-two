@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-002`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-test-maintainability-hardening-v1`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 ## Execution Log
 
 - `2026-04-05T07:06:56+08:00`: task package created
@@ -23,18 +23,18 @@
 - `pytest -q`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-002`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-test-maintainability-hardening-v1`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 <!-- generated:runlog-meta:end -->

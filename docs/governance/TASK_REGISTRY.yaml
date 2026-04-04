@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-05T07:17:24+08:00'
+updated_at: '2026-04-05T07:40:01+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -234,7 +234,7 @@ tasks:
   closed_at: '2026-04-05T07:06:48+08:00'
 - task_id: TASK-GOV-002
   title: 测试热点 warning 预防性收口
-  status: review
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -242,9 +242,9 @@ tasks:
   branch: feat/TASK-GOV-002-test-maintainability-hardening
   size_class: standard
   automation_mode: manual
-  worker_state: review_pending
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-05T07:17:24+08:00'
+  last_reported_at: '2026-04-05T07:26:51+08:00'
   topology: single_worker
   allowed_dirs:
   - tests/governance/
@@ -274,4 +274,46 @@ tasks:
   runlog_file: docs/governance/runlogs/TASK-GOV-002-RUNLOG.md
   created_at: '2026-04-05T07:06:56+08:00'
   activated_at: '2026-04-05T07:08:11+08:00'
+  closed_at: '2026-04-05T07:26:51+08:00'
+- task_id: TASK-GOV-003
+  title: 任务生命周期闭环补齐
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-task-lifecycle-closure-v1
+  branch: feat/TASK-GOV-003-governance-task-lifecycle-closure
+  size_class: standard
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-05T07:40:01+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  reserved_paths: []
+  planned_write_paths:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  planned_test_paths:
+  - tests/governance/
+  - tests/automation/
+  required_tests:
+  - python scripts/check_authority_alignment.py
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+  - pytest tests/contracts -q
+  - pytest tests/integration -q
+  - pytest -q
+  task_file: docs/governance/tasks/TASK-GOV-003.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-003-RUNLOG.md
+  created_at: '2026-04-05T07:40:01+08:00'
+  activated_at: null
   closed_at: null

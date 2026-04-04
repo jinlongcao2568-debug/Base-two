@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-002`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-test-maintainability-hardening-v1`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 ## Primary Goals
 
@@ -59,23 +59,23 @@
 - `scripts/check_hygiene.py`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `review`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
-- `updated_at`: `2026-04-05T07:21:48+08:00`
+- `updated_at`: `2026-04-05T07:26:51+08:00`
 <!-- generated:task-meta:end -->
