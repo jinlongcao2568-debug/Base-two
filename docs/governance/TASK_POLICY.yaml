@@ -1,0 +1,40 @@
+version: '1.0'
+updated_at: '2026-04-04T19:45:00+08:00'
+authority_source: docs/product/AUTHORITY_SPEC.md
+operator_source: docs/governance/OPERATOR_MANUAL.md
+size_classes:
+  micro:
+    target_duration: '<=45m'
+    max_scope_roots: 1
+    default_topology: single_task
+    default_automation_mode: assisted
+    split_allowed: false
+  standard:
+    target_duration: '45m-4h'
+    max_scope_roots: 2
+    default_topology: single_worker
+    default_automation_mode: assisted
+    split_allowed: false
+  heavy:
+    target_duration: '>4h'
+    max_scope_roots: '2+'
+    default_topology: single_worker
+    default_automation_mode: manual
+    split_allowed: true
+automation_modes:
+  manual:
+    description: Human approval remains required for worktree preparation and closeout decisions.
+  assisted:
+    description: Automation may prepare work but does not auto-close children.
+  autonomous:
+    description: Automation may prepare and close only when topology, tests, and boundaries are fully satisfied.
+stop_conditions:
+  - current_task drift across registry, roadmap, task file, runlog, or worktree entry
+  - contract validation failure
+  - hygiene hard failure
+  - integration chain failure on authority-critical paths
+  - branch mismatch for the live current task
+closeout_rules:
+  - required_tests must appear in the runlog
+  - task status must not remain doing after formal closeout
+  - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied

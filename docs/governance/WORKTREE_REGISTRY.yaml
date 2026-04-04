@@ -1,13 +1,23 @@
 version: '3.0'
-updated_at: '2026-04-04T14:04:17+08:00'
+updated_at: '2026-04-04T18:55:00+08:00'
 entries:
-- task_id: TASK-AUTO-001
-  work_mode: coordination
-  parent_task_id: null
-  branch: feat/TASK-AUTO-001-automation-control-plane
-  path: D:/Base One/Base-two/AX9
-  status: closed
-  cleanup_state: not_needed
-  cleanup_attempts: 0
-  last_cleanup_error: null
-  worker_owner: coordinator
+  - task_id: TASK-AUTO-001
+    work_mode: coordination
+    parent_task_id: null
+    branch: feat/TASK-AUTO-001-automation-control-plane
+    path: D:/Base One/Base-two/AX9
+    status: closed
+    cleanup_state: not_needed
+    cleanup_attempts: 0
+    last_cleanup_error: null
+    worker_owner: coordinator
+  - task_id: TASK-GOV-001
+    work_mode: coordination
+    parent_task_id: null
+    branch: feat/TASK-GOV-001-authority-consistency-hardening
+    path: D:/Base One/Base-two/AX9
+    status: active
+    cleanup_state: not_needed
+    cleanup_attempts: 0
+    last_cleanup_error: null
+    worker_owner: coordinator

@@ -245,6 +245,21 @@ def write_roadmap(root: Path, frontmatter: dict[str, Any], body: str) -> None:
     write_text(root / ROADMAP_FILE, content)
 
 
+def extract_generated_fields(text: str, start_marker: str, end_marker: str) -> dict[str, str]:
+    pattern = re.compile(re.escape(start_marker) + r"\n(.*?)\n" + re.escape(end_marker), re.DOTALL)
+    match = pattern.search(text)
+    if not match:
+        raise GovernanceError(f"missing generated block: {start_marker}")
+    return extract_markdown_fields(match.group(1))
+
+
+def extract_markdown_fields(text: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for key, value in re.findall(r"-\s+`([^`]+)`:\s+`([^`]*)`", text):
+        fields.setdefault(key, value)
+    return fields
+
+
 def sync_generated_block(text: str, start_marker: str, end_marker: str, block: str) -> str:
     rendered = f"{start_marker}\n{block.rstrip()}\n{end_marker}"
     pattern = re.compile(re.escape(start_marker) + r".*?" + re.escape(end_marker), re.DOTALL)

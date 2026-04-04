@@ -170,6 +170,53 @@ def init_structure(repo: Path) -> None:
     (repo / "tests/base/test_base.py").write_text("def test_base():\n    assert True\n", encoding="utf-8")
 
 
+def base_task_markdown() -> str:
+    return (
+        "# TASK-BASE-001 base coordination task\n\n"
+        "## Task Baseline\n\n"
+        "- `task_id`: `TASK-BASE-001`\n"
+        "- `status`: `doing`\n"
+        "- `stage`: `base-phase`\n"
+        "- `branch`: `main`\n"
+        "- `worker_state`: `running`\n\n"
+        "<!-- generated:task-meta:start -->\n"
+        "## Generated Metadata\n\n"
+        "- `status`: `doing`\n"
+        "- `task_kind`: `coordination`\n"
+        "- `execution_mode`: `shared_coordination`\n"
+        "- `size_class`: `standard`\n"
+        "- `automation_mode`: `assisted`\n"
+        "- `worker_state`: `running`\n"
+        "- `topology`: `single_worker`\n"
+        "- `reserved_paths`: `[]`\n"
+        "- `branch`: `main`\n"
+        "- `updated_at`: `2026-04-04T00:00:00+08:00`\n"
+        "<!-- generated:task-meta:end -->\n"
+    )
+
+
+def base_runlog_markdown() -> str:
+    return (
+        "# TASK-BASE-001 RUNLOG\n\n"
+        "## Task Status\n\n"
+        "- `task_id`: `TASK-BASE-001`\n"
+        "- `status`: `doing`\n"
+        "- `stage`: `base-phase`\n"
+        "- `branch`: `main`\n"
+        "- `worker_state`: `running`\n\n"
+        "## Test Log\n\n"
+        "- `pytest tests/base -q`\n\n"
+        "<!-- generated:runlog-meta:start -->\n"
+        "## Generated Task Snapshot\n\n"
+        "- `task_id`: `TASK-BASE-001`\n"
+        "- `status`: `doing`\n"
+        "- `stage`: `base-phase`\n"
+        "- `branch`: `main`\n"
+        "- `worker_state`: `running`\n"
+        "<!-- generated:runlog-meta:end -->\n"
+    )
+
+
 def write_governance_files(repo: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
@@ -221,11 +268,8 @@ def write_governance_files(repo: Path) -> None:
             ],
         },
     )
-    (repo / "docs/governance/tasks/TASK-BASE-001.md").write_text("# TASK-BASE-001\n", encoding="utf-8")
-    (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").write_text(
-        "# TASK-BASE-001 RUNLOG\n\n## 测试记录\n\n- `pytest tests/base -q`\n",
-        encoding="utf-8",
-    )
+    (repo / "docs/governance/tasks/TASK-BASE-001.md").write_text(base_task_markdown(), encoding="utf-8")
+    (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").write_text(base_runlog_markdown(), encoding="utf-8")
 
 
 def init_governance_repo(tmp_path: Path) -> Path:

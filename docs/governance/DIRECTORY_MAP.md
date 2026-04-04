@@ -67,6 +67,8 @@
 
 ## 12. `docs/`
 - `docs/baseline/`：单文件权威文档
+- `docs/product/`：从 baseline 派生的执行级产品文档
+- `docs/contracts/`：正式 contracts 真源，包含 registry、schema、example、field semantics
 - `docs/governance/`：治理文件、检查表、政策文档
 禁止把临时排障记录、实验说明放入 baseline。
 

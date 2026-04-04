@@ -1,40 +1,40 @@
-version: "1.0"
-updated_at: "2026-04-02T20:45:00+08:00"
-description: 最小 owner 清单。当前仓库仍处于骨架期，owner 使用占位责任人；进入真实开发后必须替换为正式 owner。
+version: '1.1'
+updated_at: '2026-04-04T19:45:00+08:00'
+description: Role-based ownership map for the current formal repository baseline.
 owners:
-  - path: src/stage3_parsing/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
-  - path: src/stage4_validation/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
-  - path: src/stage5_reporting/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
-  - path: src/stage6_facts/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
-  - path: src/domain/engineering/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
   - path: docs/baseline/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
-  - path: docs/governance/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
+    business_owner: authority-steward
+    tech_owner: repository-steward
+    backup_owner: governance-maintainer
   - path: docs/contracts/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
+    business_owner: contracts-steward
+    tech_owner: contracts-maintainer
+    backup_owner: repository-steward
+  - path: docs/governance/
+    business_owner: governance-steward
+    tech_owner: governance-maintainer
+    backup_owner: repository-steward
+  - path: src/stage3_parsing/
+    business_owner: parsing-domain-owner
+    tech_owner: stage3-maintainer
+    backup_owner: repository-steward
+  - path: src/stage4_validation/
+    business_owner: validation-domain-owner
+    tech_owner: stage4-maintainer
+    backup_owner: repository-steward
+  - path: src/stage5_reporting/
+    business_owner: reporting-domain-owner
+    tech_owner: stage5-maintainer
+    backup_owner: repository-steward
+  - path: src/stage6_facts/
+    business_owner: facts-domain-owner
+    tech_owner: stage6-maintainer
+    backup_owner: repository-steward
+  - path: src/domain/engineering/
+    business_owner: engineering-domain-owner
+    tech_owner: domain-maintainer
+    backup_owner: repository-steward
   - path: db/migrations/
-    business_owner: tbd_business_owner
-    tech_owner: tbd_tech_owner
-    backup_owner: tbd_backup_owner
+    business_owner: data-governance-owner
+    tech_owner: migration-maintainer
+    backup_owner: repository-steward

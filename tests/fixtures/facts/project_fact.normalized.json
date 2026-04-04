@@ -1,0 +1,27 @@
+{
+  "object_type": "project_fact",
+  "project_id": "project-cn-example-001",
+  "fact_version": 1,
+  "fact_refresh_trigger": "RULE_PIPELINE_REFRESH",
+  "fact_source_summary": "Derived from project_base project-cn-example-001 and rule-hit-cn-example-001.",
+  "project_base_ref": "project_base:project-cn-example-001",
+  "rule_hit_refs": [
+    "rule_hit:rule-hit-cn-example-001"
+  ],
+  "report_record_ref": "report_record:RR-001",
+  "public_chain_status": "COMPLETE",
+  "rule_hit_summary": "One medium-risk clue is attached to the project.",
+  "clue_summary": "A competitor signal remains pending review.",
+  "sale_gate_status": "REVIEW",
+  "real_competitor_count": 3,
+  "serviceable_competitor_count": 2,
+  "competitor_quality_grade": "B",
+  "price_cluster_score": 68,
+  "price_gradient_pattern": "NARROW_BAND",
+  "fact_summary": "The project remains sellable after review of the detected competitor clue.",
+  "risk_summary": "A medium-risk clue keeps the project in REVIEW until manual confirmation completes.",
+  "review_status": "PENDING",
+  "manual_override_status": "PENDING",
+  "report_status": "READY",
+  "last_fact_refreshed_at": "2026-04-04T18:00:00+08:00"
+}

@@ -1,0 +1,27 @@
+{
+  "object_type": "project_fact",
+  "project_id": "project-cn-example-001",
+  "fact_version": 1,
+  "fact_refresh_trigger": "RULE_PIPELINE_REFRESH",
+  "fact_source_summary": "Derived from project_base PB-001, rule_hit RH-001, and the latest report write-back.",
+  "project_base_ref": "project_base:PB-001",
+  "rule_hit_refs": [
+    "rule_hit:RH-001"
+  ],
+  "report_record_ref": "report_record:RR-001",
+  "public_chain_status": "COMPLETE",
+  "rule_hit_summary": "One auto-hit and one clue were consolidated into the stage-6 fact.",
+  "clue_summary": "A medium-risk clue remains pending review.",
+  "sale_gate_status": "REVIEW",
+  "real_competitor_count": 3,
+  "serviceable_competitor_count": 2,
+  "competitor_quality_grade": "B",
+  "price_cluster_score": 68,
+  "price_gradient_pattern": "NARROW_BAND",
+  "fact_summary": "The public chain is complete and the project remains sellable after review.",
+  "risk_summary": "A medium-risk clue keeps the project in REVIEW until manual confirmation completes.",
+  "review_status": "PENDING",
+  "manual_override_status": "PENDING",
+  "report_status": "READY",
+  "last_fact_refreshed_at": "2026-04-04T18:00:00+08:00"
+}

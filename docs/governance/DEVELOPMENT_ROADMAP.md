@@ -1,6 +1,6 @@
 ---
-current_phase: automation-control-plane-v1
-current_task_id: TASK-AUTO-001
+current_phase: authority-consistency-hardening
+current_task_id: TASK-GOV-001
 next_recommended_task_id: null
 stage_establishment:
   stage1: not_established
@@ -17,72 +17,36 @@ automation_foundation: in_progress
 
 # AX9S Development Roadmap
 
-## 当前任务
+## Current Task
 
-- `TASK-AUTO-001`：把自动化控制面稳定落到 `main`，并引入按任务大小自动分流的一期控制面。
+- `TASK-GOV-001`: close authority drift across governance entry files, contracts assets, tests, and downstream execution documents before any next automation phase is opened.
 
-## 当前阶段目标
+## Recently Closed
 
-- 一期的目标不是让系统自己决定做什么，而是让系统能可靠执行“已经定义清楚的任务”。
-- 建立主干唯一可信的自动化控制面。
-- 固化 `micro / standard / heavy` 三档任务模型。
-- 让 worker 主动回报状态，让协调器自动轮询、自动收口子任务、自动重试清理 worktree。
-- 把治理检查、代码整洁度检查和自动化烟雾测试纳入仓库。
+- `TASK-AUTO-001`: landed the first automation control-plane baseline and closed the shared coordination setup for `automation-control-plane-v1`.
 
-## 当前不做
+## Current Phase Goal
 
-- 不自动切换到下一个父任务。
-- 不自动删除父任务分支或治理分支。
-- 不把业务阶段开发混入本轮治理任务。
-- 不宣称已经具备全天无人值守能力。
+- Make the current repository obey one live execution source at a time.
+- Upgrade contracts from registry-only assets to professional contracts with schema, example, and field semantics.
+- Add a real `stage3 -> stage4 -> stage6` integration proof so stage establishment is backed by downstream consumption.
+- Expand README, MVP, test matrix, and governance indexes from seed-level text into execution-grade documents.
 
-## 自动化一期范围
+## Explicitly Out Of Scope
 
-- 主干治理入口：
-  - `docs/governance/CURRENT_TASK.yaml`
-  - `docs/governance/TASK_REGISTRY.yaml`
-  - `docs/governance/WORKTREE_REGISTRY.yaml`
-  - `docs/governance/DEVELOPMENT_ROADMAP.md`
-- 自动化治理资产：
-  - `docs/governance/MODULE_MAP.yaml`
-  - `docs/governance/TEST_MATRIX.yaml`
-  - `docs/governance/CODE_HYGIENE_POLICY.md`
-  - `docs/governance/AUTOMATION_OPERATING_MODEL.md`
-- 自动化脚本：
-  - `scripts/governance_lib.py`
-  - `scripts/task_ops.py`
-  - `scripts/check_repo.py`
-  - `scripts/check_hygiene.py`
-  - `scripts/automation_runner.py`
-- 自动化测试：
-  - `tests/governance/`
-  - `tests/contracts/`
-  - `tests/automation/`
+- Do not rename the formal stage directories.
+- Do not move `docs/contracts/` to the repository root.
+- Do not expand into new business-stage implementation work.
 
-## 任务大小策略
+## Exit Criteria For Current Phase
 
-- `micro`：预计 `<=45` 分钟，只改 `1` 个模块，不触碰共享保留区；`planned_write_paths` 建议 `<=5`，硬上限 `8`；不建 worktree。
-- `standard`：预计 `45` 分钟到 `4` 小时，改 `1-2` 个相邻模块；默认单 worker，仅在风险隔离、实验性实现或需要随时丢弃时才建 `1` 个 worktree。
-- `heavy`：预计 `>4` 小时，或存在 `2` 个以上明确独立写域；只有 `planned_write_paths`、`required_tests`、`reserved_paths` 都能拆清时，才允许进入父任务 + 最多 `2` 个 execution worktree 的并行模式。
+- `CURRENT_TASK.yaml`, `TASK_REGISTRY.yaml`, `WORKTREE_REGISTRY.yaml`, roadmap, task file, and runlog stay fully aligned for the live task.
+- `docs/contracts/` contains registry assets, schemas, examples, and field semantics for the stage-6 `project_fact` contract.
+- `tests/integration/` stops being empty and proves the minimum `stage3 -> stage4 -> stage6` chain.
+- README and downstream governance/product documents stop using seed or skeleton wording for live controls.
+- `python scripts/check_authority_alignment.py` reports every authority and automation readiness score at `>=95`.
+- The fixed batch-5 validation sequence passes twice in a row without score drift.
 
-## 自动化模式规则
+## Next Candidate
 
-- `manual`：治理升级、共享保留区冲突、拆分条件不清晰或显式要求人工控制。
-- `assisted`：边界清楚的 `micro / standard` 任务，可自动执行检查和准备动作，但保留人工 review。
-- `autonomous`：模块地图完整、测试完备、边界清楚且满足并行前提的任务，可自动推进并主动回报。
-
-## runner 行为门禁
-
-- `manual`：协调器只执行 `check_repo.py`、`check_hygiene.py` 和 `cleanup-orphans`，跳过 worktree 准备与 `auto-close-children`。
-- `assisted`：协调器可准备 execution worktree，但不会自动关闭子任务；子任务停在 `review_pending`。
-- `autonomous`：协调器可准备 execution worktree，并在 required tests 满足后自动执行 `auto-close-children`。
-
-## 下一阶段候选
-
-- `TASK-AUTO-002`：长时自动化运行、父任务自动关账和恢复策略。
-
-## 说明
-
-- `main` 是自动化协调器唯一可信的控制面来源。
-- worker 必须主动回报状态，协调器轮询只作为兜底。
-- 第一期自动化目标是稳定运行 `2-4` 小时，不以全天无人值守为验收口径。
+- No next task will be activated automatically. The next task must be created explicitly after `TASK-GOV-001` reaches `review`.

@@ -1,44 +1,37 @@
 # TASK-AUTO-001 RUNLOG
 
-## 任务状态
+## Task Status
 
-- `task_id`：`TASK-AUTO-001`
-- `status`：`doing`
-- `stage`：`automation-control-plane-v1`
-- `branch`：`feat/TASK-AUTO-001-automation-control-plane`
+- `task_id`: `TASK-AUTO-001`
+- `status`: `done`
+- `stage`: `automation-control-plane-v1`
+- `branch`: `feat/TASK-AUTO-001-automation-control-plane`
+- `worker_state`: `completed`
 
-## 执行记录
+## Execution Log
 
-- `2026-04-04T17:10:00+08:00`：在 `main` 建立自动化一期任务入口与 registry 初始项。
-- `2026-04-04T17:10:00+08:00`：补齐 `DEVELOPMENT_ROADMAP.md`、`MODULE_MAP.yaml`、`TEST_MATRIX.yaml`、`CODE_HYGIENE_POLICY.md`。
-- `2026-04-04T17:18:00+08:00`：吸收补强建议：`review_pending`、`blocked_manual`、cleanup 重试上限、`AUTOMATION_OPERATING_MODEL.md`。
-- `2026-04-04T13:23:45+08:00`：实现 automation control plane v1，并补齐治理、合同和自动化测试。
-- `2026-04-04T13:31:42+08:00`：拆分 `check_repo.py`、`check_hygiene.py`、`task_ops.py` 的核心长函数。
-- `2026-04-04T18:20:00+08:00`：补齐 `automation_mode` runner 门禁，并把 `reserved_paths` 纳入任务 schema、`heavy` 拓扑判断和 split guard。
-- `2026-04-04T14:01:44+08:00`：已补齐 automation_mode runner gate 与 heavy reserved_paths split guard
-## 测试记录
+- `2026-04-04T17:10:00+08:00`: created the first automation control-plane task package and governance entry set.
+- `2026-04-04T17:18:00+08:00`: expanded the operating model with review, blocked-manual, and cleanup retry semantics.
+- `2026-04-04T18:20:00+08:00`: added runner gate handling for `automation_mode` and `reserved_paths`.
+- `2026-04-04T18:55:00+08:00`: task formally archived as completed and removed from the live current-task slot.
 
-- 待补充：
-  - `python scripts/check_repo.py`
-  - `python scripts/check_hygiene.py`
-  - `pytest tests/governance -q`
-  - `pytest tests/contracts -q`
-  - `pytest tests/automation -q`
-  - `pytest -q`
+## Test Log
+
 - `python scripts/check_repo.py`
 - `python scripts/check_hygiene.py`
 - `pytest tests/governance -q`
 - `pytest tests/contracts -q`
 - `pytest tests/automation -q`
 - `pytest -q`
-## 风险与阻塞
 
-- 一期仍是“已定义任务的可靠执行控制面”，不是全天无人值守系统。
-- `governance_lib.py` 和部分测试文件仍有 hygiene 告警，但当前是告警，不是阻断。
+## Risks And Blockers
 
-## 关账结论
+- This task established the control-plane baseline only. It did not solve authority drift, contracts completeness, or integration proof.
 
-- 待补齐本轮回归测试并完成评审后再决定是否关账。
+## Closeout Decision
+
+- Closed.
+- Current execution ownership transferred to `TASK-GOV-001`.
 
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot

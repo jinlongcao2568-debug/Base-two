@@ -1,0 +1,169 @@
+object_name: project_fact
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_sections:
+  - '5.14'
+  - '5.15'
+schema_file: docs/contracts/schemas/stage6_project_fact.schema.json
+example_file: docs/contracts/examples/project_fact.example.json
+description: 唯一正式的阶段 6 统一项目事实对象，供页面、接口、经营、阶段 7 至阶段 9 以及消息策略消费。
+fields:
+  - name: object_type
+    required: true
+    type: string
+    enum:
+      - project_fact
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales, stage7, stage8, stage9]
+    notes: Formal object discriminator.
+  - name: project_id
+    required: true
+    type: string
+    source_stage: stage3
+    consumer_surfaces: [page, api, sales]
+    notes: Stable project identity carried into the fact layer.
+  - name: fact_version
+    required: true
+    type: integer
+    source_stage: stage6
+    consumer_surfaces: [page, api, delivery]
+    notes: Must be monotonic or comparable for rollback and audit.
+  - name: fact_refresh_trigger
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [governance, audit]
+    notes: Records the reason for a formal fact refresh.
+  - name: fact_source_summary
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [governance, audit]
+    notes: Human-readable lineage summary for the refresh.
+  - name: project_base_ref
+    required: true
+    type: string
+    source_stage: stage3
+    consumer_surfaces: [governance, audit]
+    notes: Trace back to the stage-3 formal source object.
+  - name: rule_hit_refs
+    required: true
+    type: array[string]
+    source_stage: stage4
+    consumer_surfaces: [governance, audit]
+    notes: Trace back to the formal stage-4 rule results that feed the aggregate.
+  - name: report_record_ref
+    required: false
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [governance, audit]
+    notes: Optional trace to the latest formal report object when stage-5 output exists.
+  - name: public_chain_status
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Summary of public-chain completeness carried into the final fact.
+  - name: rule_hit_summary
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Human-readable summary of formal rule results.
+  - name: clue_summary
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Human-readable summary of unresolved clues.
+  - name: sale_gate_status
+    required: true
+    type: string
+    enum:
+      - OPEN
+      - REVIEW
+      - HOLD
+      - BLOCK
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales, stage7, stage8, stage9]
+    notes: Formal top-level sellability state defined by authority section 5.15.1.
+  - name: real_competitor_count
+    required: true
+    type: integer
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Count of formally identified real competitors.
+  - name: serviceable_competitor_count
+    required: true
+    type: integer
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Count of formally serviceable competitors.
+  - name: competitor_quality_grade
+    required: true
+    type: string
+    enum:
+      - A
+      - B
+      - C
+      - D
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Formal competition-quality grade from the authority document.
+  - name: price_cluster_score
+    required: true
+    type: number
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Formal price-cluster score constrained to 0-100.
+  - name: price_gradient_pattern
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales]
+    notes: Formal price-pattern summary used in sellability judgment.
+  - name: fact_summary
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales, delivery]
+    notes: Formal top-level fact summary for downstream consumption.
+  - name: risk_summary
+    required: true
+    type: string
+    source_stage: stage6
+    consumer_surfaces: [page, api, sales, delivery]
+    notes: Formal risk summary for downstream consumption.
+  - name: review_status
+    required: true
+    type: string
+    enum:
+      - PENDING
+      - CONFIRMED
+      - REJECTED
+      - OVERRIDDEN
+    source_stage: stage5
+    consumer_surfaces: [page, api, governance]
+    notes: Formal review state surfaced into the stage-6 fact.
+  - name: manual_override_status
+    required: true
+    type: string
+    source_stage: stage5
+    consumer_surfaces: [page, api, governance]
+    notes: Must explicitly reveal whether manual override exists; the authority document requires at least pending/confirmed/rejected differentiation.
+  - name: report_status
+    required: true
+    type: string
+    enum:
+      - DRAFT
+      - READY
+      - ISSUED
+      - REVOKED
+    source_stage: stage5
+    consumer_surfaces: [page, api, delivery]
+    notes: Formal report state exposed to customer delivery surfaces.
+  - name: last_fact_refreshed_at
+    required: true
+    type: datetime
+    source_stage: stage6
+    consumer_surfaces: [page, api, governance, delivery]
+    notes: Timestamp of the latest committed fact refresh.

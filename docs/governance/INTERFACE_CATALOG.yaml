@@ -1,8 +1,12 @@
-version: "1.0"
-updated_at: "2026-04-02T20:45:00+08:00"
+version: '1.1'
+updated_at: '2026-04-04T19:45:00+08:00'
+status: no_business_api_registered
+authority_source: docs/product/AUTHORITY_SPEC.md
+last_reviewed_at: '2026-04-04T19:45:00+08:00'
+next_update_trigger: Register the first formal customer-visible API, webhook, or external message contract.
 description: >
-  机器可读接口清单 seed。当前仓库尚未进入接口实现阶段，
-  因此先保留 catalog 外壳；后续新增正式接口时必须登记。
+  No formal business API or external customer-facing message contract is registered in the current baseline.
+  This zero-state is intentional and reviewed; any new external interface must be added here in the same task.
 catalog_rules:
   required_fields:
     - name

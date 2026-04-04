@@ -52,6 +52,57 @@ def test_check_repo_fails_on_modified_path_outside_planned_write_paths(tmp_path:
     assert "outside planned_write_paths" in result.stdout
 
 
+def test_check_repo_fails_when_current_task_is_done(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    current_task["status"] = "done"
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"][0]["status"] = "done"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "cannot remain on a done task" in result.stdout
+
+
+def test_check_repo_fails_when_roadmap_current_task_drifts(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(
+        "---\n"
+        "current_phase: wrong-phase\n"
+        "current_task_id: TASK-WRONG-001\n"
+        "next_recommended_task_id: null\n"
+        "stage_establishment:\n"
+        "  stage1: not_established\n"
+        "  stage2: not_established\n"
+        "  stage3: not_established\n"
+        "  stage4: not_established\n"
+        "  stage5: not_established\n"
+        "  stage6: not_established\n"
+        "  stage7: not_established\n"
+        "  stage8: not_established\n"
+        "  stage9: not_established\n"
+        "automation_foundation: not_established\n"
+        "---\n\n# Roadmap\n",
+        encoding="utf-8",
+    )
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "roadmap current_task_id mismatch" in result.stdout
+
+
+def test_check_repo_fails_when_task_file_status_drifts(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    task_file = repo / "docs/governance/tasks/TASK-BASE-001.md"
+    task_file.write_text(
+        task_file.read_text(encoding="utf-8").replace("- `status`: `doing`", "- `status`: `review`", 1),
+        encoding="utf-8",
+    )
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "task file mismatch for field status" in result.stdout
+
+
 def test_check_repo_fails_when_execution_touches_reserved_path(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")

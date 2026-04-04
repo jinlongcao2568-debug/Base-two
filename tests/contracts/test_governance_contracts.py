@@ -114,7 +114,8 @@ def test_module_map_schema_fields_present() -> None:
 
 def test_test_matrix_schema_fields_present() -> None:
     payload = load_yaml(REPO_ROOT / "docs/governance/TEST_MATRIX.yaml")
-    assert payload["version"] == "1.0"
+    assert payload["version"] in {"1.0", "1.1"}
     assert {"micro", "standard", "heavy"} <= set(payload["size_class_gates"])
     module_rules = payload["modules"]["governance_control_plane"]
     assert {"micro", "standard", "heavy"} <= set(module_rules)
+    assert "authority_critical_chains" in payload

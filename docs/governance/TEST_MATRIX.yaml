@@ -1,92 +1,144 @@
-version: '1.0'
-updated_at: '2026-04-04T17:10:00+08:00'
+version: '1.1'
+updated_at: '2026-04-04T19:20:00+08:00'
 size_class_gates:
   micro:
     preflight:
-    - python scripts/check_repo.py
-    - python scripts/check_hygiene.py
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
     worker:
-    - module unit tests
+      - module unit tests
     closeout:
-    - pytest tests/governance -q
+      - pytest tests/governance -q
   standard:
     preflight:
-    - python scripts/check_repo.py
-    - python scripts/check_hygiene.py
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - python scripts/validate_contracts.py
     worker:
-    - module unit tests
-    - targeted integration smoke tests
+      - module unit tests
+      - targeted integration smoke tests
     closeout:
-    - pytest tests/governance -q
+      - pytest tests/governance -q
+      - pytest tests/contracts -q
+      - pytest tests/integration -q
   heavy:
     preflight:
-    - python scripts/check_repo.py
-    - python scripts/check_hygiene.py
-    - python scripts/task_ops.py decide-topology TASK-ID
+      - python scripts/check_authority_alignment.py
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - python scripts/validate_contracts.py
+      - python scripts/task_ops.py decide-topology TASK-ID
     worker:
-    - child module unit tests
-    - shared integration smoke tests
+      - child module unit tests
+      - authority-critical integration tests
     closeout:
-    - pytest tests/governance -q
-    - pytest -q
+      - pytest tests/governance -q
+      - pytest tests/contracts -q
+      - pytest tests/integration -q
+      - pytest -q
+authority_critical_chains:
+  stage3_stage4_stage6_minimal:
+    description: Stage 3 project_base must be consumed by stage 4 rule_hit and then by the stage 6 project_fact.
+    formal_objects:
+      - project_base
+      - rule_hit
+      - project_fact
+    fixture_paths:
+      - tests/fixtures/raw/project_notice.raw.json
+      - tests/fixtures/normalized/project_base.normalized.json
+      - tests/fixtures/rules/rule_hit.normalized.json
+      - tests/fixtures/facts/project_fact.normalized.json
+      - tests/fixtures/golden/stage3_stage4_stage6_minimal_flow.golden.json
+    required_tests:
+      - pytest tests/stage3 -q
+      - pytest tests/stage4 -q
+      - pytest tests/stage6 -q
+      - pytest tests/integration -q
 modules:
   governance_control_plane:
     micro:
       required_tests:
-      - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
-      - pytest tests/governance -q
+        - python scripts/check_repo.py
+        - python scripts/check_hygiene.py
+        - pytest tests/governance -q
     standard:
       required_tests:
-      - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
-      - pytest tests/governance -q
-      - pytest tests/contracts -q
-      - pytest tests/automation -q
+        - python scripts/check_repo.py
+        - python scripts/check_hygiene.py
+        - pytest tests/governance -q
+        - pytest tests/contracts -q
+        - pytest tests/automation -q
     heavy:
       required_tests:
-      - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
-      - pytest tests/governance -q
-      - pytest tests/contracts -q
-      - pytest tests/automation -q
-      - pytest -q
+        - python scripts/check_authority_alignment.py
+        - python scripts/check_repo.py
+        - python scripts/check_hygiene.py
+        - pytest tests/governance -q
+        - pytest tests/contracts -q
+        - pytest tests/automation -q
+        - pytest -q
+  stage3_parsing:
+    micro:
+      required_tests:
+        - pytest tests/stage3 -q
+    standard:
+      required_tests:
+        - pytest tests/stage3 -q
+        - pytest tests/integration -q
+    heavy:
+      required_tests:
+        - pytest tests/stage3 -q
+        - pytest tests/integration -q
+        - pytest -q
+  stage4_validation:
+    micro:
+      required_tests:
+        - pytest tests/stage4 -q
+    standard:
+      required_tests:
+        - pytest tests/stage4 -q
+        - pytest tests/integration -q
+    heavy:
+      required_tests:
+        - pytest tests/stage4 -q
+        - pytest tests/integration -q
+        - pytest -q
   stage6_facts:
     micro:
       required_tests:
-      - pytest tests/stage6 -q
+        - pytest tests/stage6 -q
     standard:
       required_tests:
-      - pytest tests/stage6 -q
-      - pytest tests/integration -q
+        - pytest tests/stage6 -q
+        - pytest tests/integration -q
     heavy:
       required_tests:
-      - pytest tests/stage6 -q
-      - pytest tests/integration -q
-      - pytest -q
+        - pytest tests/stage6 -q
+        - pytest tests/integration -q
+        - pytest -q
   stage7_sales:
     micro:
       required_tests:
-      - pytest tests/stage7 -q
+        - pytest tests/stage7 -q
     standard:
       required_tests:
-      - pytest tests/stage7 -q
-      - pytest tests/integration -q
+        - pytest tests/stage7 -q
+        - pytest tests/integration -q
     heavy:
       required_tests:
-      - pytest tests/stage7 -q
-      - pytest tests/integration -q
-      - pytest -q
+        - pytest tests/stage7 -q
+        - pytest tests/integration -q
+        - pytest -q
   stage8_contact:
     micro:
       required_tests:
-      - pytest tests/stage8 -q
+        - pytest tests/stage8 -q
     standard:
       required_tests:
-      - pytest tests/stage8 -q
-      - pytest tests/integration -q
+        - pytest tests/stage8 -q
+        - pytest tests/integration -q
     heavy:
       required_tests:
-      - pytest tests/stage8 -q
-      - pytest tests/integration -q
-      - pytest -q
+        - pytest tests/stage8 -q
+        - pytest tests/integration -q
+        - pytest -q

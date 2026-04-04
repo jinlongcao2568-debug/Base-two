@@ -1,0 +1,13 @@
+{
+  "project_id": "project-cn-example-001",
+  "source_family": "ggzy_national",
+  "region_code": "CN-320100",
+  "project_name": "示例建设工程项目",
+  "project_type_raw": "房屋建筑工程",
+  "engineering_domain": "building_construction",
+  "bid_control_price": 18000000,
+  "bid_eval_method": "综合评估法",
+  "public_chain_status": "COMPLETE",
+  "opening_record_count": 1,
+  "invalid_bid_count": 0
+}

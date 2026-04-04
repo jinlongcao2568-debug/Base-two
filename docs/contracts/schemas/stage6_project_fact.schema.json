@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/stage6_project_fact.schema.json",
+  "title": "AX9 Stage 6 Project Fact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "object_type",
+    "project_id",
+    "fact_version",
+    "fact_refresh_trigger",
+    "fact_source_summary",
+    "project_base_ref",
+    "rule_hit_refs",
+    "public_chain_status",
+    "rule_hit_summary",
+    "clue_summary",
+    "sale_gate_status",
+    "real_competitor_count",
+    "serviceable_competitor_count",
+    "competitor_quality_grade",
+    "price_cluster_score",
+    "price_gradient_pattern",
+    "fact_summary",
+    "risk_summary",
+    "review_status",
+    "manual_override_status",
+    "report_status",
+    "last_fact_refreshed_at"
+  ],
+  "properties": {
+    "object_type": {
+      "const": "project_fact"
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fact_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "fact_refresh_trigger": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fact_source_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_base_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rule_hit_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "report_record_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "public_chain_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rule_hit_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "clue_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sale_gate_status": {
+      "type": "string",
+      "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"]
+    },
+    "real_competitor_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "serviceable_competitor_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "competitor_quality_grade": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D"]
+    },
+    "price_cluster_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "price_gradient_pattern": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fact_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "risk_summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "review_status": {
+      "type": "string",
+      "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"]
+    },
+    "manual_override_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "report_status": {
+      "type": "string",
+      "enum": ["DRAFT", "READY", "ISSUED", "REVOKED"]
+    },
+    "last_fact_refreshed_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

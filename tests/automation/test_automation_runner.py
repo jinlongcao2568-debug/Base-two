@@ -19,6 +19,11 @@ run_python = HELPERS.run_python
 write_yaml = HELPERS.write_yaml
 
 
+def sync_task_artifacts(repo: Path) -> None:
+    result = run_python(TASK_OPS_SCRIPT, repo, "sync", "--write")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
@@ -33,6 +38,7 @@ def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     registry["tasks"][0]["planned_write_paths"] = ["src/base/", "tests/base/"]
     registry["tasks"][0]["allowed_dirs"] = ["src/base/", "tests/base/"]
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
     git_commit_all(repo, "switch to micro")
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once")
     assert result.returncode == 0, result.stdout + result.stderr
@@ -52,6 +58,7 @@ def test_runner_manual_mode_skips_parallel_actions(tmp_path: Path) -> None:
     registry["tasks"][0]["automation_mode"] = "manual"
     registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
 
     for suffix in ("A", "B"):
         create = run_python(
@@ -113,6 +120,7 @@ def test_runner_assisted_mode_prepares_but_does_not_close_children(tmp_path: Pat
     registry["tasks"][0]["automation_mode"] = "assisted"
     registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
 
     for suffix in ("A", "B"):
         create = run_python(
@@ -174,6 +182,7 @@ def test_runner_prepares_and_closes_heavy_children(tmp_path: Path) -> None:
     registry["tasks"][0]["automation_mode"] = "autonomous"
     registry["tasks"][0]["required_tests"] = ["pytest tests/base -q"]
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
 
     for suffix in ("A", "B"):
         create = run_python(

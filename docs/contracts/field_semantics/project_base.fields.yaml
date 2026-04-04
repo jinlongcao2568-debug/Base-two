@@ -1,0 +1,52 @@
+object_name: project_base
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_sections:
+  - '5.2'
+schema_file: docs/contracts/schemas/stage3_project_base.schema.json
+example_file: docs/contracts/examples/project_base.example.json
+description: 阶段 3 结构化解析产出的基础项目实体，只承载公开源可直接结构化得到的项目事实。
+fields:
+  - name: project_id
+    required: true
+    type: string
+    source_stage: stage3
+  - name: source_family
+    required: true
+    type: string
+    source_stage: stage2
+  - name: region_code
+    required: true
+    type: string
+    source_stage: stage2
+  - name: project_name
+    required: true
+    type: string
+    source_stage: stage3
+  - name: project_type_raw
+    required: true
+    type: string
+    source_stage: stage3
+  - name: engineering_domain
+    required: true
+    type: string
+    source_stage: stage3
+  - name: bid_control_price
+    required: true
+    type: number
+    source_stage: stage3
+  - name: bid_eval_method
+    required: true
+    type: string
+    source_stage: stage3
+  - name: public_chain_status
+    required: true
+    type: string
+    source_stage: stage3
+  - name: opening_record_count
+    required: true
+    type: integer
+    source_stage: stage3
+  - name: invalid_bid_count
+    required: true
+    type: integer
+    source_stage: stage3

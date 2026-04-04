@@ -1,64 +1,68 @@
-current_task_id: TASK-AUTO-001
-title: 自动化开发一期：主干控制面 + 按任务大小自动分流
-status: done
+current_task_id: TASK-GOV-001
+title: 权威一致性收口与控制面硬化
+status: doing
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: automation-control-plane-v1
-branch: feat/TASK-AUTO-001-automation-control-plane
-size_class: standard
+stage: authority-consistency-hardening
+branch: feat/TASK-GOV-001-authority-consistency-hardening
+size_class: heavy
 automation_mode: manual
-worker_state: completed
+worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-04T14:04:17+08:00'
+last_reported_at: '2026-04-04T19:38:06+08:00'
 topology: single_worker
 allowed_dirs:
-- docs/governance/CURRENT_TASK.yaml
-- docs/governance/DEVELOPMENT_ROADMAP.md
-- docs/governance/TASK_REGISTRY.yaml
-- docs/governance/WORKTREE_REGISTRY.yaml
-- docs/governance/MODULE_MAP.yaml
-- docs/governance/TEST_MATRIX.yaml
-- docs/governance/CODE_HYGIENE_POLICY.md
-- docs/governance/AUTOMATION_OPERATING_MODEL.md
-- docs/governance/tasks/
-- docs/governance/runlogs/
+- README.md
+- docs/product/
+- docs/contracts/
+- docs/governance/
 - scripts/
-- tests/governance/
 - tests/contracts/
+- tests/governance/
 - tests/automation/
+- tests/integration/
+- tests/fixtures/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
 reserved_paths: []
 planned_write_paths:
-- docs/governance/CURRENT_TASK.yaml
-- docs/governance/DEVELOPMENT_ROADMAP.md
-- docs/governance/TASK_REGISTRY.yaml
-- docs/governance/WORKTREE_REGISTRY.yaml
-- docs/governance/MODULE_MAP.yaml
-- docs/governance/TEST_MATRIX.yaml
-- docs/governance/CODE_HYGIENE_POLICY.md
-- docs/governance/AUTOMATION_OPERATING_MODEL.md
-- docs/governance/tasks/TASK-AUTO-001.md
-- docs/governance/runlogs/TASK-AUTO-001-RUNLOG.md
-- scripts/governance_lib.py
-- scripts/task_ops.py
-- scripts/check_repo.py
-- scripts/check_hygiene.py
-- scripts/automation_runner.py
-- tests/governance/
+- README.md
+- docs/product/
+- docs/contracts/
+- docs/governance/
+- scripts/
 - tests/contracts/
+- tests/governance/
 - tests/automation/
+- tests/integration/
+- tests/fixtures/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
 planned_test_paths:
-- tests/governance/
 - tests/contracts/
+- tests/governance/
 - tests/automation/
+- tests/integration/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
 required_tests:
+- python scripts/check_authority_alignment.py
+- python scripts/validate_contracts.py
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
-- pytest tests/governance -q
 - pytest tests/contracts -q
+- pytest tests/governance -q
 - pytest tests/automation -q
+- pytest tests/integration -q
+- pytest tests/stage3 -q
+- pytest tests/stage4 -q
+- pytest tests/stage6 -q
 - pytest -q
-task_file: docs/governance/tasks/TASK-AUTO-001.md
-runlog_file: docs/governance/runlogs/TASK-AUTO-001-RUNLOG.md
-next_action: 等待显式切换到下一个任务
-updated_at: '2026-04-04T14:04:17+08:00'
+task_file: docs/governance/tasks/TASK-GOV-001.md
+runlog_file: docs/governance/runlogs/TASK-GOV-001-RUNLOG.md
+next_action: worker 正在推进，等待进一步回报。
+updated_at: '2026-04-04T19:38:06+08:00'

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/stage3_project_base.schema.json",
+  "title": "AX9 Stage 3 Project Base",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "project_id",
+    "source_family",
+    "region_code",
+    "project_name",
+    "project_type_raw",
+    "engineering_domain",
+    "bid_control_price",
+    "bid_eval_method",
+    "public_chain_status",
+    "opening_record_count",
+    "invalid_bid_count"
+  ],
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_family": {
+      "type": "string",
+      "minLength": 1
+    },
+    "region_code": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_type_raw": {
+      "type": "string",
+      "minLength": 1
+    },
+    "engineering_domain": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bid_control_price": {
+      "type": "number",
+      "minimum": 0
+    },
+    "bid_eval_method": {
+      "type": "string",
+      "minLength": 1
+    },
+    "public_chain_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "opening_record_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "invalid_bid_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

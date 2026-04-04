@@ -17,6 +17,24 @@ def test_pause_moves_active_task_to_paused(tmp_path: Path) -> None:
     assert worktrees["entries"][0]["status"] == "paused"
 
 
+def test_can_start_succeeds_for_live_current_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    result = run_python(TASK_OPS_SCRIPT, repo, "can-start")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "can-start TASK-BASE-001" in result.stdout
+
+
+def test_can_close_requires_required_tests_in_runlog(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").write_text(
+        "# TASK-BASE-001 RUNLOG\n",
+        encoding="utf-8",
+    )
+    result = run_python(TASK_OPS_SCRIPT, repo, "can-close")
+    assert result.returncode == 1
+    assert "required tests missing from runlog" in result.stdout
+
+
 def test_activate_rejects_execution_task_in_main_worktree(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     create = run_python(

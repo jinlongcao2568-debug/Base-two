@@ -1,0 +1,49 @@
+version: '1.0'
+updated_at: '2026-04-04T19:45:00+08:00'
+authority_source: docs/product/AUTHORITY_SPEC.md
+capabilities:
+  - capability_id: governance_control_plane
+    status: implemented
+    source_of_truth:
+      - docs/governance/CURRENT_TASK.yaml
+      - docs/governance/TASK_REGISTRY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+    scripts:
+      - scripts/check_authority_alignment.py
+      - scripts/check_repo.py
+      - scripts/check_hygiene.py
+      - scripts/task_ops.py
+      - scripts/automation_runner.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+  - capability_id: contracts_registry_validation
+    status: implemented
+    source_of_truth:
+      - docs/contracts/
+      - docs/governance/SCHEMA_REGISTRY.md
+    scripts:
+      - scripts/validate_contracts.py
+    tests:
+      - pytest tests/contracts -q
+  - capability_id: stage3_stage4_stage6_minimal_chain
+    status: implemented
+    source_of_truth:
+      - docs/contracts/schemas/stage3_project_base.schema.json
+      - docs/contracts/schemas/stage4_rule_hit.schema.json
+      - docs/contracts/schemas/stage6_project_fact.schema.json
+      - docs/governance/TEST_MATRIX.yaml
+    scripts:
+      - scripts/validate_contracts.py
+    tests:
+      - pytest tests/stage3 -q
+      - pytest tests/stage4 -q
+      - pytest tests/stage6 -q
+      - pytest tests/integration -q
+  - capability_id: stage7_to_stage9_business_automation
+    status: not_implemented
+    source_of_truth:
+      - docs/product/MVP_SCOPE.md
+      - docs/governance/DEVELOPMENT_ROADMAP.md
+    scripts: []
+    tests: []

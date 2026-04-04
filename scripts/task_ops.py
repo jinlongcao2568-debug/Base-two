@@ -413,6 +413,44 @@ def cmd_close(args: argparse.Namespace) -> int:
     return 0
 
 
+def resolve_query_task(root: Path, task_id: str | None) -> tuple[dict, dict, dict]:
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    current_task = load_current_task(root)
+    resolved_id = task_id or current_task["current_task_id"]
+    task = find_task(registry["tasks"], resolved_id)
+    return task, registry, worktrees
+
+
+def cmd_can_start(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    task, _, worktrees = resolve_query_task(root, args.task_id)
+    current = load_current_task(root)
+    if task["task_id"] != current["current_task_id"]:
+        raise GovernanceError("can-start only supports the live current task")
+    if task["status"] in {"done", "review"}:
+        raise GovernanceError("current task is not startable in done/review state")
+    if current_branch(root) != task["branch"]:
+        raise GovernanceError("current branch does not match the live task branch")
+    entry = worktree_map(worktrees).get(task["task_id"])
+    if entry is None or entry.get("status") != "active":
+        raise GovernanceError("live current task does not have an active worktree entry")
+    print(f"[OK] can-start {task['task_id']}")
+    return 0
+
+
+def cmd_can_close(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    task, _, _ = resolve_query_task(root, args.task_id)
+    if task["status"] in {"queued", "paused", "blocked"}:
+        raise GovernanceError("task cannot close from queued/paused/blocked state")
+    missing = missing_required_tests(root, task)
+    if missing:
+        raise GovernanceError(f"required tests missing from runlog: {', '.join(missing)}")
+    print(f"[OK] can-close {task['task_id']}")
+    return 0
+
+
 def cmd_sync(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
@@ -746,6 +784,14 @@ def add_task_lifecycle_commands(subparsers) -> None:
     close_parser = subparsers.add_parser("close")
     close_parser.add_argument("task_id", nargs="?")
     close_parser.set_defaults(func=cmd_close)
+
+    can_start_parser = subparsers.add_parser("can-start")
+    can_start_parser.add_argument("task_id", nargs="?")
+    can_start_parser.set_defaults(func=cmd_can_start)
+
+    can_close_parser = subparsers.add_parser("can-close")
+    can_close_parser.add_argument("task_id", nargs="?")
+    can_close_parser.set_defaults(func=cmd_can_close)
 
     sync_parser = subparsers.add_parser("sync")
     sync_parser.add_argument("--write", action="store_true")

@@ -1,0 +1,9 @@
+{
+  "flow_id": "stage3-stage4-stage6-minimal",
+  "project_id": "project-cn-example-001",
+  "expected_project_base_ref": "project_base:project-cn-example-001",
+  "expected_rule_hit_ref": "rule_hit:rule-hit-cn-example-001",
+  "expected_sale_gate_status": "REVIEW",
+  "expected_review_status": "PENDING",
+  "expected_report_status": "READY"
+}

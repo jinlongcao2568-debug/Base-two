@@ -1,69 +1,72 @@
-# AX9S Governance Skeleton
+# AX9S Authority-Aligned Engineering Baseline
 
-AX9S 当前处于“治理底座 + 目录骨架 + contracts 校验链”阶段。
+This repository is the formal implementation baseline for the AX9S China engineering domain.
 
-## 当前仓库包含
+Conflict rule:
+- Domain truth is owned by `docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md`.
+- Execution discipline is owned by `docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md`.
+- The live execution entry is `docs/governance/CURRENT_TASK.yaml`.
+- If any downstream file drifts, fix the downstream file. Do not weaken the authority source.
 
-- `docs/baseline/`
-  - 建设工程域权威文档
-  - 建设工程域研发 / Codex 执行手册
-- `docs/governance/`
-  - 目录边界、错误策略、fixture 策略、评审与 PR 检查
-  - owner 清单、例外台账、接口清单、字段登记册
-  - 分支纪律和任务模板
-- `docs/contracts/`
-  - 4 份机器可读台账
-  - 对应 JSON Schema
-- `scripts/validate_contracts.py`
-  - contracts 校验入口
-- `tests/contracts/test_contract_templates.py`
-  - contracts smoke test
-- `src/`、`tests/`、`db/`
-  - 九阶段与治理目录骨架
+## Live Sources Of Truth
 
-## 当前正式真源
+- Authority index: `docs/product/AUTHORITY_SPEC.md`
+- Operator manual: `docs/governance/OPERATOR_MANUAL.md`
+- Live task entry: `docs/governance/CURRENT_TASK.yaml`
+- Task and worktree ledgers: `docs/governance/TASK_REGISTRY.yaml`, `docs/governance/WORKTREE_REGISTRY.yaml`
+- Structure and module boundaries: `docs/governance/DIRECTORY_MAP.md`, `docs/governance/MODULE_MAP.yaml`
+- Test gates: `docs/governance/TEST_MATRIX.yaml`
+- Formal contracts: `docs/contracts/`
 
-- 领域定义真源：
-  - `docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md`
-- 仓库执行真源：
-  - `docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md`
-- contracts 台账真源：
-  - `docs/contracts/sources_registry.yaml`
-  - `docs/contracts/region_coverage_registry.yaml`
-  - `docs/contracts/customer_delivery_field_whitelist.yaml`
-  - `docs/contracts/customer_delivery_field_blacklist.yaml`
+## What Is Already Real
 
-根目录不再保留平行的 contracts YAML 副本。
+- Governance control plane:
+  - `scripts/check_repo.py`
+  - `scripts/check_hygiene.py`
+  - `scripts/task_ops.py`
+  - `scripts/automation_runner.py`
+- Formal contract assets:
+  - `project_base`
+  - `rule_hit`
+  - `project_fact`
+- Authority-critical regression chain:
+  - `tests/stage3/`
+  - `tests/stage4/`
+  - `tests/stage6/`
+  - `tests/integration/test_stage3_stage4_stage6_minimal_flow.py`
 
-## 本地校验
+## Product Scope Snapshot
 
-1. 安装依赖
+- China MVP formal scope is stage 2 through stage 6.
+- Stage 7 through stage 9 are downstream consumers and optional business extensions in the current MVP.
+- Stage 6 remains the only formal unified fact surface.
+- Page, API, sales, contact, and delivery consumers must not rebuild top-level judgment outside `project_fact`.
+
+## Local Validation
 
 ```powershell
-python -m pip install -r requirements-dev.txt
-```
-
-2. 校验 contracts
-
-```powershell
+python scripts/check_authority_alignment.py
 python scripts/validate_contracts.py
-pytest tests/contracts/test_contract_templates.py
+python scripts/check_repo.py
+python scripts/check_hygiene.py
+pytest tests/contracts -q
+pytest tests/governance -q
+pytest tests/automation -q
+pytest tests/integration -q
+pytest -q
 ```
 
-3. 本地 git 初始化后的建议流程
+## Repository Layout
 
-```powershell
-git checkout -b feat/TASK-xxx-short-topic
-```
+- `docs/baseline/`: authority and execution baseline documents
+- `docs/product/`: derived product-facing execution documents
+- `docs/contracts/`: formal registries, schemas, examples, and field semantics
+- `docs/governance/`: live control-plane documents
+- `scripts/`: repository governance and validation entry points
+- `tests/`: governance, contracts, automation, stage, and integration tests
 
-开工前先填写：
+## Current Non-Goals
 
-- `docs/governance/TASK_TEMPLATE.md`
-- 相关接口或字段登记文件
-- 如需越边界，先登记 `docs/governance/exceptions_registry.yaml`
-
-## 当前状态说明
-
-- `src/` 和阶段测试目录已建立，但仍是最小骨架。
-- 合同台账、Schema 和 smoke test 已接入。
-- 后续进入具体研发前，应先在任务包中明确阶段、授权目录、测试和回滚路径。
+- No stage-directory renaming.
+- No second contracts root.
+- No new business-stage implementation logic under the current governance hardening task.
