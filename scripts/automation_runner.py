@@ -60,7 +60,7 @@ def prepare_parallel_worktrees(root: Path, current_task_id: str, worktree_root: 
     return created
 
 
-def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool) -> int:
+def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, continue_roadmap: bool) -> int:
     current_task = load_current_task(root)
     gate = runner_action_gate(current_task)
     results = [
@@ -96,6 +96,14 @@ def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool) 
     elif current_task["topology"] == "parallel_parent":
         print(f"[SKIP] auto-close-children skipped: {gate['reason']}")
 
+    if continue_roadmap and exit_code == 0:
+        continuation = task_ops(root, "continue-roadmap")
+        if continuation.stdout.strip():
+            print(continuation.stdout.strip())
+        if continuation.stderr.strip():
+            print(continuation.stderr.strip())
+        if continuation.returncode != 0:
+            exit_code = continuation.returncode
     cleanup = task_ops(root, "cleanup-orphans")
     if cleanup.stdout.strip():
         print(cleanup.stdout.strip())
@@ -113,10 +121,12 @@ def main() -> int:
     once_parser = subparsers.add_parser("once")
     once_parser.add_argument("--worktree-root")
     once_parser.add_argument("--prepare-worktrees", action="store_true")
+    once_parser.add_argument("--continue-roadmap", action="store_true")
 
     loop_parser = subparsers.add_parser("loop")
     loop_parser.add_argument("--worktree-root")
     loop_parser.add_argument("--prepare-worktrees", action="store_true")
+    loop_parser.add_argument("--continue-roadmap", action="store_true")
     loop_parser.add_argument("--interval-seconds", type=int, default=60)
     loop_parser.add_argument("--cycles", type=int, default=0)
 
@@ -125,11 +135,11 @@ def main() -> int:
         root = find_repo_root()
         worktree_root = Path(args.worktree_root).resolve() if args.worktree_root else default_worktree_root(root)
         if args.command == "once":
-            return coordinator_cycle(root, worktree_root, args.prepare_worktrees)
+            return coordinator_cycle(root, worktree_root, args.prepare_worktrees, args.continue_roadmap)
         cycle = 0
         while True:
             cycle += 1
-            result = coordinator_cycle(root, worktree_root, args.prepare_worktrees)
+            result = coordinator_cycle(root, worktree_root, args.prepare_worktrees, args.continue_roadmap)
             if result != 0:
                 return result
             if args.cycles and cycle >= args.cycles:

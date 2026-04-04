@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 
 from governance_lib import GovernanceError
+from task_continuation_ops import cmd_continue_current, cmd_continue_roadmap
 from task_lifecycle_ops import (
     cmd_activate,
     cmd_can_close,
@@ -76,6 +77,12 @@ def add_task_lifecycle_commands(subparsers) -> None:
     topology_parser = subparsers.add_parser("decide-topology")
     topology_parser.add_argument("task_id")
     topology_parser.set_defaults(func=cmd_decide_topology)
+
+    continue_current_parser = subparsers.add_parser("continue-current")
+    continue_current_parser.set_defaults(func=cmd_continue_current)
+
+    continue_roadmap_parser = subparsers.add_parser("continue-roadmap")
+    continue_roadmap_parser.set_defaults(func=cmd_continue_roadmap)
 
 
 def add_worktree_commands(subparsers) -> None:

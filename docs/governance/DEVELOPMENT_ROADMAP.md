@@ -1,7 +1,15 @@
 ---
-current_phase: authority-consistency-hardening
-current_task_id: TASK-GOV-001
+current_phase: automation-roadmap-continuation-v1
+current_task_id: TASK-AUTO-002
 next_recommended_task_id: null
+advance_mode: explicit_or_generated
+auto_create_missing_task: true
+branch_switch_policy: create_or_switch_if_clean
+priority_order:
+  - governance_automation
+  - authority_chain
+  - business_automation
+business_automation_enabled: false
 stage_establishment:
   stage1: not_established
   stage2: not_established
@@ -19,34 +27,32 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-GOV-001`: close authority drift across governance entry files, contracts assets, tests, and downstream execution documents before any next automation phase is opened.
+- `TASK-AUTO-002`: implement the continuation control plane so automation can resume the live task or advance to a uniquely valid successor without guessing.
 
 ## Recently Closed
 
+- `TASK-GOV-001`: closed authority drift, formalized contracts and handoff assets, expanded minimum regression coverage, and hardened the governance control plane.
 - `TASK-AUTO-001`: landed the first automation control-plane baseline and closed the shared coordination setup for `automation-control-plane-v1`.
 
 ## Current Phase Goal
 
-- Make the current repository obey one live execution source at a time.
-- Upgrade contracts from registry-only assets to professional contracts with schema, example, and field semantics.
-- Add a real `stage3 -> stage4 -> stage6` integration proof so stage establishment is backed by downstream consumption.
-- Expand README, MVP, test matrix, and governance indexes from seed-level text into execution-grade documents.
+- Add formal `continue-current` and `continue-roadmap` semantics to the live governance control plane.
+- Let automation close a review-ready current task, resolve or generate the next governance successor, and activate it only when the branch/worktree/dependency rules are satisfied.
+- Keep roadmap advancement limited to governance scheduling gaps in v1; do not auto-pick new business implementation work.
 
 ## Explicitly Out Of Scope
 
-- Do not rename the formal stage directories.
-- Do not move `docs/contracts/` to the repository root.
-- Do not expand into new business-stage implementation work.
+- Do not auto-generate stage7-stage9 business tasks.
+- Do not relax the clean-worktree requirement before switching or creating a successor branch.
+- Do not create a second task ledger or second roadmap source.
 
 ## Exit Criteria For Current Phase
 
-- `CURRENT_TASK.yaml`, `TASK_REGISTRY.yaml`, `WORKTREE_REGISTRY.yaml`, roadmap, task file, and runlog stay fully aligned for the live task.
-- `docs/contracts/` contains registry assets, schemas, examples, and field semantics for the stage-6 `project_fact` contract.
-- `tests/integration/` stops being empty and proves the minimum `stage3 -> stage4 -> stage6` chain.
-- README and downstream governance/product documents stop using seed or skeleton wording for live controls.
-- `python scripts/check_authority_alignment.py` reports every authority and automation readiness score at `>=95`.
-- The fixed batch-5 validation sequence passes twice in a row without score drift.
+- `task_ops continue-current` keeps or reactivates the live task without drifting current-task state.
+- `task_ops continue-roadmap` closes a review-ready live task and activates a unique successor only when roadmap policy, dependency, boundary, and branch rules are satisfied.
+- `automation_runner.py once --continue-roadmap` can drive the same flow after gates pass.
+- The roadmap frontmatter carries machine-readable continuation policy fields and the task policy carries the matching successor blueprint.
 
 ## Next Candidate
 
-- No next task will be activated automatically. The next task must be created explicitly after `TASK-GOV-001` reaches `review`.
+- v1 successor generation is limited to governance automation gaps. If no explicit or generated governance successor is available, automation must stop and report the gap.

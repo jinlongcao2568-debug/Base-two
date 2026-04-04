@@ -1,68 +1,39 @@
-current_task_id: TASK-GOV-001
-title: 权威一致性收口与控制面硬化
-status: done
+current_task_id: TASK-AUTO-002
+title: 路线图自动推进编排层
+status: review
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: authority-consistency-hardening
-branch: feat/TASK-GOV-001-authority-consistency-hardening
+stage: automation-roadmap-continuation-v1
+branch: feat/TASK-AUTO-002-roadmap-autopilot-continuation
 size_class: heavy
 automation_mode: manual
-worker_state: completed
+worker_state: review_pending
 blocked_reason: null
-last_reported_at: '2026-04-04T21:53:59+08:00'
+last_reported_at: '2026-04-04T22:26:50+08:00'
 topology: single_worker
 allowed_dirs:
-- README.md
-- docs/product/
-- docs/contracts/
 - docs/governance/
 - scripts/
-- tests/contracts/
 - tests/governance/
 - tests/automation/
-- tests/integration/
-- tests/fixtures/
-- tests/stage3/
-- tests/stage4/
-- tests/stage6/
 reserved_paths: []
 planned_write_paths:
-- README.md
-- docs/product/
-- docs/contracts/
 - docs/governance/
 - scripts/
-- tests/contracts/
 - tests/governance/
 - tests/automation/
-- tests/integration/
-- tests/fixtures/
-- tests/stage3/
-- tests/stage4/
-- tests/stage6/
 planned_test_paths:
-- tests/contracts/
 - tests/governance/
 - tests/automation/
-- tests/integration/
-- tests/stage3/
-- tests/stage4/
-- tests/stage6/
 required_tests:
 - python scripts/check_authority_alignment.py
-- python scripts/validate_contracts.py
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
-- pytest tests/contracts -q
 - pytest tests/governance -q
 - pytest tests/automation -q
-- pytest tests/integration -q
-- pytest tests/stage3 -q
-- pytest tests/stage4 -q
-- pytest tests/stage6 -q
 - pytest -q
-task_file: docs/governance/tasks/TASK-GOV-001.md
-runlog_file: docs/governance/runlogs/TASK-GOV-001-RUNLOG.md
-next_action: 等待显式切换到下一个任务
-updated_at: '2026-04-04T21:53:59+08:00'
+task_file: docs/governance/tasks/TASK-AUTO-002.md
+runlog_file: docs/governance/runlogs/TASK-AUTO-002-RUNLOG.md
+next_action: worker 已完成候选交付；等待自动收口或评审。
+updated_at: '2026-04-04T22:26:50+08:00'

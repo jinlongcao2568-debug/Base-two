@@ -72,6 +72,14 @@ def test_check_repo_fails_when_roadmap_current_task_drifts(tmp_path: Path) -> No
         "current_phase: wrong-phase\n"
         "current_task_id: TASK-WRONG-001\n"
         "next_recommended_task_id: null\n"
+        "advance_mode: explicit_or_generated\n"
+        "auto_create_missing_task: true\n"
+        "branch_switch_policy: create_or_switch_if_clean\n"
+        "priority_order:\n"
+        "  - governance_automation\n"
+        "  - authority_chain\n"
+        "  - business_automation\n"
+        "business_automation_enabled: false\n"
         "stage_establishment:\n"
         "  stage1: not_established\n"
         "  stage2: not_established\n"
@@ -89,6 +97,26 @@ def test_check_repo_fails_when_roadmap_current_task_drifts(tmp_path: Path) -> No
     result = run_python(CHECK_REPO_SCRIPT, repo)
     assert result.returncode == 1
     assert "roadmap current_task_id mismatch" in result.stdout
+
+
+def test_check_repo_fails_when_roadmap_policy_is_invalid(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("advance_mode: explicit_or_generated", "advance_mode: invalid_mode", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "advance_mode" in result.stdout
+
+
+def test_check_repo_fails_when_next_recommended_task_is_missing(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-MISSING-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "next_recommended_task_id" in result.stdout
 
 
 def test_check_repo_fails_when_task_file_status_drifts(tmp_path: Path) -> None:

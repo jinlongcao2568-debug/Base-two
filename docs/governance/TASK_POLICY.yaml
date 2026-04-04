@@ -38,3 +38,33 @@ closeout_rules:
   - required_tests must appear in the runlog
   - task status must not remain doing after formal closeout
   - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied
+task_blueprints:
+  - blueprint_id: roadmap_autopilot_continuation
+    title: 路线图自动推进编排层
+    task_kind: coordination
+    execution_mode: shared_coordination
+    stage: automation-roadmap-continuation-v1
+    size_class: heavy
+    automation_mode: manual
+    topology: single_worker
+    allowed_dirs:
+      - docs/governance/
+      - scripts/
+      - tests/governance/
+      - tests/automation/
+    planned_write_paths:
+      - docs/governance/
+      - scripts/
+      - tests/governance/
+      - tests/automation/
+    planned_test_paths:
+      - tests/governance/
+      - tests/automation/
+    required_tests:
+      - python scripts/check_authority_alignment.py
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+      - pytest -q
+    branch_template: feat/{task_id}-roadmap-autopilot-continuation

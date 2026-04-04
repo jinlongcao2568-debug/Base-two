@@ -12,6 +12,7 @@ SPEC.loader.exec_module(HELPERS)
 
 AUTOMATION_RUNNER_SCRIPT = HELPERS.AUTOMATION_RUNNER_SCRIPT
 TASK_OPS_SCRIPT = HELPERS.TASK_OPS_SCRIPT
+CHECK_REPO_SCRIPT = HELPERS.CHECK_REPO_SCRIPT
 init_governance_repo = HELPERS.init_governance_repo
 git_commit_all = HELPERS.git_commit_all
 read_yaml = HELPERS.read_yaml
@@ -22,6 +23,52 @@ write_yaml = HELPERS.write_yaml
 def sync_task_artifacts(repo: Path) -> None:
     result = run_python(TASK_OPS_SCRIPT, repo, "sync", "--write")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
+    result = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        task_id,
+        "--title",
+        "next coordination task",
+        "--stage",
+        "next-phase",
+        "--branch",
+        f"feat/{task_id}",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "scripts/",
+        "tests/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "scripts/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def mark_review_ready(repo: Path) -> None:
+    finished = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-BASE-001",
+        "--summary",
+        "review ready",
+        "--tests",
+        "pytest tests/base -q",
+    )
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    git_commit_all(repo, "prepare roadmap continuation")
 
 
 def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
@@ -285,3 +332,33 @@ def test_runner_reports_cleanup_blocked(tmp_path: Path) -> None:
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
     entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-BLOCK")
     assert entry["cleanup_state"] == "blocked_manual"
+
+
+def test_runner_continue_roadmap_advances_review_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    mark_review_ready(repo)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
+def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
+    autopilot = next(item for item in capability_map["capabilities"] if item["capability_id"] == "roadmap_autopilot_continuation")
+    autopilot["status"] = "implemented"
+    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
+    mark_review_ready(repo)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    assert result.returncode == 1
+    assert "no successor" in result.stdout

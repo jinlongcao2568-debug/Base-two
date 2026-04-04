@@ -46,6 +46,14 @@ def roadmap_text() -> str:
         "current_phase: base-phase\n"
         "current_task_id: TASK-BASE-001\n"
         "next_recommended_task_id: null\n"
+        "advance_mode: explicit_or_generated\n"
+        "auto_create_missing_task: true\n"
+        "branch_switch_policy: create_or_switch_if_clean\n"
+        "priority_order:\n"
+        "  - governance_automation\n"
+        "  - authority_chain\n"
+        "  - business_automation\n"
+        "business_automation_enabled: false\n"
         "stage_establishment:\n"
         "  stage1: not_established\n"
         "  stage2: not_established\n"
@@ -59,6 +67,125 @@ def roadmap_text() -> str:
         "automation_foundation: not_established\n"
         "---\n\n# Roadmap\n"
     )
+
+
+def capability_map_payload() -> dict[str, Any]:
+    return {
+        "version": "1.0",
+        "updated_at": "2026-04-04T00:00:00+08:00",
+        "authority_source": "docs/product/AUTHORITY_SPEC.md",
+        "capabilities": [
+            {
+                "capability_id": "governance_control_plane",
+                "status": "implemented",
+                "source_of_truth": [
+                    "docs/governance/CURRENT_TASK.yaml",
+                    "docs/governance/TASK_REGISTRY.yaml",
+                    "docs/governance/WORKTREE_REGISTRY.yaml",
+                ],
+                "scripts": ["scripts/task_ops.py", "scripts/automation_runner.py"],
+                "tests": ["pytest tests/governance -q", "pytest tests/automation -q"],
+            },
+            {
+                "capability_id": "roadmap_autopilot_continuation",
+                "status": "not_implemented",
+                "source_of_truth": [
+                    "docs/governance/DEVELOPMENT_ROADMAP.md",
+                    "docs/governance/TASK_POLICY.yaml",
+                    "docs/governance/CAPABILITY_MAP.yaml",
+                ],
+                "scripts": [
+                    "scripts/task_ops.py",
+                    "scripts/task_continuation_ops.py",
+                    "scripts/automation_runner.py",
+                ],
+                "tests": ["pytest tests/governance -q", "pytest tests/automation -q"],
+            },
+        ],
+    }
+
+
+def task_blueprints_payload() -> list[dict[str, Any]]:
+    return [
+        {
+            "blueprint_id": "roadmap_autopilot_continuation",
+            "title": "路线图自动推进编排层",
+            "task_kind": "coordination",
+            "execution_mode": "shared_coordination",
+            "stage": "automation-roadmap-continuation-v1",
+            "size_class": "heavy",
+            "automation_mode": "manual",
+            "topology": "single_worker",
+            "allowed_dirs": [
+                "docs/governance/",
+                "scripts/",
+                "tests/governance/",
+                "tests/automation/",
+            ],
+            "planned_write_paths": [
+                "docs/governance/",
+                "scripts/",
+                "tests/governance/",
+                "tests/automation/",
+            ],
+            "planned_test_paths": ["tests/governance/", "tests/automation/"],
+            "required_tests": [
+                "python scripts/check_repo.py",
+                "python scripts/check_hygiene.py",
+                "pytest tests/governance -q",
+                "pytest tests/automation -q",
+                "pytest -q",
+            ],
+            "branch_template": "feat/{task_id}-roadmap-autopilot-continuation",
+        }
+    ]
+
+
+def task_policy_payload() -> dict[str, Any]:
+    return {
+        "version": "1.0",
+        "updated_at": "2026-04-04T00:00:00+08:00",
+        "authority_source": "docs/product/AUTHORITY_SPEC.md",
+        "operator_source": "docs/governance/OPERATOR_MANUAL.md",
+        "size_classes": {
+            "micro": {
+                "target_duration": "<=45m",
+                "max_scope_roots": 1,
+                "default_topology": "single_task",
+                "default_automation_mode": "assisted",
+                "split_allowed": False,
+            },
+            "standard": {
+                "target_duration": "45m-4h",
+                "max_scope_roots": 2,
+                "default_topology": "single_worker",
+                "default_automation_mode": "assisted",
+                "split_allowed": False,
+            },
+            "heavy": {
+                "target_duration": ">4h",
+                "max_scope_roots": "2+",
+                "default_topology": "single_worker",
+                "default_automation_mode": "manual",
+                "split_allowed": True,
+            },
+        },
+        "automation_modes": {
+            "manual": {"description": "Manual coordination."},
+            "assisted": {"description": "Assisted coordination."},
+            "autonomous": {"description": "Autonomous coordination."},
+        },
+        "stop_conditions": [
+            "current_task drift across registry, roadmap, task file, runlog, or worktree entry",
+            "contract validation failure",
+            "hygiene hard failure",
+        ],
+        "closeout_rules": [
+            "required_tests must appear in the runlog",
+            "task status must not remain doing after formal closeout",
+        ],
+        "task_blueprints": task_blueprints_payload(),
+    }
 
 
 def module_map_payload() -> dict[str, Any]:
@@ -236,6 +363,8 @@ def write_governance_files(repo: Path) -> None:
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
     write_yaml(repo / "docs/governance/MODULE_MAP.yaml", module_map_payload())
     write_yaml(repo / "docs/governance/TEST_MATRIX.yaml", test_matrix_payload())
+    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map_payload())
+    write_yaml(repo / "docs/governance/TASK_POLICY.yaml", task_policy_payload())
     task = base_task_payload()
     write_yaml(
         repo / "docs/governance/CURRENT_TASK.yaml",

@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-04T21:55:01+08:00'
+updated_at: '2026-04-04T22:26:50+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -137,7 +137,7 @@ tasks:
   closed_at: '2026-04-04T21:53:59+08:00'
 - task_id: TASK-AUTO-002
   title: 路线图自动推进编排层
-  status: queued
+  status: review
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -145,9 +145,9 @@ tasks:
   branch: feat/TASK-AUTO-002-roadmap-autopilot-continuation
   size_class: heavy
   automation_mode: manual
-  worker_state: idle
+  worker_state: review_pending
   blocked_reason: null
-  last_reported_at: '2026-04-04T21:55:01+08:00'
+  last_reported_at: '2026-04-04T22:26:50+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -164,6 +164,7 @@ tasks:
   - tests/governance/
   - tests/automation/
   required_tests:
+  - python scripts/check_authority_alignment.py
   - python scripts/check_repo.py
   - python scripts/check_hygiene.py
   - pytest tests/governance -q
@@ -172,5 +173,5 @@ tasks:
   task_file: docs/governance/tasks/TASK-AUTO-002.md
   runlog_file: docs/governance/runlogs/TASK-AUTO-002-RUNLOG.md
   created_at: '2026-04-04T21:55:01+08:00'
-  activated_at: null
+  activated_at: '2026-04-04T21:56:05+08:00'
   closed_at: null

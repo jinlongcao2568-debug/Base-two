@@ -33,6 +33,10 @@ from governance_lib import (
     TASK_MARKER_START,
 )
 
+ROADMAP_ADVANCE_MODES = {"explicit_or_generated"}
+ROADMAP_BRANCH_SWITCH_POLICIES = {"create_or_switch_if_clean"}
+ROADMAP_PRIORITY_VALUES = {"governance_automation", "authority_chain", "business_automation"}
+
 
 def validate_registry_entries(root, registry: dict, worktrees: dict) -> None:
     for task in registry.get("tasks", []):
@@ -105,12 +109,30 @@ def validate_current_worktree_entry(active_task: dict, worktrees: dict) -> None:
         raise GovernanceError("current task worktree entry branch mismatch")
 
 
-def validate_roadmap_alignment(root, active_task: dict) -> None:
+def validate_roadmap_alignment(root, active_task: dict, tasks_by_id: dict[str, dict]) -> None:
     roadmap_frontmatter, _ = read_roadmap(root)
     if roadmap_frontmatter.get("current_task_id") != active_task["task_id"]:
         raise GovernanceError("roadmap current_task_id mismatch")
     if roadmap_frontmatter.get("current_phase") != active_task["stage"]:
         raise GovernanceError("roadmap current_phase mismatch")
+    if roadmap_frontmatter.get("advance_mode") not in ROADMAP_ADVANCE_MODES:
+        raise GovernanceError("roadmap advance_mode is missing or invalid")
+    if not isinstance(roadmap_frontmatter.get("auto_create_missing_task"), bool):
+        raise GovernanceError("roadmap auto_create_missing_task must be a boolean")
+    if roadmap_frontmatter.get("branch_switch_policy") not in ROADMAP_BRANCH_SWITCH_POLICIES:
+        raise GovernanceError("roadmap branch_switch_policy is missing or invalid")
+    priority_order = roadmap_frontmatter.get("priority_order")
+    if not isinstance(priority_order, list) or not priority_order:
+        raise GovernanceError("roadmap priority_order must be a non-empty list")
+    if any(item not in ROADMAP_PRIORITY_VALUES for item in priority_order):
+        raise GovernanceError("roadmap priority_order contains an unknown value")
+    if len(set(priority_order)) != len(priority_order):
+        raise GovernanceError("roadmap priority_order must not contain duplicates")
+    if not isinstance(roadmap_frontmatter.get("business_automation_enabled"), bool):
+        raise GovernanceError("roadmap business_automation_enabled must be a boolean")
+    next_task_id = roadmap_frontmatter.get("next_recommended_task_id")
+    if next_task_id is not None and next_task_id not in tasks_by_id:
+        raise GovernanceError("roadmap next_recommended_task_id missing from registry")
 
 
 def validate_task_file_alignment(root, active_task: dict) -> None:
@@ -201,7 +223,7 @@ def main() -> int:
         active_task, allowed_dirs, planned_write_paths, in_execution_context = resolve_active_task(root, tasks_by_id)
         if not in_execution_context:
             validate_current_worktree_entry(active_task, worktrees)
-            validate_roadmap_alignment(root, active_task)
+            validate_roadmap_alignment(root, active_task, tasks_by_id)
             validate_task_file_alignment(root, active_task)
             validate_runlog_alignment(root, active_task)
         modified_paths = git_status_paths(root)

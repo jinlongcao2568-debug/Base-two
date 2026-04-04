@@ -49,6 +49,10 @@ Conflict rule:
 ## Current State
 
 - The governance control plane is live and test-backed.
-- Contracts are formalized for `project_base`, `rule_hit`, and `project_fact`.
+- Contracts are formalized for `project_base`, `rule_hit`, `evidence`, `review_request`, `report_record`, and `project_fact`.
 - The minimum authority-critical chain `stage3 -> stage4 -> stage6` is covered by fixtures and integration tests.
 - No public business API is registered yet; the interface catalog stays in an explicit zero-state until one exists.
+- Continuation now has two formal entry points:
+  - `continue-current` resumes only the live current task.
+  - `continue-roadmap` closes a review-ready live task and resolves the next valid governance successor.
+- v1 roadmap continuation can generate only governance automation successors; it does not auto-pick business implementation work.

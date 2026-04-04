@@ -17,6 +17,8 @@ WORKTREE_REGISTRY_FILE = Path("docs/governance/WORKTREE_REGISTRY.yaml")
 ROADMAP_FILE = Path("docs/governance/DEVELOPMENT_ROADMAP.md")
 MODULE_MAP_FILE = Path("docs/governance/MODULE_MAP.yaml")
 TEST_MATRIX_FILE = Path("docs/governance/TEST_MATRIX.yaml")
+TASK_POLICY_FILE = Path("docs/governance/TASK_POLICY.yaml")
+CAPABILITY_MAP_FILE = Path("docs/governance/CAPABILITY_MAP.yaml")
 CODE_HYGIENE_POLICY_FILE = Path("docs/governance/CODE_HYGIENE_POLICY.md")
 EXECUTION_CONTEXT_FILE = Path(".codex/local/EXECUTION_CONTEXT.yaml")
 RESERVED_PATHS = [
@@ -98,6 +100,14 @@ def load_module_map(root: Path) -> dict[str, Any]:
 
 def load_test_matrix(root: Path) -> dict[str, Any]:
     return load_yaml(root / TEST_MATRIX_FILE)
+
+
+def load_task_policy(root: Path) -> dict[str, Any]:
+    return load_yaml(root / TASK_POLICY_FILE)
+
+
+def load_capability_map(root: Path) -> dict[str, Any]:
+    return load_yaml(root / CAPABILITY_MAP_FILE)
 
 
 def task_map(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:

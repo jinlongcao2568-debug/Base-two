@@ -13,6 +13,20 @@ capabilities:
       - scripts/check_repo.py
       - scripts/check_hygiene.py
       - scripts/task_ops.py
+      - scripts/task_continuation_ops.py
+      - scripts/automation_runner.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+  - capability_id: roadmap_autopilot_continuation
+    status: implemented
+    source_of_truth:
+      - docs/governance/DEVELOPMENT_ROADMAP.md
+      - docs/governance/TASK_POLICY.yaml
+      - docs/governance/CAPABILITY_MAP.yaml
+    scripts:
+      - scripts/task_ops.py
+      - scripts/task_continuation_ops.py
       - scripts/automation_runner.py
     tests:
       - pytest tests/governance -q

@@ -60,12 +60,14 @@ REQUIRED_AUTOMATION_SCRIPTS = [
     "scripts/check_repo.py",
     "scripts/check_hygiene.py",
     "scripts/task_ops.py",
+    "scripts/task_continuation_ops.py",
     "scripts/automation_runner.py",
     "scripts/validate_contracts.py",
     "scripts/check_authority_alignment.py",
 ]
 REQUIRED_AUTOMATION_TESTS = [
     "tests/governance/test_check_repo.py",
+    "tests/governance/test_task_continuation.py",
     "tests/governance/test_task_ops.py",
     "tests/governance/test_authority_alignment.py",
     "tests/automation/test_automation_runner.py",
@@ -191,7 +193,7 @@ def _collect_live_task_alignment_errors(root: Path) -> list[str]:
         validate_registry_entries(root, registry, worktrees)
         active_task, _, _ = resolve_current_task(root, tasks_by_id)
         validate_current_worktree_entry(active_task, worktrees)
-        validate_roadmap_alignment(root, active_task)
+        validate_roadmap_alignment(root, active_task, tasks_by_id)
         validate_task_file_alignment(root, active_task)
         validate_runlog_alignment(root, active_task)
         active_coordination = [
@@ -474,6 +476,7 @@ def _evaluate_structure_layer(root: Path) -> list[str]:
     capability_ids = {item.get("capability_id") for item in capability_map.get("capabilities", [])}
     for capability_id in (
         "governance_control_plane",
+        "roadmap_autopilot_continuation",
         "contracts_registry_validation",
         "stage3_stage4_stage6_minimal_chain",
         "formal_handoff_catalog",
@@ -552,6 +555,8 @@ def _evaluate_automation_layer(root: Path) -> list[str]:
         tests = governance_capability.get("tests") or []
         if "scripts/check_authority_alignment.py" not in scripts:
             errors.append("governance_control_plane capability must list scripts/check_authority_alignment.py")
+        if "scripts/task_continuation_ops.py" not in scripts:
+            errors.append("governance_control_plane capability must list scripts/task_continuation_ops.py")
         for command in ("pytest tests/governance -q", "pytest tests/automation -q"):
             if command not in tests:
                 errors.append(f"governance_control_plane capability missing test command: {command}")

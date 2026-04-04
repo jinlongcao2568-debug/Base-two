@@ -106,5 +106,5 @@
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `updated_at`: `2026-04-04T21:53:59+08:00`
+- `updated_at`: `2026-04-04T22:19:45+08:00`
 <!-- generated:task-meta:end -->
