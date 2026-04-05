@@ -64,6 +64,19 @@ capabilities:
     tests:
       - pytest tests/governance -q
       - pytest tests/automation -q
+  - capability_id: git_publish_on_demand_v1
+    status: implemented
+    source_of_truth:
+      - docs/governance/GIT_PUBLISH_POLICY.yaml
+      - docs/governance/AUTOMATION_INTENTS.yaml
+      - docs/governance/runlogs/
+    scripts:
+      - scripts/task_publish_ops.py
+      - scripts/task_runtime_ops.py
+      - scripts/automation_intent.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
   - capability_id: roadmap_autopilot_continuation
     status: implemented
     source_of_truth:

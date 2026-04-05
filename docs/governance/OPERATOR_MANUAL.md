@@ -59,6 +59,22 @@ Conflict rule:
   - executes `continue-roadmap`
   - prepares child worktrees and review-bundle closeout when the live task is a `parallel_parent`
 
+## Git Publish Commands
+
+- `python scripts/task_ops.py publish-preflight --action <action> [--task-id <task_id>]`
+  - runs the governed publish preflight without mutating the repository
+- `python scripts/task_ops.py commit-task-results [--task-id <task_id>] [--message "<msg>"]`
+  - commits only task-scoped changes plus direct governance artifacts
+- `python scripts/task_ops.py push-task-branch [--task-id <task_id>]`
+  - pushes the task branch to `origin`
+- `python scripts/task_ops.py create-task-pr [--task-id <task_id>]`
+  - pushes if needed and creates a draft PR against `main`
+- `python scripts/task_ops.py publish-task-results [--task-id <task_id>]`
+  - runs `commit -> push -> create draft PR`
+- Git publish actions are explicit only.
+  - They do not run from continuation commands or task closeout.
+  - They default to `review/done` tasks and stop when publish gates fail.
+
 ## Runtime Status
 
 - `python scripts/task_ops.py orchestration-status --format yaml`

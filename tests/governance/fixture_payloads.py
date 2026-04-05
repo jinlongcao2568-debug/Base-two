@@ -92,6 +92,21 @@ def _governance_control_capabilities() -> list[dict[str, Any]]:
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
         _capability(
+            "git_publish_on_demand_v1",
+            "implemented",
+            [
+                "docs/governance/GIT_PUBLISH_POLICY.yaml",
+                "docs/governance/AUTOMATION_INTENTS.yaml",
+                "docs/governance/runlogs/",
+            ],
+            [
+                "scripts/task_publish_ops.py",
+                "scripts/task_runtime_ops.py",
+                "scripts/automation_intent.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+        _capability(
             "roadmap_autopilot_continuation",
             "not_implemented",
             [
@@ -523,6 +538,7 @@ def base_allowed_dirs() -> list[str]:
         "docs/governance/CURRENT_TASK.yaml",
         "docs/governance/DEVELOPMENT_ROADMAP.md",
         "docs/governance/AUTOMATION_INTENTS.yaml",
+        "docs/governance/GIT_PUBLISH_POLICY.yaml",
         "docs/governance/PROMPT_MODULE_CATALOG.yaml",
         "docs/governance/prompt_modules/",
         "docs/governance/runtime_prompts/",

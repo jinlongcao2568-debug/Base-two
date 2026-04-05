@@ -20,6 +20,8 @@ Conflict rule:
   - live phase and current-task roadmap context
 - `AUTOMATION_INTENTS.yaml`
   - natural-language intent routing policy for governed continuation entrypoints in `docs/governance/AUTOMATION_INTENTS.yaml`
+- `GIT_PUBLISH_POLICY.yaml`
+  - explicit on-demand Git publish policy for commit, push, and draft PR actions
 - `DIRECTORY_MAP.md`
   - repository boundary map
 - `PROMPT_MODULE_CATALOG.yaml`
@@ -68,6 +70,10 @@ Conflict rule:
   - It may recognize broader natural-language continue requests.
   - It still routes only to `continue-current` or `continue-roadmap`.
   - Ambiguous requests must stop instead of guessing through a task switch.
+- Git publish is now a separate explicit control-plane action set.
+  - `commit-task-results`, `push-task-branch`, `create-task-pr`, and `publish-task-results` are manual release actions.
+  - They do not run from `continue-current`, `continue-roadmap`, or automatic closeout.
+  - They are gated by `docs/governance/GIT_PUBLISH_POLICY.yaml`.
 - Closing a live top-level coordination task without an immediately activated successor now moves the repository into a legal idle control-plane state.
 - Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
 - `stage7-stage9` remain downstream-only stages and now require both dependency satisfaction and `stage7_to_stage9_business_automation=implemented` before automation may generate them.

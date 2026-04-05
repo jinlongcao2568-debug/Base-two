@@ -30,6 +30,7 @@ from task_closeout import assess_live_closeout
 from task_coordination_lease import assess_coordination_lease
 from task_continuation_ops import _resolve_roadmap_successor
 from task_handoff import build_recovery_pack
+from task_publish_ops import PUBLISH_ACTIONS, publish_preflight
 from task_rendering import find_task
 
 
@@ -296,6 +297,25 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
     }
 
 
+def _preflight_publish_action(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    action = intent["intent_id"]
+    if action not in PUBLISH_ACTIONS:
+        raise GovernanceError(f"unsupported publish intent_id: {action}")
+    result = publish_preflight(root, action=action)
+    result.update(
+        {
+            "matched_phrase": matched_phrase,
+            "intent_id": action,
+            "mapped_command": intent["mapped_command"],
+            "closeout_recommendation": None,
+            "recovery_pack": None,
+            "recovery_source": None,
+            "recovery_warnings": [],
+        }
+    )
+    return result
+
+
 def preflight(root: Path, utterance: str) -> dict[str, Any]:
     catalog = _load_catalog(root)
     intent, matched_phrase, explanation = _recognize_intent(root, catalog, utterance)
@@ -316,6 +336,8 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
         return _preflight_continue_current(root, intent, matched_phrase)
     if intent["intent_id"] == "continue-roadmap":
         return _preflight_continue_roadmap(root, intent, matched_phrase)
+    if intent["intent_id"] in PUBLISH_ACTIONS:
+        return _preflight_publish_action(root, intent, matched_phrase)
     raise GovernanceError(f"unsupported intent_id in catalog: {intent['intent_id']}")
 
 

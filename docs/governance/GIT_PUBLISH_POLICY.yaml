@@ -1,0 +1,30 @@
+version: "1.0"
+updated_at: "2026-04-05T17:20:00+08:00"
+authority_source: docs/governance/OPERATOR_MANUAL.md
+publish_mode: explicit_on_demand_only
+allowed_publish_statuses:
+  - review
+  - done
+default_remote: origin
+default_base_branch: main
+default_pr_mode: draft
+scope_mode: planned_write_paths_plus_direct_governance
+direct_governance_paths:
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+task_artifacts:
+  - task_file
+  - runlog_file
+  - handoff_file
+required_preflight_checks:
+  - task_exists_or_explicit_task_id
+  - task_status_allowed
+  - required_tests_recorded
+  - ledger_consistency
+  - task_scoped_dirty_paths_only
+  - remote_origin_if_needed
+  - gh_cli_if_needed
+  - gh_auth_if_needed
+  - existing_pr_detection_if_needed

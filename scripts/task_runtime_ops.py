@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import argparse
 
-from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError
+from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError, configure_utf8_stdio
+from task_publish_ops import (
+    PUBLISH_ACTIONS,
+    cmd_commit_task_results,
+    cmd_create_task_pr,
+    cmd_publish_preflight,
+    cmd_publish_task_results,
+    cmd_push_task_branch,
+)
 from task_continuation_ops import cmd_continue_current, cmd_continue_roadmap
 from task_coordination_ops import cmd_handoff, cmd_release, cmd_takeover
 from task_coordination_planner import cmd_plan_coordination, cmd_promote_candidate
@@ -122,13 +130,48 @@ def add_task_lifecycle_commands(subparsers) -> None:
     topology_parser.add_argument("task_id")
     topology_parser.set_defaults(func=cmd_decide_topology)
 
+    add_continuation_commands(subparsers)
+    add_coordination_commands(subparsers)
+    add_publish_commands(subparsers)
+
+
+def add_continuation_commands(subparsers) -> None:
     continue_current_parser = subparsers.add_parser("continue-current")
     continue_current_parser.set_defaults(func=cmd_continue_current)
 
     continue_roadmap_parser = subparsers.add_parser("continue-roadmap")
     continue_roadmap_parser.set_defaults(func=cmd_continue_roadmap)
 
-    add_coordination_commands(subparsers)
+
+def add_publish_commands(subparsers) -> None:
+    publish_preflight_parser = subparsers.add_parser("publish-preflight")
+    publish_preflight_parser.add_argument("--action", default="publish-task-results", choices=PUBLISH_ACTIONS)
+    publish_preflight_parser.add_argument("--task-id")
+    publish_preflight_parser.set_defaults(func=cmd_publish_preflight)
+
+    commit_parser = subparsers.add_parser("commit-task-results")
+    commit_parser.add_argument("--task-id")
+    commit_parser.add_argument("--message")
+    commit_parser.set_defaults(func=cmd_commit_task_results)
+
+    push_parser = subparsers.add_parser("push-task-branch")
+    push_parser.add_argument("--task-id")
+    push_parser.set_defaults(func=cmd_push_task_branch)
+
+    pr_parser = subparsers.add_parser("create-task-pr")
+    pr_parser.add_argument("--task-id")
+    pr_parser.add_argument("--title")
+    pr_parser.add_argument("--body")
+    pr_parser.add_argument("--base-branch")
+    pr_parser.set_defaults(func=cmd_create_task_pr)
+
+    publish_parser = subparsers.add_parser("publish-task-results")
+    publish_parser.add_argument("--task-id")
+    publish_parser.add_argument("--message")
+    publish_parser.add_argument("--title")
+    publish_parser.add_argument("--body")
+    publish_parser.add_argument("--base-branch")
+    publish_parser.set_defaults(func=cmd_publish_task_results)
 
 
 def add_worktree_commands(subparsers) -> None:
@@ -210,6 +253,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    configure_utf8_stdio()
     parser = build_parser()
     args = parser.parse_args()
     try:

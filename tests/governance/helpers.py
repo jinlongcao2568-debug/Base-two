@@ -180,6 +180,88 @@ def _write_automation_intents(path: Path) -> None:
     )
 
 
+def _write_automation_intents_v2(path: Path) -> None:
+    write_yaml(
+        path,
+        {
+            "version": "1.0",
+            "recognition_mode": "heuristic_free_form",
+            "generic_continue_signals": ["继续", "接着"],
+            "supported_intents": [
+                {
+                    "intent_id": "continue-current",
+                    "canonical_phrase": "继续当前任务",
+                    "mapped_command": "python scripts/task_ops.py continue-current",
+                    "command_argv": ["python", "scripts/task_ops.py", "continue-current"],
+                    "examples": ["继续当前任务"],
+                    "action_any": ["继续", "接着"],
+                    "context_any": ["当前任务", "手头任务"],
+                    "disallow_any": ["路线图", "下一步"],
+                },
+                {
+                    "intent_id": "continue-roadmap",
+                    "canonical_phrase": "按路线图继续推进",
+                    "mapped_command": "python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees",
+                    "command_argv": [
+                        "python",
+                        "scripts/automation_runner.py",
+                        "once",
+                        "--continue-roadmap",
+                        "--prepare-worktrees",
+                    ],
+                    "examples": ["按路线图继续推进"],
+                    "action_any": ["继续", "推进"],
+                    "context_any": ["路线图", "下一步"],
+                },
+                {
+                    "intent_id": "commit-task-results",
+                    "canonical_phrase": "提交当前任务成果",
+                    "mapped_command": "python scripts/task_ops.py commit-task-results",
+                    "command_argv": ["python", "scripts/task_ops.py", "commit-task-results"],
+                    "examples": ["提交当前任务成果"],
+                },
+                {
+                    "intent_id": "push-task-branch",
+                    "canonical_phrase": "推送当前任务分支",
+                    "mapped_command": "python scripts/task_ops.py push-task-branch",
+                    "command_argv": ["python", "scripts/task_ops.py", "push-task-branch"],
+                    "examples": ["推送当前任务分支"],
+                },
+                {
+                    "intent_id": "create-task-pr",
+                    "canonical_phrase": "为当前任务开PR",
+                    "mapped_command": "python scripts/task_ops.py create-task-pr",
+                    "command_argv": ["python", "scripts/task_ops.py", "create-task-pr"],
+                    "examples": ["为当前任务开PR"],
+                },
+                {
+                    "intent_id": "publish-task-results",
+                    "canonical_phrase": "发布当前任务成果",
+                    "mapped_command": "python scripts/task_ops.py publish-task-results",
+                    "command_argv": ["python", "scripts/task_ops.py", "publish-task-results"],
+                    "examples": ["发布当前任务成果"],
+                },
+            ],
+        },
+    )
+
+
+def _write_git_publish_policy(path: Path) -> None:
+    write_yaml(
+        path,
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-05T00:00:00+08:00",
+            "authority_source": "docs/governance/OPERATOR_MANUAL.md",
+            "publish_mode": "explicit_on_demand_only",
+            "allowed_publish_statuses": ["review", "done"],
+            "default_remote": "origin",
+            "default_base_branch": "main",
+            "default_pr_mode": "draft",
+        },
+    )
+
+
 def _write_prompt_governance_files(root: Path) -> None:
     _write_prompt_catalog(root)
     _write_prompt_module_docs(root)
@@ -549,7 +631,8 @@ def write_governance_files(repo: Path) -> None:
     task = base_task_payload()
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
-    _write_automation_intents(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
+    _write_automation_intents_v2(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
+    _write_git_publish_policy(repo / "docs/governance/GIT_PUBLISH_POLICY.yaml")
     _write_handoff_policy(repo / "docs/governance/HANDOFF_POLICY.yaml")
     _write_coordination_planner_policy(repo / "docs/governance/COORDINATION_PLANNER_POLICY.yaml")
     _write_prompt_governance_files(repo)
