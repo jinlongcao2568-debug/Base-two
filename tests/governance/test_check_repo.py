@@ -199,8 +199,8 @@ def test_check_repo_fails_when_business_policy_is_invalid(tmp_path: Path) -> Non
     roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
     roadmap = roadmap.replace("business_automation_enabled: false", "business_automation_enabled: true", 1)
     roadmap = roadmap.replace(
-        "business_automation_scope: stage1_to_stage6",
         "business_automation_scope: stage1_to_stage9",
+        "business_automation_scope: unsupported_scope",
         1,
     )
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")

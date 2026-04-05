@@ -73,10 +73,10 @@ task_blueprints:
       - pytest -q
     branch_template: feat/{task_id}-roadmap-autopilot-continuation
   - blueprint_id: business_parallel_parent_stage1_to_stage6
-    title: Stage1-Stage6 业务自动推进轮次
+    title: Business automation round
     task_kind: coordination
     execution_mode: shared_coordination
-    stage: business-stage1-stage6-round
+    stage: business-full-chain-round
     size_class: heavy
     automation_mode: autonomous
     topology: parallel_parent
@@ -108,7 +108,7 @@ task_blueprints:
       - pytest tests/automation -q
       - pytest tests/contracts -q
       - pytest tests/integration -q
-    branch_template: feat/{task_id}-stage1-stage6-business-round
+    branch_template: feat/{task_id}-business-automation-round
   - blueprint_id: business_stage_bootstrap_execution
     title: Stage bootstrap lane
     task_kind: execution

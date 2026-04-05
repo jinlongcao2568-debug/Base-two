@@ -180,12 +180,18 @@ def init_structure(repo: Path) -> None:
         "src/stage4_validation",
         "src/stage5_reporting",
         "src/stage6_facts",
+        "src/stage7_sales",
+        "src/stage8_contact",
+        "src/stage9_delivery",
         "tests/stage1",
         "tests/stage2",
         "tests/stage3",
         "tests/stage4",
         "tests/stage5",
         "tests/stage6",
+        "tests/stage7",
+        "tests/stage8",
+        "tests/stage9",
     ):
         (repo / stage_dir).mkdir(parents=True, exist_ok=True)
     for test_dir in ("tests/contracts", "tests/automation", "tests/integration"):
@@ -193,7 +199,7 @@ def init_structure(repo: Path) -> None:
     (repo / ".gitignore").write_text(".codex/local/\n__pycache__/\n", encoding="utf-8")
     (repo / "src/base/module.py").write_text("def base_value():\n    return 1\n", encoding="utf-8")
     (repo / "tests/base/test_base.py").write_text("def test_base():\n    assert True\n", encoding="utf-8")
-    for stage_name in ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6"):
+    for stage_name in ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6", "stage7", "stage8", "stage9"):
         (repo / f"tests/{stage_name}/test_{stage_name}.py").write_text(
             f"def test_{stage_name}():\n    assert True\n",
             encoding="utf-8",

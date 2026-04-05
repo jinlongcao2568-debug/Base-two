@@ -8,16 +8,7 @@ from typing import Callable
 
 import yaml
 
-from check_repo import (
-    resolve_current_state,
-    resolve_current_task,
-    validate_current_worktree_entry,
-    validate_idle_worktree_state,
-    validate_registry_entries,
-    validate_roadmap_alignment,
-    validate_runlog_alignment,
-    validate_task_file_alignment,
-)
+from governance_repo_checks import run_repo_checks
 from governance_lib import (
     GovernanceError,
     find_repo_root,
@@ -193,15 +184,8 @@ def _collect_live_task_alignment_errors(root: Path) -> list[str]:
         registry = load_task_registry(root)
         tasks_by_id = task_map(registry)
         worktrees = load_worktree_registry(root)
-        validate_registry_entries(root, registry, worktrees)
-        current_state, _, _, idle_current = resolve_current_state(root, tasks_by_id)
-        validate_roadmap_alignment(root, current_state, tasks_by_id)
-        if idle_current:
-            validate_idle_worktree_state(worktrees)
-        else:
-            validate_current_worktree_entry(current_state, worktrees)
-            validate_task_file_alignment(root, current_state)
-            validate_runlog_alignment(root, current_state)
+        run_repo_checks(root, registry, tasks_by_id, worktrees)
+        idle_current = is_idle_current_payload(load_current_task(root))
         active_coordination = [
             entry
             for entry in worktrees.get("entries", [])
@@ -286,16 +270,7 @@ def _evaluate_authority(
     return errors
 
 
-def _evaluate_consistency(root: Path, live_task_errors: list[str]) -> list[str]:
-    errors = list(live_task_errors)
-    readme = _load_text(root, "README.md", errors)
-    governance_readme = _load_text(root, "docs/governance/README.md", errors)
-    roadmap_frontmatter, roadmap_body = read_roadmap(root)
-    current_task = load_current_task(root)
-    capability_map = _load_yaml_file(root, "docs/governance/CAPABILITY_MAP.yaml", errors)
-    task_policy = _load_yaml_file(root, "docs/governance/TASK_POLICY.yaml", errors)
-    interface_catalog = _load_yaml_file(root, "docs/governance/INTERFACE_CATALOG.yaml", errors)
-
+def _append_consistency_doc_checks(readme: str, governance_readme: str, errors: list[str]) -> None:
     _require_snippets(
         readme,
         [
@@ -320,6 +295,13 @@ def _evaluate_consistency(root: Path, live_task_errors: list[str]) -> list[str]:
     _reject_legacy_words(readme, "README.md", errors)
     _reject_legacy_words(governance_readme, "docs/governance/README.md", errors)
 
+
+def _append_current_task_consistency(
+    current_task: dict[str, object],
+    roadmap_frontmatter: dict[str, object],
+    roadmap_body: str,
+    errors: list[str],
+) -> None:
     if is_idle_current_payload(current_task):
         if roadmap_frontmatter.get("current_task_id") is not None:
             errors.append("roadmap current_task_id conflicts with idle CURRENT_TASK.yaml")
@@ -335,12 +317,34 @@ def _evaluate_consistency(root: Path, live_task_errors: list[str]) -> list[str]:
         if current_task.get("current_task_id") not in roadmap_body:
             errors.append("roadmap body does not mention the live current task")
 
+
+def _append_authority_source_consistency(
+    capability_map: dict[str, object],
+    task_policy: dict[str, object],
+    interface_catalog: dict[str, object],
+    errors: list[str],
+) -> None:
     if capability_map.get("authority_source") != AUTHORITY_SPEC:
         errors.append("CAPABILITY_MAP authority_source drift")
     if task_policy.get("authority_source") != AUTHORITY_SPEC:
         errors.append("TASK_POLICY authority_source drift")
     if interface_catalog.get("authority_source") != AUTHORITY_SPEC:
         errors.append("INTERFACE_CATALOG authority_source drift")
+
+
+def _evaluate_consistency(root: Path, live_task_errors: list[str]) -> list[str]:
+    errors = list(live_task_errors)
+    readme = _load_text(root, "README.md", errors)
+    governance_readme = _load_text(root, "docs/governance/README.md", errors)
+    roadmap_frontmatter, roadmap_body = read_roadmap(root)
+    current_task = load_current_task(root)
+    capability_map = _load_yaml_file(root, "docs/governance/CAPABILITY_MAP.yaml", errors)
+    task_policy = _load_yaml_file(root, "docs/governance/TASK_POLICY.yaml", errors)
+    interface_catalog = _load_yaml_file(root, "docs/governance/INTERFACE_CATALOG.yaml", errors)
+
+    _append_consistency_doc_checks(readme, governance_readme, errors)
+    _append_current_task_consistency(current_task, roadmap_frontmatter, roadmap_body, errors)
+    _append_authority_source_consistency(capability_map, task_policy, interface_catalog, errors)
     return errors
 
 

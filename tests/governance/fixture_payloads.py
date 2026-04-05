@@ -17,7 +17,7 @@ def roadmap_text() -> str:
         "  - authority_chain\n"
         "  - business_automation\n"
         "business_automation_enabled: false\n"
-        "business_automation_scope: stage1_to_stage6\n"
+        "business_automation_scope: stage1_to_stage9\n"
         "parallel_strategy: dependency_aware_disjoint_writes\n"
         "max_parallel_workers: 2\n"
         "spec_source_policy: baseline_contracts_task_package\n"
@@ -58,7 +58,7 @@ def _capability(
     }
 
 
-def _capability_entries() -> list[dict[str, Any]]:
+def _governance_capability_entries() -> list[dict[str, Any]]:
     return [
         _capability(
             "governance_control_plane",
@@ -86,6 +86,11 @@ def _capability_entries() -> list[dict[str, Any]]:
             ],
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
+    ]
+
+
+def _business_capability_entries() -> list[dict[str, Any]]:
+    return [
         _capability(
             "stage1_to_stage6_business_automation",
             "not_implemented",
@@ -103,6 +108,21 @@ def _capability_entries() -> list[dict[str, Any]]:
             ],
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
+        _capability(
+            "stage7_to_stage9_business_automation",
+            "not_established",
+            [
+                "docs/governance/DEVELOPMENT_ROADMAP.md",
+                "docs/governance/TASK_POLICY.yaml",
+                "docs/governance/MODULE_MAP.yaml",
+            ],
+            [
+                "scripts/business_autopilot.py",
+                "scripts/task_continuation_ops.py",
+                "scripts/automation_runner.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
     ]
 
 
@@ -111,7 +131,7 @@ def capability_map_payload() -> dict[str, Any]:
         "version": "1.0",
         "updated_at": "2026-04-04T00:00:00+08:00",
         "authority_source": "docs/product/AUTHORITY_SPEC.md",
-        "capabilities": _capability_entries(),
+        "capabilities": [*_governance_capability_entries(), *_business_capability_entries()],
     }
 
 
@@ -142,10 +162,10 @@ def _roadmap_blueprint() -> dict[str, Any]:
 def _business_parent_blueprint() -> dict[str, Any]:
     return {
         "blueprint_id": "business_parallel_parent_stage1_to_stage6",
-        "title": "Stage1-Stage6 business round",
+        "title": "Business automation round",
         "task_kind": "coordination",
         "execution_mode": "shared_coordination",
-        "stage": "business-stage1-stage6-round",
+        "stage": "business-full-chain-round",
         "size_class": "heavy",
         "automation_mode": "autonomous",
         "topology": "parallel_parent",
@@ -181,7 +201,7 @@ def _business_parent_blueprint() -> dict[str, Any]:
             "pytest tests/contracts -q",
             "pytest tests/integration -q",
         ],
-        "branch_template": "feat/{task_id}-stage1-stage6-business-round",
+        "branch_template": "feat/{task_id}-business-automation-round",
     }
 
 
@@ -303,6 +323,9 @@ def module_map_payload() -> dict[str, Any]:
             _stage_module("stage4_validation", "stage4", ["project_base"], ["rule_hit", "evidence", "review_request"], ["stage3_parsing"], ["src/stage4_validation/", "tests/stage4/"], ["stage5_reporting", "stage6_facts"], ["pytest tests/stage4 -q"]),
             _stage_module("stage5_reporting", "stage5", ["validated findings"], ["report_record"], ["stage4_validation"], ["src/stage5_reporting/", "tests/stage5/"], ["stage6_facts"], ["pytest tests/stage5 -q"]),
             _stage_module("stage6_facts", "stage6", ["validated findings", "report artifacts"], ["project_fact"], ["stage4_validation", "stage5_reporting"], ["src/stage6_facts/", "tests/stage6/"], ["stage7_sales", "stage8_contact", "stage9_delivery"], ["pytest tests/stage6 -q"]),
+            _stage_module("stage7_sales", "stage7", ["project_fact"], ["sales_context"], ["stage6_facts"], ["src/stage7_sales/", "tests/stage7/"], ["tests/integration/"], ["pytest tests/stage7 -q"]),
+            _stage_module("stage8_contact", "stage8", ["project_fact"], ["contact_context"], ["stage6_facts"], ["src/stage8_contact/", "tests/stage8/"], ["tests/integration/"], ["pytest tests/stage8 -q"]),
+            _stage_module("stage9_delivery", "stage9", ["project_fact", "downstream contexts"], ["delivery_payloads"], ["stage6_facts", "stage7_sales", "stage8_contact"], ["src/stage9_delivery/", "tests/stage9/"], ["tests/integration/"], ["pytest tests/stage9 -q"]),
             {
                 "module_id": "governance_control_plane",
                 "owner_stage": "governance",
@@ -342,6 +365,9 @@ def test_matrix_payload() -> dict[str, Any]:
             "stage4_validation": _matrix_entry("pytest tests/stage4 -q", "pytest tests/stage4 -q", "pytest tests/integration -q", "pytest -q"),
             "stage5_reporting": _matrix_entry("pytest tests/stage5 -q", "pytest tests/stage5 -q", "pytest tests/integration -q", "pytest -q"),
             "stage6_facts": _matrix_entry("pytest tests/stage6 -q", "pytest tests/stage6 -q", "pytest tests/integration -q", "pytest -q"),
+            "stage7_sales": _matrix_entry("pytest tests/stage7 -q", "pytest tests/stage7 -q", "pytest tests/integration -q", "pytest -q"),
+            "stage8_contact": _matrix_entry("pytest tests/stage8 -q", "pytest tests/stage8 -q", "pytest tests/integration -q", "pytest -q"),
+            "stage9_delivery": _matrix_entry("pytest tests/stage9 -q", "pytest tests/stage9 -q", "pytest tests/integration -q", "pytest -q"),
             "governance_control_plane": _matrix_entry("pytest tests/base -q", "pytest tests/base -q", "pytest tests/base -q"),
         },
     }

@@ -57,5 +57,5 @@ Conflict rule:
   - `continue-current` resumes only the live current task.
   - `continue-roadmap` closes a review-ready live task or resumes from the formal idle state, then resolves the next valid successor.
 - Closing a live top-level coordination task without an immediately activated successor now moves the repository into a legal idle control-plane state.
-- Roadmap continuation can now generate only `stage1-stage6` business successor rounds after governance continuation is in place.
-- `stage7-stage9` remain deferred manual stages and must not be auto-generated or auto-activated.
+- Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
+- `stage7-stage9` are no longer hard-pinned to a governance-only deferred state; they remain downstream stages that may advance only when their dependencies, task package boundaries, and required tests are satisfied.

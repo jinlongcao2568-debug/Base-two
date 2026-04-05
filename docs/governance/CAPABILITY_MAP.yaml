@@ -96,9 +96,16 @@ capabilities:
       - pytest tests/stage6 -q
       - pytest tests/integration -q
   - capability_id: stage7_to_stage9_business_automation
-    status: deferred_manual
+    status: not_established
     source_of_truth:
       - docs/product/MVP_SCOPE.md
       - docs/governance/DEVELOPMENT_ROADMAP.md
-    scripts: []
-    tests: []
+      - docs/governance/MODULE_MAP.yaml
+      - docs/governance/TASK_POLICY.yaml
+    scripts:
+      - scripts/business_autopilot.py
+      - scripts/task_continuation_ops.py
+      - scripts/automation_runner.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q

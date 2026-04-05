@@ -94,9 +94,6 @@ def enable_business_autopilot(repo: Path) -> None:
     roadmap = roadmap.replace("  stage4: not_established", "  stage4: implementation_ready", 1)
     roadmap = roadmap.replace("  stage5: not_established", "  stage5: bootstrap_required", 1)
     roadmap = roadmap.replace("  stage6: not_established", "  stage6: implementation_ready", 1)
-    roadmap = roadmap.replace("  stage7: not_established", "  stage7: deferred_manual", 1)
-    roadmap = roadmap.replace("  stage8: not_established", "  stage8: deferred_manual", 1)
-    roadmap = roadmap.replace("  stage9: not_established", "  stage9: deferred_manual", 1)
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
 
 

@@ -10,7 +10,7 @@ BUSINESS_AUTOPILOT_CAPABILITY_ID = "stage1_to_stage6_business_automation"
 BUSINESS_PARENT_BLUEPRINT_ID = "business_parallel_parent_stage1_to_stage6"
 BUSINESS_BOOTSTRAP_BLUEPRINT_ID = "business_stage_bootstrap_execution"
 BUSINESS_IMPLEMENTATION_BLUEPRINT_ID = "business_stage_implementation_execution"
-BUSINESS_SCOPE_VALUES = {"stage1_to_stage6"}
+BUSINESS_SCOPE_VALUES = {"stage1_to_stage6", "stage1_to_stage9"}
 PARALLEL_STRATEGY_VALUES = {"dependency_aware_disjoint_writes"}
 SPEC_SOURCE_POLICY_VALUES = {"baseline_contracts_task_package"}
 BUSINESS_GAP_PRIORITY_VALUES = {"bootstrap_required", "implementation_ready", "integration_expansion"}
@@ -22,8 +22,9 @@ STAGE_ESTABLISHMENT_VALUES = {
     "implemented",
     "deferred_manual",
 }
-BUSINESS_STAGE_IDS = ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6")
-DEFERRED_STAGE_IDS = ("stage7", "stage8", "stage9")
+CORE_STAGE_IDS = ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6")
+DOWNSTREAM_STAGE_IDS = ("stage7", "stage8", "stage9")
+BUSINESS_STAGE_IDS = (*CORE_STAGE_IDS, *DOWNSTREAM_STAGE_IDS)
 AUTHORITY_INPUTS = [
     "docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md",
     "docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md",
@@ -76,7 +77,31 @@ CONTRACT_INPUTS_BY_MODULE = {
         "docs/contracts/customer_delivery_field_whitelist.yaml",
         "docs/contracts/customer_delivery_field_blacklist.yaml",
     ],
+    "stage7_sales": [
+        "docs/contracts/handoff_catalog.yaml",
+        "docs/contracts/schemas/stage6_project_fact.schema.json",
+        "docs/contracts/examples/project_fact.example.json",
+        "docs/contracts/field_semantics/project_fact.fields.yaml",
+    ],
+    "stage8_contact": [
+        "docs/contracts/handoff_catalog.yaml",
+        "docs/contracts/schemas/stage6_project_fact.schema.json",
+        "docs/contracts/examples/project_fact.example.json",
+        "docs/contracts/field_semantics/project_fact.fields.yaml",
+    ],
+    "stage9_delivery": [
+        "docs/contracts/handoff_catalog.yaml",
+        "docs/contracts/schemas/stage6_project_fact.schema.json",
+        "docs/contracts/examples/project_fact.example.json",
+        "docs/contracts/field_semantics/project_fact.fields.yaml",
+        "docs/contracts/customer_delivery_field_whitelist.yaml",
+        "docs/contracts/customer_delivery_field_blacklist.yaml",
+    ],
 }
+
+
+def _automatable_stage_ids(scope: str) -> tuple[str, ...]:
+    return CORE_STAGE_IDS if scope == "stage1_to_stage6" else BUSINESS_STAGE_IDS
 
 
 def load_business_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
@@ -102,15 +127,13 @@ def load_business_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
         raise GovernanceError("roadmap business_gap_priority must not contain duplicates")
     if not isinstance(stage_establishment, dict):
         raise GovernanceError("roadmap stage_establishment must be a mapping")
-    for stage_id in (*BUSINESS_STAGE_IDS, *DEFERRED_STAGE_IDS):
+    for stage_id in BUSINESS_STAGE_IDS:
         value = stage_establishment.get(stage_id)
         if value not in STAGE_ESTABLISHMENT_VALUES:
             raise GovernanceError(f"roadmap stage_establishment invalid for {stage_id}")
-    for stage_id in DEFERRED_STAGE_IDS:
-        if stage_establishment.get(stage_id) != "deferred_manual":
-            raise GovernanceError(f"roadmap {stage_id} must stay deferred_manual while business automation is limited to stage1-stage6")
     return {
         "scope": scope,
+        "automatable_stage_ids": _automatable_stage_ids(scope),
         "parallel_strategy": parallel_strategy,
         "max_parallel_workers": max_parallel_workers,
         "spec_source_policy": spec_source_policy,
@@ -175,7 +198,7 @@ def _eligible_modules(root, policy: dict[str, Any], gap_kind: str) -> list[dict[
     modules_by_id = {module["module_id"]: module for module in stage_modules.values()}
     stage_establishment = policy["stage_establishment"]
     eligible: list[dict[str, Any]] = []
-    for stage_id in BUSINESS_STAGE_IDS:
+    for stage_id in policy["automatable_stage_ids"]:
         if stage_establishment.get(stage_id) != gap_kind:
             continue
         module = stage_modules.get(stage_id)
@@ -195,7 +218,15 @@ def _review_bundle_commands(root, task: dict[str, Any]) -> list[str]:
         commands.append("python scripts/validate_contracts.py")
     matrix_commands = task_required_tests_for_matrix(root, task)
     commands.extend(matrix_commands)
-    if task.get("module_id") in {"stage3_parsing", "stage4_validation", "stage5_reporting", "stage6_facts"}:
+    if task.get("module_id") in {
+        "stage3_parsing",
+        "stage4_validation",
+        "stage5_reporting",
+        "stage6_facts",
+        "stage7_sales",
+        "stage8_contact",
+        "stage9_delivery",
+    }:
         commands.append("pytest tests/integration -q")
     deduped: list[str] = []
     for command in commands:

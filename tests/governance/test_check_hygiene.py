@@ -47,12 +47,18 @@ def test_check_hygiene_no_longer_flags_control_plane_hotspots(tmp_path: Path) ->
     result = run_python(
         CHECK_HYGIENE_SCRIPT,
         repo,
+        "scripts/check_authority_alignment.py",
+        "scripts/check_repo.py",
         "scripts/governance_lib.py",
+        "scripts/governance_controls.py",
         "scripts/task_ops.py",
         "scripts/validate_contracts.py",
     )
     assert result.returncode == 0, result.stdout + result.stderr
+    assert "scripts/check_authority_alignment.py" not in result.stdout
+    assert "scripts/check_repo.py" not in result.stdout
     assert "scripts/governance_lib.py" not in result.stdout
+    assert "scripts/governance_controls.py" not in result.stdout
     assert "scripts/task_ops.py" not in result.stdout
     assert "scripts/validate_contracts.py" not in result.stdout
 

@@ -5,20 +5,25 @@
 - `task_id`: `TASK-GOV-004`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-control-kernel-split-v1`
 - `branch`: `feat/TASK-GOV-004-governance-control-kernel-split`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
+
 ## Primary Goals
 
-- to-be-filled
+- Split the governance control plane into shared state-machine, reusable rule, repo-check, and CLI orchestration layers without changing the live command surface.
+- Remove the main hygiene hotspot warnings on `scripts/governance_controls.py`, `scripts/check_repo.py`, and `scripts/check_authority_alignment.py`.
+- Align roadmap/business policy handling with the actual module order in `docs/governance/MODULE_MAP.yaml`, including downstream `stage7-stage9`, without claiming those stages are already implemented.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not modify business implementation code under `src/`.
+- Do not introduce a second control-plane ledger or a second roadmap source.
+- Do not claim that `stage7-stage9` automation is production-complete; this task only removes the hard governance restriction and keeps ordering and policy consistent.
 
 ## Allowed Dirs
 
@@ -52,27 +57,28 @@
 
 ## Reserved Paths
 
-- to-be-filled
+- none
+
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `next_gate`: `validation_pending`
 
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-004-governance-control-kernel-split`
-- `updated_at`: `2026-04-05T08:29:27+08:00`
+- `updated_at`: `2026-04-05T08:29:53+08:00`
 <!-- generated:task-meta:end -->

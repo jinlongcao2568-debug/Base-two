@@ -1,23 +1,41 @@
-current_task_id: null
-title: null
-status: idle
-task_kind: null
-execution_mode: null
+current_task_id: TASK-GOV-004
+title: 治理控制面内核拆分
+status: doing
+task_kind: coordination
+execution_mode: shared_coordination
 parent_task_id: null
-stage: null
-branch: null
-size_class: null
-automation_mode: null
-worker_state: idle
+stage: governance-control-kernel-split-v1
+branch: feat/TASK-GOV-004-governance-control-kernel-split
+size_class: standard
+automation_mode: manual
+worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-05T08:29:27+08:00'
-topology: null
-allowed_dirs: []
+last_reported_at: '2026-04-05T08:29:53+08:00'
+topology: single_worker
+allowed_dirs:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
 reserved_paths: []
-planned_write_paths: []
-planned_test_paths: []
-required_tests: []
-task_file: null
-runlog_file: null
-next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-05T08:29:27+08:00'
+planned_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+planned_test_paths:
+- tests/governance/
+- tests/automation/
+required_tests:
+- python scripts/check_authority_alignment.py
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py
+- pytest tests/governance -q
+- pytest tests/automation -q
+- pytest tests/contracts -q
+- pytest tests/integration -q
+- pytest -q
+task_file: docs/governance/tasks/TASK-GOV-004.md
+runlog_file: docs/governance/runlogs/TASK-GOV-004-RUNLOG.md
+next_action: Implement the live task package and keep branch/control-plane state aligned.
+updated_at: '2026-04-05T08:29:53+08:00'

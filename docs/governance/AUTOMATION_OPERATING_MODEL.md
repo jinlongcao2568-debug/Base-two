@@ -5,8 +5,7 @@
 - The live automation layer now supports:
   - `continue-current`
   - `continue-roadmap`
-  - dependency-aware `stage1-stage6` business successor generation
-- The live automation layer must not auto-generate `stage7-stage9` business work.
+  - dependency-aware business successor generation that follows the ordered stages in `docs/governance/MODULE_MAP.yaml`
 
 ## Continuation Semantics
 
@@ -32,11 +31,11 @@
 - Resolution order is:
   1. use `next_recommended_task_id` when it exists and is valid;
   2. otherwise generate a governance successor when the governance automation gap is still open;
-  3. otherwise generate a `stage1-stage6` business successor round when business automation is enabled and the business autopilot capability is implemented;
+  3. otherwise generate a business successor round when business automation is enabled and the business autopilot capability is implemented;
   4. otherwise stop with a no-successor report.
 - A generated business successor round must:
-  - stay within `stage1-stage6`;
   - obey `MODULE_MAP.yaml` dependency order;
+  - respect the live roadmap scope and stage establishment policy;
   - select at most 2 child execution lanes;
   - declare authority inputs, contract inputs, module scope, and review policy on each child task.
 

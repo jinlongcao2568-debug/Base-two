@@ -52,12 +52,12 @@ Conflict rule:
 
 ## Business Autopilot Limits
 
-- Automatic business successor generation is limited to `stage1-stage6`.
+- Automatic business successor generation follows the stage order declared in `docs/governance/MODULE_MAP.yaml` and the live roadmap policy.
 - The formal implementation truth for business automation is:
   - baseline authority
   - formal contracts
   - the generated task package
-- `stage7-stage9` must not be auto-generated or auto-activated in this phase.
+- `stage7-stage9` are downstream-only stages; they may be generated or activated only when `stage6_facts` and any additional declared dependencies are already satisfied.
 
 ## Closeout Rules
 
