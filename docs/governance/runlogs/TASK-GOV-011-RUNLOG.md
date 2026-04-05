@@ -15,9 +15,15 @@
 
 - `2026-04-05T14:57:03+08:00`: task package created
 - `2026-04-05T15:21:23+08:00`: worker-finish `formal handoff recovery is implemented and validated`
+- `2026-04-05T15:24:08+08:00`: worker-finish `formal handoff recovery is implemented and validated`
 ## Test Log
 
 - to-be-filled
+- `pytest tests/automation -q`
+- `python scripts/check_repo.py`
+- `python scripts/check_hygiene.py`
+- `python scripts/check_authority_alignment.py`
+- `pytest tests/governance -q`
 - `pytest tests/automation -q`
 ## Narrative Assertions
 

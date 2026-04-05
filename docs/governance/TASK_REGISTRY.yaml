@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-05T15:21:23+08:00'
+updated_at: '2026-04-05T15:24:08+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -720,7 +720,7 @@ tasks:
   automation_mode: manual
   worker_state: review_pending
   blocked_reason: null
-  last_reported_at: '2026-04-05T15:21:23+08:00'
+  last_reported_at: '2026-04-05T15:24:08+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/

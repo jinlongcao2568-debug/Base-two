@@ -40,6 +40,17 @@ def _reported_next_tests(args: argparse.Namespace) -> list[str] | None:
     return items or None
 
 
+def _reported_tests(args: argparse.Namespace) -> list[str]:
+    raw_tests = getattr(args, "tests", []) or []
+    flattened: list[str] = []
+    for entry in raw_tests:
+        if isinstance(entry, list):
+            flattened.extend(str(item) for item in entry)
+        else:
+            flattened.append(str(entry))
+    return flattened
+
+
 def _reported_risks(args: argparse.Namespace) -> list[str] | None:
     items = list(getattr(args, "risk", []) or [])
     return items or None
@@ -116,8 +127,9 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     bullets = [f"`{iso_now()}`: {note}" for note in args.note]
     if bullets:
         append_runlog_bullets(root, task, "Execution Log", bullets)
-    if args.tests:
-        append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in args.tests])
+    reported_tests = _reported_tests(args)
+    if reported_tests:
+        append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in reported_tests])
     write_handoff(
         root,
         task,
@@ -181,8 +193,9 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{iso_now()}`: worker-finish `{args.summary}`"])
-    if args.tests:
-        append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in args.tests])
+    reported_tests = _reported_tests(args)
+    if reported_tests:
+        append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in reported_tests])
     if args.candidate_paths:
         append_runlog_bullets(root, task, "Candidate Paths", [f"`{path}`" for path in args.candidate_paths])
     write_handoff(

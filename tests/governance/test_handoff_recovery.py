@@ -99,6 +99,30 @@ def test_worker_finish_writes_review_ready_recovery_pack(tmp_path: Path) -> None
     assert handoff["next_tests"] == ["pytest tests/base -q"]
 
 
+def test_worker_finish_records_all_repeated_test_flags(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    result = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-BASE-001",
+        "--summary",
+        "recovery pack integrated",
+        "--tests",
+        "python scripts/check_repo.py",
+        "--tests",
+        "python scripts/check_hygiene.py",
+        "--tests",
+        "pytest tests/base -q",
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    runlog = (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").read_text(encoding="utf-8")
+    assert "`python scripts/check_repo.py`" in runlog
+    assert "`python scripts/check_hygiene.py`" in runlog
+    assert "`pytest tests/base -q`" in runlog
+
+
 def test_continue_current_restores_fallback_recovery_when_formal_handoff_missing(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     result = run_python(TASK_OPS_SCRIPT, repo, "continue-current")

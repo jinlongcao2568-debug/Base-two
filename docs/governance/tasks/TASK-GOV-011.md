@@ -85,5 +85,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-011-handoff-recovery`
-- `updated_at`: `2026-04-05T15:21:23+08:00`
+- `updated_at`: `2026-04-05T15:24:08+08:00`
 <!-- generated:task-meta:end -->
