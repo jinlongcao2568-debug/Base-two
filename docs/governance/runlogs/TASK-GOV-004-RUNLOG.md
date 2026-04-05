@@ -3,11 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-004`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-control-kernel-split-v1`
 - `branch`: `feat/TASK-GOV-004-governance-control-kernel-split`
-- `worker_state`: `running`
-
+- `worker_state`: `completed`
 ## Execution Log
 
 - `2026-04-05T08:29:27+08:00`: task package created
@@ -34,19 +33,18 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-004`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-control-kernel-split-v1`
 - `branch`: `feat/TASK-GOV-004-governance-control-kernel-split`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 <!-- generated:runlog-meta:end -->

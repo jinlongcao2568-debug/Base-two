@@ -1,23 +1,23 @@
 ---
-current_phase: governance-control-kernel-split-v1
-current_task_id: TASK-GOV-004
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
 branch_switch_policy: create_or_switch_if_clean
 priority_order:
-  - governance_automation
-  - authority_chain
-  - business_automation
+- governance_automation
+- authority_chain
+- business_automation
 business_automation_enabled: true
 business_automation_scope: stage1_to_stage9
 parallel_strategy: dependency_aware_disjoint_writes
 max_parallel_workers: 2
 spec_source_policy: baseline_contracts_task_package
 business_gap_priority:
-  - bootstrap_required
-  - implementation_ready
-  - integration_expansion
+- bootstrap_required
+- implementation_ready
+- integration_expansion
 stage_establishment:
   stage1: bootstrap_required
   stage2: bootstrap_required
@@ -35,8 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-GOV-004`: `治理控制面内核拆分` is the live coordination task for `governance-control-kernel-split-v1`.
-
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-001`: closed authority drift, formalized contracts and handoff assets, expanded minimum regression coverage, and hardened the governance control plane.
