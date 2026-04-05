@@ -31,6 +31,7 @@ from task_worker_ops import (
     cmd_auto_close_children,
     cmd_worker_blocked,
     cmd_worker_finish,
+    cmd_worker_heartbeat,
     cmd_worker_report,
     cmd_worker_start,
 )
@@ -244,6 +245,14 @@ def add_worker_commands(subparsers) -> None:
     worker_finish_parser.add_argument("--candidate-test-path", action="append", default=[])
     worker_finish_parser.add_argument("--resume-note", action="append", default=[])
     worker_finish_parser.set_defaults(func=cmd_worker_finish)
+
+    worker_heartbeat_parser = subparsers.add_parser("worker-heartbeat")
+    worker_heartbeat_parser.add_argument("task_id")
+    worker_heartbeat_parser.add_argument("--worker-id", default="worker-local-01")
+    worker_heartbeat_parser.add_argument("--lane-session-id")
+    worker_heartbeat_parser.add_argument("--executor-status")
+    worker_heartbeat_parser.add_argument("--result")
+    worker_heartbeat_parser.set_defaults(func=cmd_worker_heartbeat)
 
     auto_close_parser = subparsers.add_parser("auto-close-children")
     auto_close_parser.add_argument("parent_task_id")

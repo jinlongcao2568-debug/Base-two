@@ -139,6 +139,28 @@ def _setup_open_parallel_parent(repo: Path) -> list[str]:
     return task_ids
 
 
+def _setup_dispatchable_parallel_parent(repo: Path, lane_count: int) -> list[str]:
+    task_ids = [f"TASK-DISPATCH-{index:03d}" for index in range(1, lane_count + 1)]
+    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous", lane_count=lane_count)
+    for index, task_id in enumerate(task_ids, start=1):
+        BUILDERS.create_execution_task(
+            repo,
+            task_id,
+            write_path=f"src/dispatch_{index}/",
+            title=f"dispatch lane {index}",
+            required_test="pytest tests/base -q",
+        )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    for index, task_id in enumerate(task_ids, start=1):
+        task = next(item for item in registry["tasks"] if item["task_id"] == task_id)
+        task["lane_count"] = lane_count
+        task["lane_index"] = index
+        task["parallelism_plan_id"] = f"plan-TASK-BASE-001-{lane_count}"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
+    return task_ids
+
+
 def _setup_review_bundle_failure(repo: Path) -> list[str]:
     task_ids = ["TASK-EXEC-FAIL-1", "TASK-EXEC-FAIL-2", "TASK-EXEC-FAIL-3"]
     BUILDERS.set_live_task_mode(repo, automation_mode="autonomous", lane_count=len(task_ids))
@@ -365,7 +387,166 @@ def test_runner_keeps_parent_doing_when_child_review_bundle_is_still_open(tmp_pa
     assert result.returncode == 0, result.stdout + result.stderr
     assert ready_child["status"] == "done"
     assert ready_child["review_bundle_status"] == "passed"
-    assert open_child["status"] == "queued"
+    assert open_child["status"] == "doing"
+    assert open_child["worker_state"] == "running"
     assert open_child["review_bundle_status"] == "not_applicable"
     assert parent["status"] == "doing"
     assert "[OK] parent still doing: TASK-BASE-001 waiting on TASK-EXEC-002" in result.stdout
+
+
+@pytest.mark.parametrize("lane_count", [2, 3, 4])
+def test_runner_dispatches_local_launchers_for_parallel_parent(tmp_path: Path, lane_count: int) -> None:
+    repo = init_governance_repo(tmp_path)
+    task_ids = _setup_dispatchable_parallel_parent(repo, lane_count)
+    env = {
+        "AX9_LAUNCHER_HEARTBEAT_INTERVAL_SECONDS": "1",
+        "AX9_LAUNCHER_MAX_RUNTIME_SECONDS": "2",
+        "AX9_LAUNCHER_DISPATCH_SETTLE_SECONDS": "2",
+        "AX9_LAUNCHER_HEARTBEAT_TIMEOUT_SECONDS": "10",
+    }
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees", env=env)
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    entries = [entry for entry in worktrees["entries"] if entry.get("task_id") in task_ids]
+    tasks = [task for task in registry["tasks"] if task["task_id"] in task_ids]
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert len(entries) == lane_count
+    assert len(tasks) == lane_count
+    assert all(task["status"] == "doing" for task in tasks)
+    assert all(entry["lane_session_id"] is not None for entry in entries)
+    assert all(entry["executor_status"] == "running" for entry in entries)
+    assert all(entry["started_at"] is not None for entry in entries)
+    assert all(entry["last_heartbeat_at"] is not None for entry in entries)
+    assert all(f"[OK] dispatched launcher for {task_id}" in result.stdout for task_id in task_ids)
+
+
+def test_runner_marks_stale_heartbeat_lane_timed_out(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous", lane_count=1)
+    BUILDERS.create_execution_task(
+        repo,
+        "TASK-EXEC-TIMEOUT",
+        write_path="src/timeout/",
+        title="timeout lane",
+        required_test="pytest tests/base -q",
+    )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-TIMEOUT")
+    child["status"] = "doing"
+    child["worker_state"] = "running"
+    child["lane_count"] = 1
+    child["lane_index"] = 1
+    child["parallelism_plan_id"] = "plan-TASK-BASE-001-1"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-TIMEOUT"
+    created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-TIMEOUT", "--path", str(destination))
+    assert created.returncode == 0, created.stdout + created.stderr
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-TIMEOUT")
+    entry["executor_status"] = "running"
+    entry["started_at"] = "2026-04-05T18:00:00+08:00"
+    entry["last_heartbeat_at"] = "2026-04-05T18:00:00+08:00"
+    entry["lane_session_id"] = "lane-timeout-1"
+    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+
+    env = {"AX9_LAUNCHER_HEARTBEAT_TIMEOUT_SECONDS": "1"}
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees", env=env)
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-TIMEOUT")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-TIMEOUT")
+
+    assert result.returncode == 1
+    assert child["status"] == "blocked"
+    assert child["worker_state"] == "blocked"
+    assert "lane_heartbeat_timeout" in child["blocked_reason"]
+    assert entry["executor_status"] == "timed_out"
+    assert entry["last_result"] == "timeout"
+    assert "[BLOCKED] TASK-EXEC-TIMEOUT: heartbeat timeout" in result.stdout
+
+
+def test_runner_restart_recovers_running_lane_from_registry_state(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous", lane_count=1)
+    BUILDERS.create_execution_task(
+        repo,
+        "TASK-EXEC-RUN",
+        write_path="src/running/",
+        title="running lane",
+        required_test="pytest tests/base -q",
+    )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-RUN")
+    child["status"] = "doing"
+    child["worker_state"] = "running"
+    child["lane_count"] = 1
+    child["lane_index"] = 1
+    child["parallelism_plan_id"] = "plan-TASK-BASE-001-1"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-RUN"
+    created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-RUN", "--path", str(destination))
+    assert created.returncode == 0, created.stdout + created.stderr
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-RUN")
+    entry["executor_status"] = "running"
+    entry["started_at"] = "2099-04-05T21:00:00+08:00"
+    entry["last_heartbeat_at"] = "2099-04-05T21:00:00+08:00"
+    entry["lane_session_id"] = "lane-running-1"
+    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-RUN")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-RUN")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert child["status"] == "doing"
+    assert child["worker_state"] == "running"
+    assert entry["executor_status"] == "running"
+    assert entry["lane_session_id"] == "lane-running-1"
+
+
+def test_runner_keeps_parent_doing_when_blocked_and_open_children_coexist(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous", lane_count=2)
+    BUILDERS.create_execution_task(
+        repo,
+        "TASK-EXEC-BLOCKED",
+        write_path="src/blocked_lane/",
+        title="blocked lane",
+        required_test="pytest tests/base -q",
+    )
+    BUILDERS.create_execution_task(
+        repo,
+        "TASK-EXEC-OPEN",
+        write_path="src/open_lane/",
+        title="open lane",
+        required_test="pytest tests/base -q",
+    )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    for task_id, status, worker_state, lane_index in (
+        ("TASK-EXEC-BLOCKED", "blocked", "blocked", 1),
+        ("TASK-EXEC-OPEN", "queued", "idle", 2),
+    ):
+        task = next(item for item in registry["tasks"] if item["task_id"] == task_id)
+        task["lane_count"] = 2
+        task["lane_index"] = lane_index
+        task["parallelism_plan_id"] = "plan-TASK-BASE-001-2"
+        task["status"] = status
+        task["worker_state"] = worker_state
+        if status == "blocked":
+            task["blocked_reason"] = "simulated blocker"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    parent = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")["tasks"][0]
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert parent["status"] == "doing"
+    assert parent["worker_state"] == "running"

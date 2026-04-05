@@ -9,6 +9,8 @@
   - dependency-aware business successor generation that follows the ordered stages in `docs/governance/MODULE_MAP.yaml`
   - single-machine runtime telemetry and observability through `orchestration-status`
   - registry-backed task-source and worker visibility for future external scaling
+  - governed local lane launcher dispatch for prepared execution worktrees
+  - runner-side heartbeat timeout detection for active execution lanes
 
 ## Orchestrator Runtime Foundation
 
@@ -59,6 +61,13 @@
 - `docs/governance/WORKER_REGISTRY.yaml` is the worker registry.
 - `worker-local-01` is the only enabled worker in v1.
 - Non-local workers are interface reservations only and must never be silently scheduled in v1.
+- Execution lanes do not become separate physical workers.
+- Lane runtime is tracked on `WORKTREE_REGISTRY.yaml` execution entries through:
+  - `lane_session_id`
+  - `executor_status`
+  - `started_at`
+  - `last_heartbeat_at`
+  - `last_result`
 
 ## Intent Router
 
@@ -131,6 +140,27 @@
 - Runtime prompts are derived artifacts and must be regenerated from the catalog instead of edited by hand.
 - App-level custom instructions are not a governance execution source.
 - Keep app-level custom instructions empty by default; if they are present, restrict them to language and output-style preferences.
+- Execution worktrees receive a governed `EXECUTION_CONTEXT.yaml` that now also carries:
+  - `lane_count`
+  - `lane_index`
+  - `parallelism_plan_id`
+  - `runtime_prompt_profile`
+
+## Local Lane Launcher
+
+- `python scripts/local_lane_launcher.py` is the v1 execution backend for `worker-local-01`.
+- The launcher is local-only and single-machine only.
+- The launcher must:
+  - read `.codex/local/EXECUTION_CONTEXT.yaml` from the execution worktree
+  - ensure the governed runtime prompt exists
+  - materialize a launch bundle inside the execution worktree
+  - call `worker-start`
+  - emit the first `worker-heartbeat`
+- The launcher must not:
+  - publish Git state
+  - create PRs
+  - schedule remote workers
+  - invent a second prompt authority source
 
 ## Automation Runner
 
@@ -141,11 +171,14 @@
   4. validate the live `parallel_parent` lanes for hard conflicts before any worktree action;
   5. compute the effective lane budget from planner ceiling, cleanup pressure, and current runtime health;
   6. prepare worktrees for the live `parallel_parent` task in ascending `lane_index` order when allowed by automation mode;
-  7. run `auto-close-children` for review-ready child lanes when allowed by automation mode;
-  8. run orphan cleanup and publish the runner metrics block.
-- The runner still honors `manual`, `assisted`, and `autonomous` gating for parallel worktree preparation and child closeout.
+  7. dispatch local lane launchers for prepared execution worktrees when allowed by automation mode;
+  8. monitor active execution lanes for heartbeat timeout and block only the timed-out child lane;
+  9. run `auto-close-children` for review-ready child lanes when allowed by automation mode;
+  10. run orphan cleanup and publish the runner metrics block.
+- The runner still honors `manual`, `assisted`, and `autonomous` gating for parallel worktree preparation, launcher dispatch, and child closeout.
 - Runtime topology is now `1 coordinator + 1..4 child lanes`; the planner ceiling stays at `4` even though the external product language remains "dynamic parallelism".
 - The runner must also refresh runtime tick and reconcile state so operators can inspect a single-machine runtime snapshot after each cycle.
+- Runner recovery must depend only on registry state and heartbeat timestamps, never on in-memory process state.
 
 ## Health Budget
 
@@ -167,6 +200,16 @@
   - child review-bundle failures
 - Hard errors return nonzero immediately.
 - Fallback signals do not change the command surface; they are reported in the runner metrics and may leave the parent or child task blocked.
+
+## Lane Timeout Rules
+
+- `worker-heartbeat` updates runtime fields only and must not append runlog narrative bullets.
+- When an active lane heartbeat becomes stale:
+  - the child task moves to `blocked`
+  - the execution entry moves to `executor_status: timed_out`
+  - `last_result` becomes `timeout`
+- A timed-out child lane must not automatically kill the parent while other child lanes are still open.
+- The parent may aggregate to `blocked` only after the remaining child lanes are all `done` or `blocked`.
 
 ## Metrics Block
 

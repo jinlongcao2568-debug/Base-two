@@ -495,10 +495,19 @@ def test_worktree_create_and_release_round_trip(tmp_path: Path) -> None:
     )
     assert created.returncode == 0, created.stdout + created.stderr
     assert (destination / ".codex/local/EXECUTION_CONTEXT.yaml").exists()
+    context = read_yaml(destination / ".codex/local/EXECUTION_CONTEXT.yaml")
+    assert context["lane_count"] == 1
+    assert context["lane_index"] is None
+    assert context["parallelism_plan_id"] is None
+    assert context["runtime_prompt_profile"] == "docs/governance/runtime_prompts/worker.md"
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
     entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-001")
     assert entry["status"] == "active"
     assert entry["worker_owner"] == "worker-01"
+    assert entry["executor_status"] == "prepared"
+    assert entry["lane_session_id"] is None
+    assert entry["started_at"] is None
+    assert entry["last_heartbeat_at"] is None
     released = run_python(TASK_OPS_SCRIPT, repo, "worktree-release", "TASK-EXEC-001")
     assert released.returncode == 0, released.stdout + released.stderr
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
@@ -506,6 +515,63 @@ def test_worktree_create_and_release_round_trip(tmp_path: Path) -> None:
     assert entry["status"] == "closed"
     assert entry["cleanup_state"] == "done"
     assert not destination.exists()
+
+
+def test_worker_heartbeat_updates_execution_runtime_without_runlog_noise(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    create_task = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-HB",
+        "--title",
+        "execution heartbeat task",
+        "--stage",
+        "pilot",
+        "--branch",
+        "feat/TASK-EXEC-HB",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--planned-write-paths",
+        "src/execution_hb/",
+        "--planned-test-paths",
+        "tests/execution_hb/",
+    )
+    assert create_task.returncode == 0, create_task.stdout + create_task.stderr
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-HB"
+    created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-HB", "--path", str(destination))
+    assert created.returncode == 0, created.stdout + created.stderr
+
+    heartbeat = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-heartbeat",
+        "TASK-EXEC-HB",
+        "--lane-session-id",
+        "lane-heartbeat-1",
+        "--executor-status",
+        "running",
+        "--result",
+        "heartbeat",
+    )
+    assert heartbeat.returncode == 0, heartbeat.stdout + heartbeat.stderr
+
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-HB")
+    assert entry["lane_session_id"] == "lane-heartbeat-1"
+    assert entry["executor_status"] == "running"
+    assert entry["started_at"] is not None
+    assert entry["last_heartbeat_at"] is not None
+    assert entry["last_result"] == "heartbeat"
+
+    workers = read_yaml(repo / "docs/governance/WORKER_REGISTRY.yaml")
+    worker = next(item for item in workers["workers"] if item["worker_id"] == "worker-local-01")
+    assert worker["last_heartbeat_at"] is not None
+
+    runlog_text = (repo / "docs/governance/runlogs/TASK-EXEC-HB-RUNLOG.md").read_text(encoding="utf-8")
+    assert "heartbeat" not in runlog_text
 
 
 def test_cleanup_orphans_marks_blocked_when_remove_fails(tmp_path: Path) -> None:

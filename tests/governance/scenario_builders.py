@@ -261,6 +261,11 @@ def execution_worktree_entry(
         "cleanup_attempts": cleanup_attempts,
         "last_cleanup_error": None,
         "worker_owner": worker_owner,
+        "lane_session_id": None,
+        "executor_status": "completed" if status == "closed" else "prepared",
+        "started_at": None,
+        "last_heartbeat_at": None,
+        "last_result": None,
     }
 
 
@@ -282,10 +287,16 @@ def write_execution_context(
             "parent_task_id": parent_task_id,
             "branch": branch,
             "worktree_path": str(repo).replace("\\", "/"),
+            "worker_owner": "worker-01",
             "allowed_dirs": allowed_dirs,
+            "reserved_paths": [],
             "planned_write_paths": planned_write_paths,
             "planned_test_paths": planned_test_paths,
             "required_tests": required_tests or [],
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "runtime_prompt_profile": "docs/governance/runtime_prompts/worker.md",
         },
     )
 

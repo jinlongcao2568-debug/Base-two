@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from governance_lib import (
+    DEFAULT_RUNTIME_PROMPT_PROFILE,
     EXECUTION_CONTEXT_FILE,
     GovernanceError,
     choose_worker_owner,
@@ -24,6 +25,15 @@ from governance_lib import (
     worktree_map,
 )
 from task_rendering import find_task
+
+
+def _reset_execution_runtime(entry: dict, worker_owner: str) -> None:
+    entry["worker_owner"] = worker_owner
+    entry["lane_session_id"] = None
+    entry["executor_status"] = "prepared"
+    entry["started_at"] = None
+    entry["last_heartbeat_at"] = None
+    entry["last_result"] = None
 
 
 def validate_worktree_create_request(root: Path, task: dict, tasks_by_id: dict, worktrees: dict, destination: Path) -> None:
@@ -62,6 +72,10 @@ def write_execution_context(destination: Path, task: dict, worker_owner: str) ->
             "planned_write_paths": task.get("planned_write_paths", []),
             "planned_test_paths": task.get("planned_test_paths", []),
             "required_tests": task.get("required_tests", []),
+            "lane_count": task.get("lane_count", 1),
+            "lane_index": task.get("lane_index"),
+            "parallelism_plan_id": task.get("parallelism_plan_id"),
+            "runtime_prompt_profile": DEFAULT_RUNTIME_PROMPT_PROFILE,
         },
     )
 
@@ -69,7 +83,19 @@ def write_execution_context(destination: Path, task: dict, worker_owner: str) ->
 def upsert_execution_entry(worktrees: dict, task: dict, destination: Path, worker_owner: str) -> None:
     current_entry = worktree_map(worktrees).get(task["task_id"])
     if current_entry is None:
-        worktrees.setdefault("entries", []).append({"task_id": task["task_id"], "work_mode": "execution", "parent_task_id": task.get("parent_task_id"), "branch": task["branch"], "path": display_path(destination), "status": "active", "cleanup_state": "pending", "cleanup_attempts": 0, "last_cleanup_error": None, "worker_owner": worker_owner})
+        entry = {
+            "task_id": task["task_id"],
+            "work_mode": "execution",
+            "parent_task_id": task.get("parent_task_id"),
+            "branch": task["branch"],
+            "path": display_path(destination),
+            "status": "active",
+            "cleanup_state": "pending",
+            "cleanup_attempts": 0,
+            "last_cleanup_error": None,
+        }
+        _reset_execution_runtime(entry, worker_owner)
+        worktrees.setdefault("entries", []).append(entry)
         return
     current_entry["work_mode"] = "execution"
     current_entry["parent_task_id"] = task.get("parent_task_id")
@@ -77,7 +103,9 @@ def upsert_execution_entry(worktrees: dict, task: dict, destination: Path, worke
     current_entry["path"] = display_path(destination)
     current_entry["status"] = "active"
     current_entry["cleanup_state"] = "pending"
-    current_entry["worker_owner"] = worker_owner
+    current_entry["cleanup_attempts"] = int(current_entry.get("cleanup_attempts", 0))
+    current_entry["last_cleanup_error"] = None
+    _reset_execution_runtime(current_entry, worker_owner)
 
 
 def cmd_worktree_create(args: argparse.Namespace) -> int:

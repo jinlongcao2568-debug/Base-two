@@ -2,237 +2,237 @@ version: '1.0'
 updated_at: '2026-04-05T12:48:00+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 capabilities:
-  - capability_id: governance_control_plane
-    status: implemented
-    source_of_truth:
-      - docs/governance/CURRENT_TASK.yaml
-      - docs/governance/TASK_REGISTRY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
-    scripts:
-      - scripts/automation_intent.py
-      - scripts/check_authority_alignment.py
-      - scripts/check_repo.py
-      - scripts/check_hygiene.py
-      - scripts/task_ops.py
-      - scripts/task_continuation_ops.py
-      - scripts/automation_runner.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: handoff_recovery_v1
-    status: implemented
-    source_of_truth:
-      - docs/governance/HANDOFF_POLICY.yaml
-      - docs/governance/handoffs/
-      - docs/governance/runlogs/
-    scripts:
-      - scripts/task_handoff.py
-      - scripts/task_worker_ops.py
-      - scripts/task_continuation_ops.py
-      - scripts/automation_intent.py
-      - scripts/task_lifecycle_ops.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: coordination_single_writer_v1
-    status: implemented
-    source_of_truth:
-      - docs/governance/HANDOFF_POLICY.yaml
-      - .gitignore
-      - .codex/local/COORDINATION_RUNTIME.yaml
-    scripts:
-      - scripts/task_coordination_lease.py
-      - scripts/task_coordination_ops.py
-      - scripts/task_continuation_ops.py
-      - scripts/task_lifecycle_ops.py
-      - scripts/task_worker_ops.py
-      - scripts/automation_intent.py
-      - scripts/task_runtime_ops.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: doc_driven_coordination_planner_v1
-    status: implemented
-    source_of_truth:
-      - docs/governance/COORDINATION_PLANNER_POLICY.yaml
-      - docs/governance/TASK_POLICY.yaml
-      - docs/governance/AUTOMATION_INTENTS.yaml
-      - .codex/local/coordination_candidates/
-    scripts:
-      - scripts/task_coordination_planner.py
-      - scripts/task_runtime_ops.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: git_publish_on_demand_v1
-    status: implemented
-    source_of_truth:
-      - docs/governance/GIT_PUBLISH_POLICY.yaml
-      - docs/governance/AUTOMATION_INTENTS.yaml
-      - docs/governance/runlogs/
-    scripts:
-      - scripts/task_publish_ops.py
-      - scripts/task_runtime_ops.py
-      - scripts/automation_intent.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: roadmap_autopilot_continuation
-    status: implemented
-    source_of_truth:
-      - docs/governance/DEVELOPMENT_ROADMAP.md
-      - docs/governance/TASK_POLICY.yaml
-      - docs/governance/CAPABILITY_MAP.yaml
-    scripts:
-      - scripts/task_ops.py
-      - scripts/task_continuation_ops.py
-      - scripts/automation_runner.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: closeout_autopilot_v2
-    status: implemented
-    source_of_truth:
-      - docs/governance/CURRENT_TASK.yaml
-      - docs/governance/TASK_REGISTRY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
-    scripts:
-      - scripts/task_closeout.py
-      - scripts/task_continuation_ops.py
-      - scripts/task_ops.py
-      - scripts/automation_intent.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: dynamic_parallel_execution_control
-    status: implemented
-    source_of_truth:
-      - docs/governance/TASK_POLICY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
-      - docs/governance/TASK_REGISTRY.yaml
-      - docs/governance/CURRENT_TASK.yaml
-    scripts:
-      - scripts/governance_rules.py
-      - scripts/task_lifecycle_ops.py
-      - scripts/task_worktree_ops.py
-      - scripts/task_continuation_ops.py
-      - scripts/business_autopilot.py
-      - scripts/automation_runner.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: parallel_closeout_pipeline_v1
-    status: implemented
-    source_of_truth:
-      - docs/governance/TASK_REGISTRY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
-      - docs/governance/CURRENT_TASK.yaml
-    scripts:
-      - scripts/task_worker_ops.py
-      - scripts/task_continuation_ops.py
-      - scripts/automation_runner.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: runtime_prompt_profiles
-    status: implemented
-    source_of_truth:
-      - docs/governance/PROMPT_MODULE_CATALOG.yaml
-      - docs/governance/prompt_modules/
-      - docs/governance/runtime_prompts/
-    scripts:
-      - scripts/render_runtime_prompts.py
-    tests:
-      - pytest tests/governance -q
-  - capability_id: high_throughput_runner_v1
-    status: implemented
-    source_of_truth:
-      - docs/governance/DEVELOPMENT_ROADMAP.md
-      - docs/governance/AUTOMATION_OPERATING_MODEL.md
-      - docs/governance/TASK_POLICY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
-    scripts:
-      - scripts/automation_runner.py
-      - scripts/task_worktree_ops.py
-      - scripts/task_worker_ops.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: stage1_to_stage6_business_automation
-    status: implemented
-    source_of_truth:
-      - docs/governance/DEVELOPMENT_ROADMAP.md
-      - docs/governance/TASK_POLICY.yaml
-      - docs/governance/MODULE_MAP.yaml
-      - docs/governance/TEST_MATRIX.yaml
-    scripts:
-      - scripts/business_autopilot.py
-      - scripts/task_continuation_ops.py
-      - scripts/task_worker_ops.py
-      - scripts/automation_runner.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-  - capability_id: contracts_registry_validation
-    status: implemented
-    source_of_truth:
-      - docs/contracts/
-      - docs/governance/SCHEMA_REGISTRY.md
-    scripts:
-      - scripts/validate_contracts.py
-    tests:
-      - pytest tests/contracts -q
-  - capability_id: stage3_stage4_stage6_minimal_chain
-    status: implemented
-    source_of_truth:
-      - docs/contracts/schemas/stage3_project_base.schema.json
-      - docs/contracts/schemas/stage4_rule_hit.schema.json
-      - docs/contracts/schemas/stage6_project_fact.schema.json
-      - docs/governance/TEST_MATRIX.yaml
-    scripts:
-      - scripts/validate_contracts.py
-    tests:
-      - pytest tests/stage3 -q
-      - pytest tests/stage4 -q
-      - pytest tests/stage6 -q
-      - pytest tests/integration -q
-  - capability_id: formal_handoff_catalog
-    status: implemented
-    source_of_truth:
-      - docs/contracts/handoff_catalog.yaml
-      - docs/contracts/schemas/handoff_catalog.schema.json
-      - docs/contracts/field_semantics/handoff_catalog.fields.yaml
-    scripts:
-      - scripts/validate_contracts.py
-    tests:
-      - pytest tests/contracts -q
-      - pytest tests/integration -q
-  - capability_id: stage4_stage5_stage6_extended_chain
-    status: implemented
-    source_of_truth:
-      - docs/contracts/schemas/stage4_evidence.schema.json
-      - docs/contracts/schemas/stage4_review_request.schema.json
-      - docs/contracts/schemas/stage5_report_record.schema.json
-      - docs/contracts/schemas/stage6_project_fact.schema.json
-      - docs/governance/TEST_MATRIX.yaml
-    scripts:
-      - scripts/validate_contracts.py
-    tests:
-      - pytest tests/contracts -q
-      - pytest tests/stage4 -q
-      - pytest tests/stage6 -q
-      - pytest tests/integration -q
-  - capability_id: stage7_to_stage9_business_automation
-    status: not_established
-    source_of_truth:
-      - docs/product/MVP_SCOPE.md
-      - docs/governance/DEVELOPMENT_ROADMAP.md
-      - docs/governance/MODULE_MAP.yaml
-      - docs/governance/TASK_POLICY.yaml
-    scripts:
-      - scripts/business_autopilot.py
-      - scripts/task_continuation_ops.py
-      - scripts/automation_runner.py
-    tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
+- capability_id: governance_control_plane
+  status: implemented
+  source_of_truth:
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  scripts:
+  - scripts/automation_intent.py
+  - scripts/check_authority_alignment.py
+  - scripts/check_repo.py
+  - scripts/check_hygiene.py
+  - scripts/task_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/automation_runner.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: handoff_recovery_v1
+  status: implemented
+  source_of_truth:
+  - docs/governance/HANDOFF_POLICY.yaml
+  - docs/governance/handoffs/
+  - docs/governance/runlogs/
+  scripts:
+  - scripts/task_handoff.py
+  - scripts/task_worker_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/automation_intent.py
+  - scripts/task_lifecycle_ops.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: coordination_single_writer_v1
+  status: implemented
+  source_of_truth:
+  - docs/governance/HANDOFF_POLICY.yaml
+  - .gitignore
+  - .codex/local/COORDINATION_RUNTIME.yaml
+  scripts:
+  - scripts/task_coordination_lease.py
+  - scripts/task_coordination_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_worker_ops.py
+  - scripts/automation_intent.py
+  - scripts/task_runtime_ops.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: doc_driven_coordination_planner_v1
+  status: implemented
+  source_of_truth:
+  - docs/governance/COORDINATION_PLANNER_POLICY.yaml
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/AUTOMATION_INTENTS.yaml
+  - .codex/local/coordination_candidates/
+  scripts:
+  - scripts/task_coordination_planner.py
+  - scripts/task_runtime_ops.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: git_publish_on_demand_v1
+  status: implemented
+  source_of_truth:
+  - docs/governance/GIT_PUBLISH_POLICY.yaml
+  - docs/governance/AUTOMATION_INTENTS.yaml
+  - docs/governance/runlogs/
+  scripts:
+  - scripts/task_publish_ops.py
+  - scripts/task_runtime_ops.py
+  - scripts/automation_intent.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: roadmap_autopilot_continuation
+  status: implemented
+  source_of_truth:
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/CAPABILITY_MAP.yaml
+  scripts:
+  - scripts/task_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/automation_runner.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: closeout_autopilot_v2
+  status: implemented
+  source_of_truth:
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  scripts:
+  - scripts/task_closeout.py
+  - scripts/task_continuation_ops.py
+  - scripts/task_ops.py
+  - scripts/automation_intent.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: dynamic_parallel_execution_control
+  status: implemented
+  source_of_truth:
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  scripts:
+  - scripts/governance_rules.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_worktree_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/business_autopilot.py
+  - scripts/automation_runner.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: parallel_closeout_pipeline_v1
+  status: implemented
+  source_of_truth:
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  scripts:
+  - scripts/task_worker_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/automation_runner.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: runtime_prompt_profiles
+  status: implemented
+  source_of_truth:
+  - docs/governance/PROMPT_MODULE_CATALOG.yaml
+  - docs/governance/prompt_modules/
+  - docs/governance/runtime_prompts/
+  scripts:
+  - scripts/render_runtime_prompts.py
+  tests:
+  - pytest tests/governance -q
+- capability_id: high_throughput_runner_v1
+  status: implemented
+  source_of_truth:
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/AUTOMATION_OPERATING_MODEL.md
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  scripts:
+  - scripts/automation_runner.py
+  - scripts/task_worktree_ops.py
+  - scripts/task_worker_ops.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: stage1_to_stage6_business_automation
+  status: implemented
+  source_of_truth:
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/MODULE_MAP.yaml
+  - docs/governance/TEST_MATRIX.yaml
+  scripts:
+  - scripts/business_autopilot.py
+  - scripts/task_continuation_ops.py
+  - scripts/task_worker_ops.py
+  - scripts/automation_runner.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+- capability_id: contracts_registry_validation
+  status: implemented
+  source_of_truth:
+  - docs/contracts/
+  - docs/governance/SCHEMA_REGISTRY.md
+  scripts:
+  - scripts/validate_contracts.py
+  tests:
+  - pytest tests/contracts -q
+- capability_id: stage3_stage4_stage6_minimal_chain
+  status: implemented
+  source_of_truth:
+  - docs/contracts/schemas/stage3_project_base.schema.json
+  - docs/contracts/schemas/stage4_rule_hit.schema.json
+  - docs/contracts/schemas/stage6_project_fact.schema.json
+  - docs/governance/TEST_MATRIX.yaml
+  scripts:
+  - scripts/validate_contracts.py
+  tests:
+  - pytest tests/stage3 -q
+  - pytest tests/stage4 -q
+  - pytest tests/stage6 -q
+  - pytest tests/integration -q
+- capability_id: formal_handoff_catalog
+  status: implemented
+  source_of_truth:
+  - docs/contracts/handoff_catalog.yaml
+  - docs/contracts/schemas/handoff_catalog.schema.json
+  - docs/contracts/field_semantics/handoff_catalog.fields.yaml
+  scripts:
+  - scripts/validate_contracts.py
+  tests:
+  - pytest tests/contracts -q
+  - pytest tests/integration -q
+- capability_id: stage4_stage5_stage6_extended_chain
+  status: implemented
+  source_of_truth:
+  - docs/contracts/schemas/stage4_evidence.schema.json
+  - docs/contracts/schemas/stage4_review_request.schema.json
+  - docs/contracts/schemas/stage5_report_record.schema.json
+  - docs/contracts/schemas/stage6_project_fact.schema.json
+  - docs/governance/TEST_MATRIX.yaml
+  scripts:
+  - scripts/validate_contracts.py
+  tests:
+  - pytest tests/contracts -q
+  - pytest tests/stage4 -q
+  - pytest tests/stage6 -q
+  - pytest tests/integration -q
+- capability_id: stage7_to_stage9_business_automation
+  status: not_established
+  source_of_truth:
+  - docs/product/MVP_SCOPE.md
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/MODULE_MAP.yaml
+  - docs/governance/TASK_POLICY.yaml
+  scripts:
+  - scripts/business_autopilot.py
+  - scripts/task_continuation_ops.py
+  - scripts/automation_runner.py
+  tests:
+  - pytest tests/governance -q
+  - pytest tests/automation -q

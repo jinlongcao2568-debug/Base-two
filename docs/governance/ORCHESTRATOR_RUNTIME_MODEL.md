@@ -48,6 +48,30 @@ The runtime file is a local derived state surface. It is not a second task ledge
   - live-task Git publish gate summary
   - remote / `gh` / existing PR visibility
   - missing required test visibility for explicit publish actions
+- `continuation_readiness`
+  - live-task or recoverable-predecessor continuation summary
+  - checkpoint requirement and successor resolution visibility
+
+## Execution Worktree Runtime
+
+- `docs/governance/WORKTREE_REGISTRY.yaml` remains the authoritative execution-lane runtime surface.
+- Every execution entry may now carry:
+  - `lane_session_id`
+  - `executor_status`
+  - `started_at`
+  - `last_heartbeat_at`
+  - `last_result`
+- These fields are runtime metadata only. They do not replace task ledger status, runlog evidence, or closeout conclusions.
+
+## Execution Context
+
+- Each execution worktree receives `.codex/local/EXECUTION_CONTEXT.yaml`.
+- The governed execution context now includes:
+  - `lane_count`
+  - `lane_index`
+  - `parallelism_plan_id`
+  - `runtime_prompt_profile`
+- The runtime prompt profile must resolve back to `docs/governance/PROMPT_MODULE_CATALOG.yaml` and the generated runtime prompt files.
 
 ## Single-Machine Scope
 
@@ -55,6 +79,7 @@ The runtime file is a local derived state surface. It is not a second task ledge
 - `worker-local-01` is the only enabled worker in v1.
 - The coordinator and worker run on the same machine.
 - Single-writer lease rules still control repository writes.
+- Execution lanes are logical runtime slots, not extra physical workers.
 
 ## Reserved Future Interfaces
 
@@ -74,3 +99,5 @@ These are reserved interfaces only. In v1 they must remain visibly disabled or u
 - Do not treat a disabled external source as active input.
 - Do not use runtime telemetry as a replacement for runlog or handoff evidence.
 - Do not infer token or cost telemetry that the repository cannot observe.
+- Do not treat `worker-heartbeat` as narrative progress evidence; it is runtime liveness only.
+- Do not let lane runtime fields become a second truth layer for closeout, publish, or successor decisions.

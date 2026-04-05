@@ -8,6 +8,7 @@ from governance_runtime import (
     CLEANUP_STATE_VALUES,
     EXECUTION_WORKER_OWNERS,
     EXECUTION_MODE_VALUES,
+    EXECUTOR_STATUS_VALUES,
     GovernanceError,
     REVIEW_BUNDLE_STATUS_VALUES,
     RESERVED_PATHS,
@@ -239,6 +240,11 @@ def validate_task(task: dict[str, Any]) -> None:
 
 
 def validate_worktree_entry(entry: dict[str, Any]) -> None:
+    entry.setdefault("lane_session_id", None)
+    entry.setdefault("executor_status", "completed" if entry.get("status") == "closed" else "prepared")
+    entry.setdefault("started_at", None)
+    entry.setdefault("last_heartbeat_at", None)
+    entry.setdefault("last_result", None)
     required_fields = {
         "task_id",
         "work_mode",
@@ -250,6 +256,11 @@ def validate_worktree_entry(entry: dict[str, Any]) -> None:
         "cleanup_attempts",
         "last_cleanup_error",
         "worker_owner",
+        "lane_session_id",
+        "executor_status",
+        "started_at",
+        "last_heartbeat_at",
+        "last_result",
     }
     missing = sorted(required_fields - set(entry))
     if missing:
@@ -258,6 +269,7 @@ def validate_worktree_entry(entry: dict[str, Any]) -> None:
         (entry["status"] in WORKTREE_STATUS_VALUES, f"invalid worktree status: {entry['status']}"),
         (entry["cleanup_state"] in CLEANUP_STATE_VALUES, f"invalid cleanup_state: {entry['cleanup_state']}"),
         (entry["worker_owner"] in WORKER_OWNER_VALUES, f"invalid worker_owner: {entry['worker_owner']}"),
+        (entry["executor_status"] in EXECUTOR_STATUS_VALUES, f"invalid executor_status: {entry['executor_status']}"),
     ]
     for valid, message in validators:
         if not valid:

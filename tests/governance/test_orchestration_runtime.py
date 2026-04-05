@@ -167,3 +167,47 @@ def test_orchestration_status_reports_recoverable_predecessor_readiness(tmp_path
     assert readiness["checkpoint_eligible"] is True
     assert readiness["next_successor_task_id"] == "TASK-NEXT-001"
     assert readiness["recommended_action"] == "continue-roadmap"
+
+
+def test_orchestration_status_reflects_worker_heartbeat(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-HB",
+        "--title",
+        "execution heartbeat task",
+        "--stage",
+        "pilot",
+        "--branch",
+        "feat/TASK-EXEC-HB",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--planned-write-paths",
+        "src/execution_hb/",
+        "--planned-test-paths",
+        "tests/execution_hb/",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    worktree = tmp_path / "repo.worktrees" / "TASK-EXEC-HB"
+    prepared = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-HB", "--path", str(worktree))
+    assert prepared.returncode == 0, prepared.stdout + prepared.stderr
+    heartbeat = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-heartbeat",
+        "TASK-EXEC-HB",
+        "--lane-session-id",
+        "lane-heartbeat-1",
+        "--executor-status",
+        "running",
+        "--result",
+        "heartbeat",
+    )
+    assert heartbeat.returncode == 0, heartbeat.stdout + heartbeat.stderr
+
+    payload = _status_json(repo)
+    assert payload["workers"]["entries"]["worker-local-01"]["last_heartbeat_at"] is not None

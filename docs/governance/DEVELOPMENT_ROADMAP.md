@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-local-multi-agent-dispatch-v1
+current_task_id: TASK-GOV-016
 next_recommended_task_id: TASK-GOV-016
 advance_mode: explicit_or_generated
 auto_create_missing_task: true

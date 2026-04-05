@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timedelta
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -10,8 +12,10 @@ from governance_lib import (
     collect_active_execution_errors,
     collect_split_errors,
     dynamic_lane_ceiling,
+    dump_yaml,
     GovernanceError,
     find_repo_root,
+    iso_now,
     load_current_task,
     load_task_policy,
     load_task_registry,
@@ -25,6 +29,7 @@ from task_coordination_lease import coordination_thread_id, current_session_id
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+LAUNCHER_SCRIPT = SCRIPT_DIR / "local_lane_launcher.py"
 METRIC_KEYS = (
     "lane_count",
     "lane_conflict_count",
@@ -51,6 +56,16 @@ def task_ops(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
 
 def python_script(root: Path, script_name: str) -> subprocess.CompletedProcess[str]:
     return run_step(root, str(SCRIPT_DIR / script_name))
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
 
 
 def default_worktree_root(root: Path) -> Path:
@@ -109,6 +124,83 @@ def _active_execution_entries(worktree_registry: dict[str, object]) -> list[dict
         for entry in worktree_registry.get("entries", [])
         if entry.get("work_mode") == "execution" and entry.get("status") == "active"
     ]
+
+
+def _parent_execution_entries(worktree_registry: dict[str, object], parent_task_id: str) -> list[dict[str, object]]:
+    return [
+        entry
+        for entry in worktree_registry.get("entries", [])
+        if entry.get("work_mode") == "execution"
+        and entry.get("parent_task_id") == parent_task_id
+        and entry.get("status") == "active"
+    ]
+
+
+def _ensure_execution_runtime_defaults(entry: dict[str, object]) -> None:
+    entry.setdefault("lane_session_id", None)
+    entry.setdefault("executor_status", "prepared")
+    entry.setdefault("started_at", None)
+    entry.setdefault("last_heartbeat_at", None)
+    entry.setdefault("last_result", None)
+
+
+def _load_execution_entry(root: Path, task_id: str) -> tuple[dict[str, object], dict[str, object]]:
+    worktrees = load_worktree_registry(root)
+    entry = worktree_map(worktrees).get(task_id)
+    if entry is None:
+        raise GovernanceError(f"missing execution worktree entry: {task_id}")
+    _ensure_execution_runtime_defaults(entry)
+    return worktrees, entry
+
+
+def _write_worktree_registry(root: Path, worktrees: dict[str, object]) -> None:
+    worktrees["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+
+
+def _update_execution_runtime(
+    root: Path,
+    task_id: str,
+    *,
+    lane_session_id: str | None = None,
+    executor_status: str | None = None,
+    started_at: str | None = None,
+    last_heartbeat_at: str | None = None,
+    last_result: str | None = None,
+) -> dict[str, object]:
+    worktrees, entry = _load_execution_entry(root, task_id)
+    if lane_session_id is not None:
+        entry["lane_session_id"] = lane_session_id
+    if executor_status is not None:
+        entry["executor_status"] = executor_status
+    if started_at is not None:
+        entry["started_at"] = started_at
+    if last_heartbeat_at is not None:
+        entry["last_heartbeat_at"] = last_heartbeat_at
+    if last_result is not None:
+        entry["last_result"] = last_result
+    _write_worktree_registry(root, worktrees)
+    return entry
+
+
+def _parse_iso(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _wait_for_dispatch_heartbeat(root: Path, task_id: str, settle_seconds: float) -> bool:
+    deadline = time.monotonic() + max(0.0, settle_seconds)
+    while time.monotonic() < deadline:
+        _, entry = _load_execution_entry(root, task_id)
+        if entry.get("executor_status") == "running" and entry.get("last_heartbeat_at"):
+            return True
+        time.sleep(0.1)
+    _, entry = _load_execution_entry(root, task_id)
+    return bool(entry.get("executor_status") == "running" and entry.get("last_heartbeat_at"))
 
 
 def _cleanup_failures(worktree_registry: dict[str, object]) -> list[dict[str, object]]:
@@ -279,6 +371,172 @@ def prepare_parallel_worktrees(
     return created, len(created) < len(pending_children)
 
 
+def _dispatchable_lane_targets(
+    root: Path,
+    current_task: dict[str, object],
+) -> tuple[list[tuple[dict[str, object], dict[str, object]]], int]:
+    registry = load_task_registry(root)
+    tasks_by_id = task_map(registry)
+    worktrees = load_worktree_registry(root)
+    entries = _parent_execution_entries(worktrees, current_task["current_task_id"])
+    running_or_launching = 0
+    dispatchable: list[tuple[dict[str, object], dict[str, object]]] = []
+    for entry in entries:
+        _ensure_execution_runtime_defaults(entry)
+        task = tasks_by_id.get(str(entry["task_id"]))
+        if task is None or task.get("task_kind") != "execution":
+            continue
+        if task.get("status") in {"done", "blocked", "review"}:
+            continue
+        executor_status = str(entry.get("executor_status") or "prepared")
+        if executor_status in {"running", "launching"}:
+            running_or_launching += 1
+            continue
+        if executor_status in {"completed", "blocked"}:
+            continue
+        dispatchable.append((task, entry))
+    return dispatchable, running_or_launching
+
+
+def _run_lane_launcher(
+    root: Path,
+    task: dict[str, object],
+    entry: dict[str, object],
+    *,
+    heartbeat_interval: int,
+    max_runtime: int,
+) -> int:
+    launch_started_at = iso_now()
+    lane_session_id = f"lane-{task['task_id']}-{int(time.time() * 1000)}"
+    _update_execution_runtime(
+        root,
+        str(task["task_id"]),
+        lane_session_id=lane_session_id,
+        executor_status="launching",
+        started_at=launch_started_at,
+        last_result="dispatch_requested",
+    )
+    try:
+        launched = subprocess.run(
+            [
+                sys.executable,
+                str(LAUNCHER_SCRIPT),
+                "--repo-root",
+                str(root),
+                "--task-id",
+                str(task["task_id"]),
+                "--worktree-path",
+                str(entry["path"]),
+                "--lane-session-id",
+                lane_session_id,
+                "--heartbeat-interval-seconds",
+                str(heartbeat_interval),
+                "--max-runtime-seconds",
+                str(max_runtime),
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except OSError as error:
+        _update_execution_runtime(
+            root,
+            str(task["task_id"]),
+            executor_status="dispatch_failed",
+            last_result=str(error),
+        )
+        print(f"[ERROR] launcher dispatch failed for {task['task_id']}: {error}")
+        return 1
+
+    if launched.returncode != 0:
+        _update_execution_runtime(
+            root,
+            str(task["task_id"]),
+            executor_status="dispatch_failed",
+            last_result=launched.stdout.strip() or launched.stderr.strip() or "dispatch_failed",
+        )
+        _emit_step_output(launched)
+        print(f"[ERROR] launcher dispatch failed for {task['task_id']}")
+        return 1
+
+    if _wait_for_dispatch_heartbeat(root, str(task["task_id"]), 0.2):
+        print(f"[OK] dispatched launcher for {task['task_id']}")
+    else:
+        print(f"[WARN] launcher finished for {task['task_id']} but first heartbeat is still pending")
+    return 0
+
+
+def _dispatch_lane_launchers(
+    root: Path,
+    current_task: dict[str, object],
+    gate: dict[str, object],
+    effective_lane_budget: int | None,
+) -> int:
+    if current_task["topology"] != "parallel_parent":
+        return 0
+    if not gate["prepare_worktrees"]:
+        print(f"[SKIP] dispatch-lane-launchers skipped: {gate['reason']}")
+        return 0
+    if effective_lane_budget is None:
+        return 0
+    dispatchable, running_or_launching = _dispatchable_lane_targets(root, current_task)
+
+    remaining_capacity = max(0, effective_lane_budget - running_or_launching)
+    if remaining_capacity == 0 and dispatchable:
+        print(f"[SKIP] dispatch-lane-launchers skipped: active lane budget reached ({running_or_launching}/{effective_lane_budget})")
+        return 0
+
+    heartbeat_interval = max(1, _env_int("AX9_LAUNCHER_HEARTBEAT_INTERVAL_SECONDS", 15))
+    max_runtime = max(heartbeat_interval, _env_int("AX9_LAUNCHER_MAX_RUNTIME_SECONDS", 300))
+    exit_code = 0
+
+    for task, entry in dispatchable[:remaining_capacity]:
+        exit_code = max(
+            exit_code,
+            _run_lane_launcher(root, task, entry, heartbeat_interval=heartbeat_interval, max_runtime=max_runtime),
+        )
+    return exit_code
+
+
+def _monitor_lane_heartbeats(root: Path, current_task: dict[str, object]) -> int:
+    if current_task["topology"] != "parallel_parent":
+        return 0
+    registry = load_task_registry(root)
+    tasks_by_id = task_map(registry)
+    worktrees = load_worktree_registry(root)
+    timeout_seconds = max(1, _env_int("AX9_LAUNCHER_HEARTBEAT_TIMEOUT_SECONDS", 90))
+    now = datetime.now().astimezone()
+    exit_code = 0
+
+    for entry in _parent_execution_entries(worktrees, current_task["current_task_id"]):
+        _ensure_execution_runtime_defaults(entry)
+        task_id = str(entry["task_id"])
+        task = tasks_by_id.get(task_id)
+        if task is None or task.get("status") in {"done", "blocked"}:
+            continue
+        if entry.get("executor_status") not in {"launching", "running"}:
+            continue
+        reference = _parse_iso(entry.get("last_heartbeat_at")) or _parse_iso(entry.get("started_at"))
+        if reference is None:
+            continue
+        if now - reference <= timedelta(seconds=timeout_seconds):
+            continue
+        reason = f"lane_heartbeat_timeout: {task_id}"
+        blocked = task_ops(root, "worker-blocked", task_id, "--reason", reason)
+        _emit_step_output(blocked)
+        _update_execution_runtime(
+            root,
+            task_id,
+            executor_status="timed_out",
+            last_result="timeout",
+        )
+        print(f"[BLOCKED] {task_id}: heartbeat timeout")
+        exit_code = 1
+    return exit_code
+
+
 def _maybe_prepare_worktrees(
     root: Path,
     current_task: dict[str, object],
@@ -410,6 +668,12 @@ def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, 
         prepare_worktrees,
         effective_lane_budget,
     )
+    dispatch_exit = _dispatch_lane_launchers(root, current_task, gate, effective_lane_budget)
+    if dispatch_exit != 0 and exit_code == 0:
+        exit_code = dispatch_exit
+    heartbeat_exit = _monitor_lane_heartbeats(root, current_task)
+    if heartbeat_exit != 0 and exit_code == 0:
+        exit_code = heartbeat_exit
     auto_close_exit = _maybe_auto_close_children(root, current_task, gate, metrics)
     if auto_close_exit != 0:
         exit_code = auto_close_exit

@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-016`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-local-multi-agent-dispatch-v1`
 - `branch`: `feat/TASK-GOV-016-local-multi-agent-dispatch`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -22,6 +22,14 @@
 - Turn prepared execution worktrees into dispatched local lane agents with bounded prompts and runtime tracking.
 - Extend `automation_runner` from orchestration-only behavior into local multi-lane dispatch, monitoring, and closeout handling.
 - Keep the v1 scope limited to one machine, one physical worker registry entry, and up to four lanes.
+
+## Implementation Scope
+
+- Add execution-lane runtime fields to `WORKTREE_REGISTRY.yaml` so the runner can recover from registry state alone.
+- Extend `.codex/local/EXECUTION_CONTEXT.yaml` with lane metadata and the governed worker runtime prompt profile.
+- Add `worker-heartbeat` as a runtime-only command that updates liveness without polluting runlog narrative sections.
+- Add a governed local launcher that materializes execution context, emits `worker-start`, and records the first heartbeat.
+- Extend `automation_runner` to dispatch launchers, detect stale lane heartbeats, and preserve parent isolation when only one lane fails.
 
 ## Explicitly Not Doing
 
@@ -64,21 +72,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -87,5 +95,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-016-local-multi-agent-dispatch`
-- `updated_at`: `2026-04-05T20:28:55+08:00`
+- `updated_at`: `2026-04-05T21:52:29+08:00`
 <!-- generated:task-meta:end -->

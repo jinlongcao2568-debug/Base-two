@@ -5,12 +5,14 @@ from pathlib import Path
 import subprocess
 
 from governance_lib import (
+    EXECUTOR_STATUS_VALUES,
     GovernanceError,
     append_runlog_bullets,
     dump_yaml,
     find_repo_root,
     iso_now,
     load_task_registry,
+    load_worker_registry,
     load_worktree_registry,
     missing_required_tests,
     sync_task_artifacts,
@@ -25,6 +27,56 @@ from task_rendering import (
     record_blocked_split,
     update_current_task_if_active,
 )
+
+LOCAL_WORKER_ID = "worker-local-01"
+
+
+def _persist_worker_registry(root: Path, workers: dict) -> None:
+    workers["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/WORKER_REGISTRY.yaml", workers)
+
+
+def _mark_launcher_worker_heartbeat(workers: dict, *, worker_id: str = LOCAL_WORKER_ID, timestamp: str | None = None) -> None:
+    now = timestamp or iso_now()
+    for worker in workers.get("workers", []):
+        if worker.get("worker_id") == worker_id:
+            worker["last_heartbeat_at"] = now
+            return
+
+
+def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
+    entry = worktree_map(worktrees).get(task_id)
+    if entry is None or entry.get("work_mode") != "execution":
+        return None
+    entry.setdefault("lane_session_id", None)
+    entry.setdefault("executor_status", "prepared" if entry.get("status") != "closed" else "completed")
+    entry.setdefault("started_at", None)
+    entry.setdefault("last_heartbeat_at", None)
+    entry.setdefault("last_result", None)
+    return entry
+
+
+def _mark_execution_runtime(
+    entry: dict | None,
+    *,
+    now: str,
+    lane_session_id: str | None = None,
+    executor_status: str | None = None,
+    last_result: str | None = None,
+) -> None:
+    if entry is None:
+        return
+    entry["status"] = "active" if executor_status not in {"completed", "blocked"} else entry.get("status", "active")
+    if lane_session_id is not None:
+        entry["lane_session_id"] = lane_session_id
+    if entry.get("started_at") is None and executor_status in {"launching", "running", "completed", "blocked"}:
+        entry["started_at"] = now
+    if executor_status is not None:
+        entry["executor_status"] = executor_status
+    if executor_status in {"running", "completed", "blocked"}:
+        entry["last_heartbeat_at"] = now
+    if last_result is not None:
+        entry["last_result"] = last_result
 
 
 def _reported_completed_items(args: argparse.Namespace) -> list[str] | None:
@@ -82,6 +134,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
+    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-start")
     try:
@@ -89,27 +142,37 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     except GovernanceError:
         record_blocked_split(root, registry, task)
         raise
+    now = iso_now()
     task["status"] = "doing"
     task["worker_state"] = "running"
     task["blocked_reason"] = None
-    task["last_reported_at"] = iso_now()
+    task["last_reported_at"] = now
     if task["task_kind"] == "execution":
         task["review_bundle_status"] = "not_applicable"
     if task["activated_at"] is None:
-        task["activated_at"] = iso_now()
-    entry = worktree_map(worktrees).get(task["task_id"])
+        task["activated_at"] = now
+    entry = _execution_entry(worktrees, task["task_id"])
     if entry is not None:
         entry["status"] = "active"
         if args.worker_owner:
             entry["worker_owner"] = args.worker_owner
         if args.path:
             entry["path"] = args.path
-    registry["updated_at"] = iso_now()
-    worktrees["updated_at"] = iso_now()
+        _mark_execution_runtime(
+            entry,
+            now=now,
+            lane_session_id=entry.get("lane_session_id") or current_session_id(root),
+            executor_status="running",
+            last_result="worker-start",
+        )
+    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Worker started and the task is actively running.")
-    append_runlog_bullets(root, task, "Execution Log", [f"`{iso_now()}`: worker-start owner=`{args.worker_owner or 'unknown'}`"])
+    append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-start owner=`{args.worker_owner or 'unknown'}`"])
     sync_task_artifacts(root, registry, [task["task_id"]])
     record_session_event(
         root,
@@ -130,17 +193,32 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
 def cmd_worker_report(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-report")
+    now = iso_now()
     task["worker_state"] = "running"
     if task["status"] == "queued":
         task["status"] = "doing"
     task["blocked_reason"] = None
-    task["last_reported_at"] = iso_now()
-    registry["updated_at"] = iso_now()
+    task["last_reported_at"] = now
+    entry = _execution_entry(worktrees, task["task_id"])
+    _mark_execution_runtime(
+        entry,
+        now=now,
+        lane_session_id=entry.get("lane_session_id") if entry is not None else None,
+        executor_status="running" if entry is not None else None,
+        last_result="worker-report",
+    )
+    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Worker progress was recorded for the live task.")
-    bullets = [f"`{iso_now()}`: {note}" for note in args.note]
+    bullets = [f"`{now}`: {note}" for note in args.note]
     if bullets:
         append_runlog_bullets(root, task, "Execution Log", bullets)
     reported_tests = _reported_tests(args)
@@ -180,16 +258,31 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
 def cmd_worker_blocked(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-blocked")
+    now = iso_now()
     task["status"] = "blocked"
     task["worker_state"] = "blocked"
     task["blocked_reason"] = args.reason
-    task["last_reported_at"] = iso_now()
-    registry["updated_at"] = iso_now()
+    task["last_reported_at"] = now
+    entry = _execution_entry(worktrees, task["task_id"])
+    _mark_execution_runtime(
+        entry,
+        now=now,
+        lane_session_id=entry.get("lane_session_id") if entry is not None else None,
+        executor_status="blocked" if entry is not None else None,
+        last_result=args.reason,
+    )
+    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Task blocked; waiting for blocker resolution before more changes.")
-    append_runlog_bullets(root, task, "Risk and Blockers", [f"`{iso_now()}`: {args.reason}"])
+    append_runlog_bullets(root, task, "Risk and Blockers", [f"`{now}`: {args.reason}"])
     write_handoff(
         root,
         task,
@@ -224,18 +317,33 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
 def cmd_worker_finish(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-finish")
+    now = iso_now()
     task["status"] = "review"
     task["worker_state"] = "review_pending"
     task["blocked_reason"] = None
-    task["last_reported_at"] = iso_now()
+    task["last_reported_at"] = now
     if task["task_kind"] == "execution":
         task["review_bundle_status"] = "not_applicable"
-    registry["updated_at"] = iso_now()
+    entry = _execution_entry(worktrees, task["task_id"])
+    _mark_execution_runtime(
+        entry,
+        now=now,
+        lane_session_id=entry.get("lane_session_id") if entry is not None else None,
+        executor_status="completed" if entry is not None else None,
+        last_result=args.summary,
+    )
+    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
-    append_runlog_bullets(root, task, "Execution Log", [f"`{iso_now()}`: worker-finish `{args.summary}`"])
+    append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-finish `{args.summary}`"])
     reported_tests = _reported_tests(args)
     if reported_tests:
         append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in reported_tests])
@@ -271,6 +379,39 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         safe_write=True,
     )
     print(f"[OK] worker finished {task['task_id']}")
+    return 0
+
+
+def cmd_worker_heartbeat(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    workers = load_worker_registry(root)
+    task = find_task(registry["tasks"], args.task_id)
+    claim_coordination_lease(root, task, reason="worker-heartbeat")
+    now = iso_now()
+    entry = _execution_entry(worktrees, task["task_id"])
+    if entry is None:
+        raise GovernanceError(f"worker-heartbeat requires an execution worktree: {task['task_id']}")
+    executor_status = args.executor_status or entry.get("executor_status") or "running"
+    if executor_status not in EXECUTOR_STATUS_VALUES:
+        raise GovernanceError(f"invalid executor_status: {executor_status}")
+    _mark_execution_runtime(
+        entry,
+        now=now,
+        lane_session_id=args.lane_session_id or entry.get("lane_session_id") or current_session_id(root),
+        executor_status=executor_status,
+        last_result=args.result or entry.get("last_result"),
+    )
+    if task["status"] not in {"done", "blocked"}:
+        task["last_reported_at"] = now
+    _mark_launcher_worker_heartbeat(workers, worker_id=args.worker_id, timestamp=now)
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _persist_worker_registry(root, workers)
+    print(f"[OK] worker heartbeat {task['task_id']} executor_status={entry['executor_status']}")
     return 0
 
 
@@ -387,6 +528,25 @@ def _promote_parent_after_children(
             append_resume_notes=True,
         )
         return "review", [], []
+    if open_children:
+        parent["status"] = "doing"
+        parent["worker_state"] = "running"
+        parent["blocked_reason"] = None
+        parent["last_reported_at"] = iso_now()
+        append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: waiting on child review bundles `{', '.join(open_children)}`"])
+        update_current_task_if_active(root, parent, "Child review bundles are still running; coordination task remains active.")
+        write_handoff(
+            root,
+            parent,
+            summary_status=parent["status"],
+            remaining_items=[f"Wait for child review bundles: {', '.join(open_children)}"],
+            next_step="Wait for the remaining child review bundles to finish and rerun auto-close-children.",
+            next_tests=list(parent.get("required_tests") or []),
+            current_risks=[f"blocked child lanes: {', '.join(blocked)}"] if blocked else [],
+            resume_notes=["Parent task is still waiting on child review bundles."],
+            append_resume_notes=True,
+        )
+        return "doing", [], open_children
     if blocked:
         parent["status"] = "blocked"
         parent["worker_state"] = "blocked"
@@ -406,24 +566,6 @@ def _promote_parent_after_children(
             append_resume_notes=True,
         )
         return "blocked", blocked, open_children
-    if open_children:
-        parent["status"] = "doing"
-        parent["worker_state"] = "running"
-        parent["blocked_reason"] = None
-        parent["last_reported_at"] = iso_now()
-        append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: waiting on child review bundles `{', '.join(open_children)}`"])
-        update_current_task_if_active(root, parent, "Child review bundles are still running; coordination task remains active.")
-        write_handoff(
-            root,
-            parent,
-            summary_status=parent["status"],
-            remaining_items=[f"Wait for child review bundles: {', '.join(open_children)}"],
-            next_step="Wait for the remaining child review bundles to finish and rerun auto-close-children.",
-            next_tests=list(parent.get("required_tests") or []),
-            resume_notes=["Parent task is still waiting on child review bundles."],
-            append_resume_notes=True,
-        )
-        return "doing", [], open_children
     return None, [], []
 
 
