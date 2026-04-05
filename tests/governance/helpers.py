@@ -238,6 +238,48 @@ def close_live_task_to_idle(
         git_commit_all(repo, f"close {task_id} to idle")
 
 
+def set_live_task_review_without_evidence(
+    repo: Path,
+    *,
+    task_id: str = "TASK-BASE-001",
+    commit_after_update: bool = False,
+) -> None:
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == task_id)
+    task["status"] = "review"
+    task["worker_state"] = "review_pending"
+    task["blocked_reason"] = None
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    current_task["status"] = "review"
+    current_task["worker_state"] = "review_pending"
+    current_task["blocked_reason"] = None
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == task_id)
+    entry["status"] = "active"
+    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+
+    runlog_path = repo / f"docs/governance/runlogs/{task_id}-RUNLOG.md"
+    runlog_path.write_text(
+        (
+            f"# {task_id} RUNLOG\n\n"
+            "## Task Status\n\n"
+            f"- `task_id`: `{task_id}`\n"
+            "- `status`: `review`\n"
+            "- `stage`: `base-stage`\n"
+            "- `branch`: `main`\n"
+            "- `worker_state`: `review_pending`\n"
+        ),
+        encoding="utf-8",
+    )
+
+    if commit_after_update:
+        git_commit_all(repo, f"mark {task_id} review without evidence")
+
+
 def init_structure(repo: Path) -> None:
     (repo / "docs/governance/tasks").mkdir(parents=True, exist_ok=True)
     (repo / "docs/governance/runlogs").mkdir(parents=True, exist_ok=True)

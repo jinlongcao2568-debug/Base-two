@@ -10,7 +10,7 @@ size_class: null
 automation_mode: null
 worker_state: idle
 blocked_reason: null
-last_reported_at: '2026-04-05T11:26:30+08:00'
+last_reported_at: '2026-04-05T11:47:22+08:00'
 topology: null
 allowed_dirs: []
 reserved_paths: []
@@ -20,4 +20,4 @@ required_tests: []
 task_file: null
 runlog_file: null
 next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-05T11:26:30+08:00'
+updated_at: '2026-04-05T11:47:22+08:00'

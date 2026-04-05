@@ -13,6 +13,7 @@ from .helpers import (
     init_governance_repo,
     read_yaml,
     run_python,
+    set_live_task_review_without_evidence,
     set_idle_control_plane,
     write_yaml,
 )
@@ -147,6 +148,22 @@ def test_preflight_routes_free_form_roadmap_request(tmp_path: Path) -> None:
     assert payload["intent_id"] == "continue-roadmap"
 
 
+def test_preflight_roadmap_reports_ready_closeout_recommendation(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_review_ready(repo)
+
+    code, payload = _preflight(repo, "按路线图继续推进")
+
+    assert code == 0
+    assert payload["status"] == "ready"
+    assert payload["closeout_recommendation"]["status"] == "ready"
+    assert payload["closeout_recommendation"]["task_id"] == "TASK-BASE-001"
+
+
 def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
@@ -220,3 +237,42 @@ def test_preflight_continue_roadmap_blocks_incomplete_successor_boundary(tmp_pat
     assert code == 0
     assert payload["status"] == "blocked"
     assert any("boundary is incomplete" in blocker for blocker in payload["blockers"])
+
+
+def test_preflight_continue_roadmap_blocks_review_missing_test_evidence(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    set_live_task_review_without_evidence(repo, commit_after_update=True)
+
+    code, payload = _preflight(repo, "按路线图继续推进")
+
+    assert code == 0
+    assert payload["status"] == "blocked"
+    assert payload["closeout_recommendation"]["status"] == "blocked"
+    assert any("required tests missing from runlog" in blocker for blocker in payload["blockers"])
+
+
+def test_preflight_continue_roadmap_blocks_live_ledger_drift(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_review_ready(repo)
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    current_task["branch"] = "feat/drifted-branch"
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+    git_commit_all(repo, "introduce live ledger drift")
+
+    code, payload = _preflight(repo, "按路线图继续推进")
+
+    assert code == 0
+    assert payload["status"] == "blocked"
+    assert payload["closeout_recommendation"]["status"] == "blocked"
+    assert any(
+        "live ledger drift detected" in blocker or "CURRENT_TASK.yaml 字段 `branch`" in blocker
+        for blocker in payload["blockers"]
+    )

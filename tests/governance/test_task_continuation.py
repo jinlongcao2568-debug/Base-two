@@ -10,6 +10,7 @@ from .helpers import (
     init_governance_repo,
     read_yaml,
     run_python,
+    set_live_task_review_without_evidence,
     set_idle_control_plane,
     write_yaml,
 )
@@ -167,7 +168,39 @@ def test_continue_roadmap_rejects_dirty_review_task(tmp_path: Path) -> None:
     (repo / "docs/governance/dirty.md").write_text("dirty\n", encoding="utf-8")
     result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
     assert result.returncode == 1
-    assert "worktree must be clean" in result.stdout
+    assert "dirty.md" in result.stdout
+
+
+def test_continue_roadmap_rejects_review_without_test_evidence(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    set_live_task_review_without_evidence(repo, commit_after_update=True)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+
+    assert result.returncode == 1
+    assert "required tests missing from runlog" in result.stdout
+
+
+def test_continue_roadmap_rejects_live_ledger_drift(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_current_review_ready(repo)
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    current_task["branch"] = "feat/drifted-branch"
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+    git_commit_all(repo, "introduce live ledger drift")
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+
+    assert result.returncode == 1
+    assert "live ledger drift detected" in result.stdout
 
 
 def test_continue_roadmap_generates_task_auto_002_when_gap_is_open(tmp_path: Path) -> None:

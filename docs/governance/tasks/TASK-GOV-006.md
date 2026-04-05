@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-006`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-closeout-autopilot-v2`
 - `branch`: `feat/TASK-GOV-006-closeout-autopilot-v2`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 ## Primary Goals
 
@@ -59,23 +59,23 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-006-closeout-autopilot-v2`
-- `updated_at`: `2026-04-05T11:29:09+08:00`
+- `updated_at`: `2026-04-05T11:47:22+08:00`
 <!-- generated:task-meta:end -->

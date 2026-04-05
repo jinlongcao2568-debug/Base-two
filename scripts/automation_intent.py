@@ -22,11 +22,11 @@ from governance_lib import (
     load_task_policy,
     load_task_registry,
     load_worktree_registry,
-    missing_required_tests,
     read_roadmap,
     task_map,
 )
 from governance_repo_checks import run_repo_checks
+from task_closeout import assess_live_closeout
 from task_continuation_ops import _resolve_roadmap_successor
 from task_rendering import find_task
 
@@ -119,6 +119,14 @@ def _dirty_blockers(root: Path) -> list[str]:
     return [f"工作区不干净：{', '.join(dirty)}"]
 
 
+def _dedupe_items(values: list[str]) -> list[str]:
+    deduped: list[str] = []
+    for value in values:
+        if value not in deduped:
+            deduped.append(value)
+    return deduped
+
+
 def _run_repo_gate(root: Path) -> list[str]:
     try:
         registry = load_task_registry(root)
@@ -167,6 +175,7 @@ def _preview_roadmap_successor(root: Path, current_task_id: str | None) -> tuple
 def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
     blockers = _dirty_blockers(root)
     current_payload, current_task = _load_live_task(root)
+    closeout = assess_live_closeout(root, current_payload=current_payload, current_task=current_task)
     if current_payload.get("status") == "idle":
         blockers.append("CURRENT_TASK.yaml 当前为 idle；请改用路线图推进，或先显式激活任务。")
     elif current_task is not None:
@@ -183,7 +192,8 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
             "intent_id": intent["intent_id"],
             "mapped_command": intent["mapped_command"],
             "explanation": "已识别为继续当前任务，但前置条件不满足。",
-            "blockers": blockers,
+            "blockers": _dedupe_items(blockers),
+            "closeout_recommendation": closeout,
         }
 
     task_id = current_task["task_id"] if current_task is not None else current_payload.get("current_task_id")
@@ -195,6 +205,7 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
         "mapped_command": intent["mapped_command"],
         "explanation": f"将继续 live 当前任务 `{task_id}`，当前状态为 `{task_status}`，不会选择后继任务。",
         "blockers": [],
+        "closeout_recommendation": closeout,
     }
 
 
@@ -205,15 +216,15 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
 
     current_payload, current_task = _load_live_task(root)
     status = current_payload.get("status")
+    closeout = assess_live_closeout(root, current_payload=current_payload, current_task=current_task)
     if status == "blocked":
         reason = None if current_task is None else current_task.get("blocked_reason")
         blockers.append(f"当前任务已阻塞：{reason or 'blocked without recorded reason'}")
     elif status == "done":
         blockers.append("CURRENT_TASK.yaml 不应停留在 done；请先修复 live 控制面状态。")
-    elif status == "review" and current_task is not None:
-        missing = missing_required_tests(root, current_task)
-        if missing:
-            blockers.append(f"当前 review 任务缺少关账测试记录：{', '.join(missing)}")
+    elif status == "review":
+        blockers.extend(closeout.get("blockers", []))
+        blockers.extend(closeout.get("diagnostics", []))
 
     successor_summary = None
     if status not in {"doing", "paused", "blocked", "done"}:
@@ -233,7 +244,8 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
             "intent_id": intent["intent_id"],
             "mapped_command": intent["mapped_command"],
             "explanation": "已识别为按路线图推进，但当前前置条件不满足。",
-            "blockers": blockers,
+            "blockers": _dedupe_items(blockers),
+            "closeout_recommendation": closeout,
         }
 
     if status in {"doing", "paused"} and current_task is not None:
@@ -241,6 +253,11 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
             f"live 当前任务 `{current_task['task_id']}` 仍在 `{current_task['status']}`，"
             "continue-roadmap 将退化为继续当前任务，不会跳到后继。"
         )
+    elif closeout["status"] == "ready":
+        explanation = (
+            f"{closeout['summary']} 执行 continue-roadmap 时将先自动关账当前任务，"
+            f"随后解析后继。{(' ' + successor_summary) if successor_summary else ''}"
+        ).strip()
     else:
         explanation = successor_summary or "路线图前置检查通过，可以继续执行自动推进。"
     return {
@@ -250,6 +267,7 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
         "mapped_command": intent["mapped_command"],
         "explanation": explanation,
         "blockers": [],
+        "closeout_recommendation": closeout,
     }
 
 
@@ -264,6 +282,7 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
             "mapped_command": None,
             "explanation": explanation,
             "blockers": [],
+            "closeout_recommendation": None,
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)

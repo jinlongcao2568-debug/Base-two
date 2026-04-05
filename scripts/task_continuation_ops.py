@@ -26,13 +26,13 @@ from governance_lib import (
     load_task_policy,
     load_task_registry,
     load_worktree_registry,
-    missing_required_tests,
     sync_task_artifacts,
     task_map,
     validate_task,
     worktree_map,
     write_roadmap,
 )
+from task_closeout import assess_live_closeout
 from task_rendering import (
     find_task,
     pause_other_doing_tasks,
@@ -355,15 +355,14 @@ def _load_continue_roadmap_state(root):
 def _close_review_task_if_needed(root, current_task: dict[str, Any] | None, worktrees: dict[str, Any]) -> None:
     if current_task is None:
         return
-    ensure_clean_worktree(root)
-    if current_branch(root) != current_task["branch"]:
-        _switch_or_create_branch(root, current_task["branch"])
     if current_task["status"] != "review":
         return
-    missing = missing_required_tests(root, current_task)
-    if missing:
-        missing_text = ", ".join(missing)
-        raise GovernanceError(f"required tests missing from runlog: {missing_text}")
+    assessment = assess_live_closeout(root, current_task=current_task, worktrees=worktrees)
+    if assessment["status"] != "ready":
+        details = [*assessment.get("blockers", []), *assessment.get("diagnostics", [])]
+        if not details:
+            details = [assessment.get("summary", "current review task cannot auto-close")]
+        raise GovernanceError("; ".join(details))
     _mark_task_done(current_task, worktrees)
 
 
