@@ -15,10 +15,12 @@ from governance_lib import (
     infer_default_topology,
     iso_now,
     load_current_task,
+    load_task_policy,
     load_task_registry,
     load_worktree_registry,
     missing_required_tests,
     sync_task_artifacts,
+    task_parallelism_plan,
     task_required_tests_for_matrix,
     validate_task,
     worktree_map,
@@ -40,6 +42,7 @@ from task_rendering import (
 def cmd_new(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
+    task_policy = load_task_policy(root)
     tasks = registry.setdefault("tasks", [])
     if any(task["task_id"] == args.task_id for task in tasks):
         raise GovernanceError(f"task already exists: {args.task_id}")
@@ -66,15 +69,22 @@ def cmd_new(args: argparse.Namespace) -> int:
         "required_tests": args.required_tests,
         "task_file": f"docs/governance/tasks/{args.task_id}.md",
         "runlog_file": f"docs/governance/runlogs/{args.task_id}-RUNLOG.md",
+        "lane_count": 1,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": "not_applicable",
         "created_at": iso_now(),
         "activated_at": None,
         "closed_at": None,
     }
-    task["automation_mode"] = task["automation_mode"] or infer_default_automation_mode(task)
-    inferred_topology, _ = infer_default_topology(task)
-    task["topology"] = task["topology"] or inferred_topology
     if not task["required_tests"]:
         task["required_tests"] = task_required_tests_for_matrix(root, task)
+    task["automation_mode"] = task["automation_mode"] or infer_default_automation_mode(task, task_policy)
+    plan = task_parallelism_plan(task, task_policy)
+    task["topology"] = task["topology"] or plan["topology"]
+    if task["task_kind"] == "coordination":
+        task["lane_count"] = plan["lane_count"]
+        task["parallelism_plan_id"] = plan["parallelism_plan_id"]
     validate_task(task)
     tasks.append(task)
     registry["updated_at"] = iso_now()
@@ -225,12 +235,13 @@ def cmd_sync(args: argparse.Namespace) -> int:
 def cmd_split_check(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
+    task_policy = load_task_policy(root)
     tasks = [
         task
         for task in registry.get("tasks", [])
         if task.get("parent_task_id") == args.parent_task_id and task.get("task_kind") == "execution"
     ]
-    errors = collect_split_errors(tasks)
+    errors = collect_split_errors(tasks, task_policy)
     if errors:
         for error in errors:
             print(f"[ERROR] {error}")
@@ -242,9 +253,14 @@ def cmd_split_check(args: argparse.Namespace) -> int:
 def cmd_decide_topology(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
+    task_policy = load_task_policy(root)
     task = find_task(registry["tasks"], args.task_id)
-    topology, reason = infer_default_topology(task)
-    task["topology"] = topology
+    plan = task_parallelism_plan(task, task_policy)
+    task["topology"] = plan["topology"]
+    if task["task_kind"] == "coordination":
+        task["lane_count"] = plan["lane_count"]
+        task["parallelism_plan_id"] = plan["parallelism_plan_id"]
+    topology, reason = task["topology"], plan["reason"]
     task["last_reported_at"] = iso_now()
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)

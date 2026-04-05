@@ -37,8 +37,10 @@ AUTOMATION_MODE_VALUES = {"manual", "assisted", "autonomous"}
 WORKER_STATE_VALUES = {"idle", "running", "blocked", "review_pending", "completed"}
 TOPOLOGY_VALUES = {"single_task", "single_worker", "parallel_parent"}
 WORKTREE_STATUS_VALUES = {"active", "paused", "closed"}
-WORKER_OWNER_VALUES = {"coordinator", "worker-a", "worker-b"}
 CLEANUP_STATE_VALUES = {"not_needed", "pending", "blocked", "blocked_manual", "done"}
+EXECUTION_WORKER_OWNERS = tuple(f"worker-{index:02d}" for index in range(1, 5))
+WORKER_OWNER_VALUES = {"coordinator", *EXECUTION_WORKER_OWNERS}
+REVIEW_BUNDLE_STATUS_VALUES = {"not_applicable", "pending", "passed", "failed"}
 
 
 class GovernanceError(RuntimeError):

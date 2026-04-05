@@ -30,6 +30,7 @@ def set_live_task_mode(
     topology: str = "parallel_parent",
     automation_mode: str = "manual",
     required_tests: list[str] | None = None,
+    lane_count: int = 1,
 ) -> None:
     required_tests = required_tests or [DEFAULT_TEST]
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
@@ -39,6 +40,10 @@ def set_live_task_mode(
         task["topology"] = topology
         task["automation_mode"] = automation_mode
         task["required_tests"] = list(required_tests)
+        task["lane_count"] = lane_count
+        task["lane_index"] = None
+        task["parallelism_plan_id"] = f"plan-{task['task_id']}-{lane_count}" if topology == "parallel_parent" else None
+        task["review_bundle_status"] = "not_applicable"
     write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
     sync_task_artifacts(repo)
@@ -118,6 +123,8 @@ def create_review_ready_child(
     summary: str = "candidate ready",
     tmp_path: Path | None = None,
     with_worktree: bool = False,
+    lane_count: int = 1,
+    lane_index: int | None = None,
 ) -> None:
     create_execution_task(
         repo,
@@ -128,6 +135,14 @@ def create_review_ready_child(
         parent_task_id=parent_task_id,
         required_test=required_test,
     )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == task_id)
+    task["lane_count"] = lane_count
+    task["lane_index"] = lane_index
+    task["parallelism_plan_id"] = f"plan-{parent_task_id}-{lane_count}" if lane_count > 1 else None
+    task["review_bundle_status"] = "not_applicable"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    sync_task_artifacts(repo)
     if with_worktree:
         assert tmp_path is not None
         create_worktree(repo, tmp_path, task_id)
@@ -144,6 +159,7 @@ def create_review_ready_children(
     tmp_path: Path | None = None,
     with_worktrees: bool = False,
 ) -> None:
+    lane_count = len(task_ids)
     for index, task_id in enumerate(task_ids):
         create_review_ready_child(
             repo,
@@ -154,6 +170,8 @@ def create_review_ready_children(
             summary=summary,
             tmp_path=tmp_path,
             with_worktree=with_worktrees,
+            lane_count=lane_count,
+            lane_index=index + 1,
         )
 
 
@@ -171,6 +189,9 @@ def execution_task_record(
     topology: str = "single_worker",
     parent_task_id: str = "TASK-BASE-001",
     stage: str = "pilot",
+    lane_count: int = 1,
+    lane_index: int | None = None,
+    parallelism_plan_id: str | None = None,
 ) -> dict:
     return {
         "task_id": task_id,
@@ -194,6 +215,10 @@ def execution_task_record(
         "required_tests": [],
         "task_file": f"docs/governance/tasks/{task_id}.md",
         "runlog_file": f"docs/governance/runlogs/{task_id}-RUNLOG.md",
+        "lane_count": lane_count,
+        "lane_index": lane_index,
+        "parallelism_plan_id": parallelism_plan_id,
+        "review_bundle_status": "not_applicable",
         "created_at": "2026-04-04T00:00:00+08:00",
         "activated_at": "2026-04-04T00:00:00+08:00",
         "closed_at": None,
@@ -222,7 +247,7 @@ def execution_worktree_entry(
     status: str = "active",
     cleanup_state: str = "pending",
     cleanup_attempts: int = 0,
-    worker_owner: str = "worker-a",
+    worker_owner: str = "worker-01",
     parent_task_id: str = "TASK-BASE-001",
 ) -> dict:
     return {

@@ -103,24 +103,44 @@ def _task_status_map(repo: Path, task_ids: list[str]) -> dict[str, str]:
     return {task_id: tasks[task_id] for task_id in task_ids}
 
 
-def _setup_parallel_parent(repo: Path, automation_mode: str) -> list[str]:
-    task_ids = ["TASK-EXEC-00A", "TASK-EXEC-00B"]
-    BUILDERS.set_live_task_mode(repo, automation_mode=automation_mode)
+def _setup_parallel_parent(repo: Path, automation_mode: str, lane_count: int = 4) -> list[str]:
+    task_ids = [f"TASK-EXEC-{index:03d}" for index in range(1, lane_count + 1)]
+    BUILDERS.set_live_task_mode(repo, automation_mode=automation_mode, lane_count=lane_count)
     BUILDERS.create_review_ready_children(repo, task_ids, write_path_prefix="src/exec")
     return task_ids
 
 
-def _setup_review_bundle_failure(repo: Path) -> str:
-    task_id = "TASK-EXEC-FAIL"
-    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous")
+def _setup_review_bundle_failure(repo: Path) -> list[str]:
+    task_ids = ["TASK-EXEC-FAIL-1", "TASK-EXEC-FAIL-2", "TASK-EXEC-FAIL-3"]
+    BUILDERS.set_live_task_mode(repo, automation_mode="autonomous", lane_count=len(task_ids))
     BUILDERS.create_review_ready_child(
         repo,
-        task_id,
+        task_ids[0],
+        write_path="src/exec_pass_1/",
+        title="execution pass one",
+        required_test="pytest tests/base -q",
+        lane_count=len(task_ids),
+        lane_index=1,
+    )
+    BUILDERS.create_review_ready_child(
+        repo,
+        task_ids[1],
         write_path="src/exec_fail/",
         title="execution fail",
         required_test="pytest tests/missing -q",
+        lane_count=len(task_ids),
+        lane_index=2,
     )
-    return task_id
+    BUILDERS.create_review_ready_child(
+        repo,
+        task_ids[2],
+        write_path="src/exec_pass_2/",
+        title="execution pass two",
+        required_test="pytest tests/base -q",
+        lane_count=len(task_ids),
+        lane_index=3,
+    )
+    return task_ids
 
 
 def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
@@ -147,8 +167,13 @@ def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     ("automation_mode", "expected_status", "prepare_message", "close_message"),
     [
         ("manual", "review", "[SKIP] prepare-worktrees skipped", "[SKIP] auto-close-children skipped"),
-        ("assisted", "review", "[OK] prepared worktree for TASK-EXEC-00A", "[SKIP] auto-close-children skipped"),
-        ("autonomous", "done", "[OK] prepared worktree for TASK-EXEC-00A", "[OK] auto-closed children: TASK-EXEC-00A, TASK-EXEC-00B"),
+        ("assisted", "review", "[OK] prepared worktree for TASK-EXEC-001", "[SKIP] auto-close-children skipped"),
+        (
+            "autonomous",
+            "done",
+            "[OK] prepared worktree for TASK-EXEC-001",
+            "[OK] auto-closed children: TASK-EXEC-001, TASK-EXEC-002, TASK-EXEC-003, TASK-EXEC-004",
+        ),
     ],
 )
 def test_runner_heavy_parent_modes(
@@ -162,11 +187,17 @@ def test_runner_heavy_parent_modes(
     task_ids = _setup_parallel_parent(repo, automation_mode)
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
     statuses = _task_status_map(repo, task_ids)
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    child_entries = [entry for entry in worktrees["entries"] if entry.get("task_id") in task_ids]
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert prepare_message in result.stdout
     assert close_message in result.stdout
     assert statuses == {task_id: expected_status for task_id in task_ids}
+    if automation_mode == "manual":
+        assert child_entries == []
+    else:
+        assert len(child_entries) == len(task_ids)
 
 
 def test_runner_reports_cleanup_blocked(tmp_path: Path) -> None:
@@ -261,6 +292,9 @@ def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree
     assert result.returncode == 0, result.stdout + result.stderr
     assert parent["topology"] == "parallel_parent"
     assert len(children) == 1
+    assert parent["lane_count"] == 1
+    assert children[0]["lane_count"] == 1
+    assert children[0]["lane_index"] == 1
     child_entry = next(entry for entry in worktrees["entries"] if entry["task_id"] == children[0]["task_id"])
     assert child_entry["status"] == "active"
     assert "[OK] prepared worktree for" in result.stdout
@@ -268,11 +302,14 @@ def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree
 
 def test_runner_blocks_lane_when_review_bundle_fails(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    task_id = _setup_review_bundle_failure(repo)
+    task_ids = _setup_review_bundle_failure(repo)
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    child = next(task for task in registry["tasks"] if task["task_id"] == task_id)
+    failing = next(task for task in registry["tasks"] if task["task_id"] == task_ids[1])
+    passing = [task for task in registry["tasks"] if task["task_id"] in {task_ids[0], task_ids[2]}]
 
     assert result.returncode == 1
-    assert child["status"] == "blocked"
-    assert "review_bundle_failed" in child["blocked_reason"]
+    assert failing["status"] == "blocked"
+    assert "review_bundle_failed" in failing["blocked_reason"]
+    assert [task["status"] for task in passing] == ["done", "done"]
+    assert "[BLOCKED] TASK-EXEC-FAIL-2" in result.stdout

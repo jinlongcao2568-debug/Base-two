@@ -37,6 +37,10 @@
 - `stage`: `automation-roadmap-continuation-v1`
 - `branch`: `feat/TASK-AUTO-002-roadmap-autopilot-continuation`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
@@ -45,4 +49,8 @@
 - `stage`: `automation-roadmap-continuation-v1`
 - `branch`: `feat/TASK-AUTO-002-roadmap-autopilot-continuation`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:end -->

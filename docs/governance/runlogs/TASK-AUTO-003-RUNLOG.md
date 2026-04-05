@@ -40,6 +40,10 @@
 - `stage`: `automation-business-autopilot-stage1-stage6-v1`
 - `branch`: `feat/TASK-AUTO-003-business-autopilot-stage1-stage6`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
@@ -48,6 +52,10 @@
 - `stage`: `automation-business-autopilot-stage1-stage6-v1`
 - `branch`: `feat/TASK-AUTO-003-business-autopilot-stage1-stage6`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:end -->
 
 ## Execution Log

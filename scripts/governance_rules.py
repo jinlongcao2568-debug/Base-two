@@ -6,8 +6,10 @@ from typing import Any, Iterable
 from governance_runtime import (
     AUTOMATION_MODE_VALUES,
     CLEANUP_STATE_VALUES,
+    EXECUTION_WORKER_OWNERS,
     EXECUTION_MODE_VALUES,
     GovernanceError,
+    REVIEW_BUNDLE_STATUS_VALUES,
     RESERVED_PATHS,
     SIZE_CLASS_VALUES,
     STATUS_VALUES,
@@ -80,10 +82,14 @@ def distinct_scope_roots(paths: Iterable[str]) -> set[str]:
     return {path_to_scope_root(path) for path in paths if path}
 
 
-def collect_split_errors(tasks: list[dict[str, Any]]) -> list[str]:
+def collect_split_errors(
+    tasks: list[dict[str, Any]],
+    task_policy: dict[str, Any] | None = None,
+) -> list[str]:
     errors: list[str] = []
-    if len(tasks) > 2:
-        errors.append("execution tasks exceed the hard limit of 2")
+    ceiling = dynamic_lane_ceiling(task_policy)
+    if len(tasks) > ceiling:
+        errors.append(f"execution tasks exceed the hard limit of {ceiling}")
     for task in tasks:
         for conflict in task_reserved_conflicts(task):
             errors.append(f"{task['task_id']} {conflict}")
@@ -129,6 +135,7 @@ def collect_split_errors(tasks: list[dict[str, Any]]) -> list[str]:
 def collect_active_execution_errors(
     tasks_by_id: dict[str, dict[str, Any]],
     worktree_registry: dict[str, Any],
+    task_policy: dict[str, Any] | None = None,
 ) -> list[str]:
     active_entries = [
         entry
@@ -136,8 +143,9 @@ def collect_active_execution_errors(
         if entry.get("work_mode") == "execution" and entry.get("status") == "active"
     ]
     errors: list[str] = []
-    if len(active_entries) > 2:
-        errors.append("active execution worktrees exceed the hard limit of 2")
+    ceiling = dynamic_lane_ceiling(task_policy)
+    if len(active_entries) > ceiling:
+        errors.append(f"active execution worktrees exceed the hard limit of {ceiling}")
     execution_tasks: list[dict[str, Any]] = []
     for entry in active_entries:
         task = tasks_by_id.get(entry["task_id"])
@@ -145,11 +153,15 @@ def collect_active_execution_errors(
             errors.append(f"missing task for active worktree entry: {entry['task_id']}")
             continue
         execution_tasks.append(task)
-    errors.extend(collect_split_errors(execution_tasks))
+    errors.extend(collect_split_errors(execution_tasks, task_policy))
     return errors
 
 
 def validate_task(task: dict[str, Any]) -> None:
+    task.setdefault("lane_count", 1)
+    task.setdefault("lane_index", None)
+    task.setdefault("parallelism_plan_id", None)
+    task.setdefault("review_bundle_status", "not_applicable")
     required_fields = {
         "task_id",
         "title",
@@ -169,6 +181,10 @@ def validate_task(task: dict[str, Any]) -> None:
         "required_tests",
         "task_file",
         "runlog_file",
+        "lane_count",
+        "lane_index",
+        "parallelism_plan_id",
+        "review_bundle_status",
     }
     missing = sorted(required_fields - set(task))
     if missing:
@@ -181,12 +197,24 @@ def validate_task(task: dict[str, Any]) -> None:
         (task["automation_mode"] in AUTOMATION_MODE_VALUES, f"invalid automation_mode: {task['automation_mode']}"),
         (task["worker_state"] in WORKER_STATE_VALUES, f"invalid worker_state: {task['worker_state']}"),
         (task["topology"] in TOPOLOGY_VALUES, f"invalid topology: {task['topology']}"),
+        (
+            task["review_bundle_status"] in REVIEW_BUNDLE_STATUS_VALUES,
+            f"invalid review_bundle_status: {task['review_bundle_status']}",
+        ),
     ]
     for valid, message in validators:
         if not valid:
             raise GovernanceError(message)
     if task["size_class"] == "micro" and len(task.get("planned_write_paths", [])) > 8:
         raise GovernanceError("micro task exceeds planned_write_paths hard limit of 8")
+    if not isinstance(task["lane_count"], int) or task["lane_count"] < 1:
+        raise GovernanceError(f"invalid lane_count: {task['lane_count']!r}")
+    if task["lane_index"] is not None and (
+        not isinstance(task["lane_index"], int) or task["lane_index"] < 1 or task["lane_index"] > task["lane_count"]
+    ):
+        raise GovernanceError(f"invalid lane_index: {task['lane_index']!r}")
+    if task["parallelism_plan_id"] is not None and not isinstance(task["parallelism_plan_id"], str):
+        raise GovernanceError(f"invalid parallelism_plan_id: {task['parallelism_plan_id']!r}")
 
 
 def validate_worktree_entry(entry: dict[str, Any]) -> None:
@@ -227,27 +255,105 @@ def task_required_tests_for_matrix(root: Path, task: dict[str, Any]) -> list[str
     return list(module_rules.get(task["size_class"], {}).get("required_tests", []))
 
 
-def infer_default_topology(task: dict[str, Any]) -> tuple[str, str]:
+def dynamic_parallelism_policy(task_policy: dict[str, Any] | None = None) -> dict[str, Any]:
+    heavy_policy = ((task_policy or {}).get("size_classes", {}) or {}).get("heavy", {})
+    return {
+        "parallelism_mode": heavy_policy.get("parallelism_mode", "dynamic"),
+        "dynamic_lane_ceiling_v1": int(heavy_policy.get("dynamic_lane_ceiling_v1", 4)),
+        "min_disjoint_write_roots": int(heavy_policy.get("min_disjoint_write_roots", 2)),
+        "required_tests_complete": heavy_policy.get("required_tests_complete", True),
+        "reserved_path_conflict_policy": heavy_policy.get("reserved_path_conflict_policy", "block_parallelism"),
+        "auto_downgrade_to_single_worker_on_conflict": heavy_policy.get(
+            "auto_downgrade_to_single_worker_on_conflict",
+            True,
+        ),
+    }
+
+
+def dynamic_lane_ceiling(task_policy: dict[str, Any] | None = None) -> int:
+    return max(1, dynamic_parallelism_policy(task_policy)["dynamic_lane_ceiling_v1"])
+
+
+def execution_worker_owner_choices(task_policy: dict[str, Any] | None = None) -> tuple[str, ...]:
+    return EXECUTION_WORKER_OWNERS[: dynamic_lane_ceiling(task_policy)]
+
+
+def task_parallelism_plan(task: dict[str, Any], task_policy: dict[str, Any] | None = None) -> dict[str, Any]:
+    task_id = task.get("task_id", "task")
     if task["size_class"] == "micro":
-        return "single_task", "micro tasks stay in a single task context"
+        return {
+            "topology": "single_task",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "micro tasks stay in a single task context",
+        }
     if task["size_class"] == "standard":
-        return "single_worker", "standard tasks default to one worker"
-    if "reserved_paths" not in task:
-        return "single_worker", "heavy task must declare reserved_paths before split evaluation"
+        return {
+            "topology": "single_worker",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "standard tasks default to one worker",
+        }
+
+    policy = dynamic_parallelism_policy(task_policy)
     roots = distinct_scope_roots(task.get("planned_write_paths", []))
-    if task_reserved_conflicts(task):
-        return "single_worker", "heavy task touches reserved paths and cannot auto-split"
-    if not task.get("planned_write_paths") or not task.get("required_tests"):
-        return "single_worker", "heavy task lacks clear write paths or required tests"
-    if len(roots) >= 2:
-        return "parallel_parent", "heavy task exposes multiple independent write scopes"
-    return "single_worker", "heavy task lacks enough independent write scopes for safe parallelism"
+    if "reserved_paths" not in task:
+        return {
+            "topology": "single_worker",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "heavy task must declare reserved_paths before split evaluation",
+        }
+    if task_reserved_conflicts(task) and policy["reserved_path_conflict_policy"] == "block_parallelism":
+        return {
+            "topology": "single_worker",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "heavy task touches reserved paths and cannot auto-split",
+        }
+    if not task.get("planned_write_paths"):
+        return {
+            "topology": "single_worker",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "heavy task lacks clear write paths for split evaluation",
+        }
+    if policy["required_tests_complete"] and not task.get("required_tests"):
+        return {
+            "topology": "single_worker",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "heavy task lacks required tests for safe parallelism",
+        }
+    if len(roots) < policy["min_disjoint_write_roots"]:
+        return {
+            "topology": "single_worker",
+            "lane_count": 1,
+            "parallelism_plan_id": None,
+            "reason": "heavy task lacks enough independent write scopes for safe parallelism",
+        }
+
+    lane_count = min(len(roots), dynamic_lane_ceiling(task_policy))
+    return {
+        "topology": "parallel_parent",
+        "lane_count": lane_count,
+        "parallelism_plan_id": f"plan-{task_id}-{lane_count}",
+        "reason": f"heavy task exposes {len(roots)} independent write scopes; planner selected {lane_count} lanes",
+    }
 
 
-def infer_default_automation_mode(task: dict[str, Any]) -> str:
+def infer_default_topology(
+    task: dict[str, Any],
+    task_policy: dict[str, Any] | None = None,
+) -> tuple[str, str]:
+    plan = task_parallelism_plan(task, task_policy)
+    return plan["topology"], plan["reason"]
+
+
+def infer_default_automation_mode(task: dict[str, Any], task_policy: dict[str, Any] | None = None) -> str:
     if task_reserved_conflicts(task):
         return "manual"
-    topology, _ = infer_default_topology(task)
+    topology, _ = infer_default_topology(task, task_policy)
     if task["size_class"] == "heavy" and topology != "parallel_parent":
         return "manual"
     if task["size_class"] in {"micro", "standard"}:
@@ -283,13 +389,20 @@ def runner_action_gate(task: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def choose_worker_owner(existing_entries: list[dict[str, Any]]) -> str:
+def choose_worker_owner(
+    existing_entries: list[dict[str, Any]],
+    task_policy: dict[str, Any] | None = None,
+) -> str:
+    available = execution_worker_owner_choices(task_policy)
     active_owners = {
         entry.get("worker_owner")
         for entry in existing_entries
-        if entry.get("status") == "active" and entry.get("worker_owner") in {"worker-a", "worker-b"}
+        if entry.get("status") == "active" and entry.get("worker_owner") in available
     }
-    return "worker-b" if "worker-a" in active_owners else "worker-a"
+    for owner in available:
+        if owner not in active_owners:
+            return owner
+    return available[0]
 
 
 def ensure_task_and_runlog_exist(root: Path, task: dict[str, Any]) -> None:

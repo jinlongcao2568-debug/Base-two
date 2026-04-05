@@ -206,7 +206,9 @@ def test_decide_topology_respects_size_class(tmp_path: Path) -> None:
         "heavy",
         "--planned-write-paths",
         "src/base/",
-        "tests/base/",
+        "scripts/",
+        "--required-tests",
+        "python scripts/check_repo.py",
     )
     assert micro.returncode == 0
     assert heavy.returncode == 0
@@ -218,6 +220,8 @@ def test_decide_topology_respects_size_class(tmp_path: Path) -> None:
     assert result_heavy.returncode == 0
     assert tasks["TASK-MICRO-001"]["topology"] == "single_task"
     assert tasks["TASK-HEAVY-001"]["topology"] == "parallel_parent"
+    assert tasks["TASK-HEAVY-001"]["lane_count"] == 2
+    assert tasks["TASK-HEAVY-001"]["parallelism_plan_id"] == "plan-TASK-HEAVY-001-2"
 
 
 def test_decide_topology_requires_reserved_paths_field_for_heavy(tmp_path: Path) -> None:
@@ -247,6 +251,132 @@ def test_decide_topology_requires_reserved_paths_field_for_heavy(tmp_path: Path)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-002")
     assert task["topology"] == "single_worker"
+    assert task["lane_count"] == 1
+    assert task["parallelism_plan_id"] is None
+
+
+def test_decide_topology_scales_to_three_lanes(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-HEAVY-003",
+        "--title",
+        "heavy task with three roots",
+        "--stage",
+        "heavy-stage",
+        "--size-class",
+        "heavy",
+        "--planned-write-paths",
+        "src/base/",
+        "scripts/",
+        "docs/base/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    result = run_python(TASK_OPS_SCRIPT, repo, "decide-topology", "TASK-HEAVY-003")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-003")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert task["topology"] == "parallel_parent"
+    assert task["lane_count"] == 3
+    assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-003-3"
+
+
+def test_decide_topology_caps_at_four_lanes(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-HEAVY-004",
+        "--title",
+        "heavy task with five roots",
+        "--stage",
+        "heavy-stage",
+        "--size-class",
+        "heavy",
+        "--planned-write-paths",
+        "src/base/",
+        "scripts/",
+        "docs/base/",
+        "tools/",
+        "configs/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    result = run_python(TASK_OPS_SCRIPT, repo, "decide-topology", "TASK-HEAVY-004")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-004")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert task["topology"] == "parallel_parent"
+    assert task["lane_count"] == 4
+    assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-004-4"
+
+
+def test_decide_topology_downgrades_when_required_tests_missing(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-HEAVY-005",
+        "--title",
+        "heavy task without tests",
+        "--stage",
+        "heavy-stage",
+        "--size-class",
+        "heavy",
+        "--planned-write-paths",
+        "src/base/",
+        "scripts/",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-005")
+    task["required_tests"] = []
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    result = run_python(TASK_OPS_SCRIPT, repo, "decide-topology", "TASK-HEAVY-005")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-005")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert task["topology"] == "single_worker"
+    assert task["lane_count"] == 1
+    assert task["parallelism_plan_id"] is None
+
+
+def test_decide_topology_downgrades_when_reserved_path_hit(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-HEAVY-006",
+        "--title",
+        "heavy task on reserved path",
+        "--stage",
+        "heavy-stage",
+        "--size-class",
+        "heavy",
+        "--planned-write-paths",
+        "scripts/",
+        "docs/base/",
+        "--reserved-paths",
+        "scripts/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    result = run_python(TASK_OPS_SCRIPT, repo, "decide-topology", "TASK-HEAVY-006")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-006")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert task["topology"] == "single_worker"
+    assert task["lane_count"] == 1
+    assert task["parallelism_plan_id"] is None
 
 
 def test_worker_state_transitions(tmp_path: Path) -> None:
@@ -405,6 +535,7 @@ def test_worktree_create_and_release_round_trip(tmp_path: Path) -> None:
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
     entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-001")
     assert entry["status"] == "active"
+    assert entry["worker_owner"] == "worker-01"
     released = run_python(TASK_OPS_SCRIPT, repo, "worktree-release", "TASK-EXEC-001")
     assert released.returncode == 0, released.stdout + released.stderr
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
@@ -425,3 +556,51 @@ def test_cleanup_orphans_marks_blocked_when_remove_fails(tmp_path: Path) -> None
     assert result.returncode == 1
     assert entry["cleanup_state"] == "blocked"
     assert entry["cleanup_attempts"] == 1
+
+
+def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    task_ids = [f"TASK-EXEC-00{index}" for index in range(1, 6)]
+    for index, task_id in enumerate(task_ids, start=1):
+        create_task = run_python(
+            TASK_OPS_SCRIPT,
+            repo,
+            "new",
+            task_id,
+            "--title",
+            f"execution task {index}",
+            "--stage",
+            "pilot",
+            "--branch",
+            f"feat/{task_id}",
+            "--task-kind",
+            "execution",
+            "--execution-mode",
+            "isolated_worktree",
+            "--planned-write-paths",
+            f"src/execution{index}/",
+            "--planned-test-paths",
+            f"tests/execution{index}/",
+        )
+        assert create_task.returncode == 0, create_task.stdout + create_task.stderr
+    for task_id in task_ids[:4]:
+        destination = tmp_path / "repo.worktrees" / task_id
+        created = run_python(
+            TASK_OPS_SCRIPT,
+            repo,
+            "worktree-create",
+            task_id,
+            "--path",
+            str(destination),
+        )
+        assert created.returncode == 0, created.stdout + created.stderr
+    rejected = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worktree-create",
+        task_ids[4],
+        "--path",
+        str(tmp_path / "repo.worktrees" / task_ids[4]),
+    )
+    assert rejected.returncode == 1
+    assert "already at hard limit 4" in rejected.stdout

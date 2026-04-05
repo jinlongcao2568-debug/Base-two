@@ -35,6 +35,10 @@ def render_optional_section(heading: str, items: list[str] | None) -> str:
     return f"\n## {heading}\n\n{render_list(items)}\n"
 
 
+def render_scalar(value) -> str:
+    return "null" if value is None else str(value)
+
+
 def render_task_markdown(task: dict) -> str:
     return f"""# {task['task_id']} {task['title']}
 
@@ -50,6 +54,10 @@ def render_task_markdown(task: dict) -> str:
 - `automation_mode`: `{task['automation_mode']}`
 - `worker_state`: `{task['worker_state']}`
 - `topology`: `{task['topology']}`
+- `lane_count`: `{render_scalar(task.get('lane_count', 1))}`
+- `lane_index`: `{render_scalar(task.get('lane_index'))}`
+- `parallelism_plan_id`: `{render_scalar(task.get('parallelism_plan_id'))}`
+- `review_bundle_status`: `{render_scalar(task.get('review_bundle_status', 'not_applicable'))}`
 
 ## Primary Goals
 
@@ -94,6 +102,10 @@ def render_runlog_markdown(task: dict) -> str:
 - `stage`: `{task['stage']}`
 - `branch`: `{task['branch']}`
 - `worker_state`: `{task['worker_state']}`
+- `lane_count`: `{render_scalar(task.get('lane_count', 1))}`
+- `lane_index`: `{render_scalar(task.get('lane_index'))}`
+- `parallelism_plan_id`: `{render_scalar(task.get('parallelism_plan_id'))}`
+- `review_bundle_status`: `{render_scalar(task.get('review_bundle_status', 'not_applicable'))}`
 
 ## Execution Log
 

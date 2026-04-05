@@ -19,7 +19,7 @@ def roadmap_text() -> str:
         "business_automation_enabled: false\n"
         "business_automation_scope: stage1_to_stage9\n"
         "parallel_strategy: dependency_aware_disjoint_writes\n"
-        "max_parallel_workers: 2\n"
+        "max_parallel_workers: 4\n"
         "spec_source_policy: baseline_contracts_task_package\n"
         "business_gap_priority:\n"
         "  - bootstrap_required\n"
@@ -72,6 +72,22 @@ def _governance_capability_entries() -> list[dict[str, Any]]:
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
         _capability(
+            "closeout_autopilot_v2",
+            "implemented",
+            [
+                "docs/governance/CURRENT_TASK.yaml",
+                "docs/governance/TASK_REGISTRY.yaml",
+                "docs/governance/WORKTREE_REGISTRY.yaml",
+                "docs/governance/runlogs/",
+            ],
+            [
+                "scripts/task_closeout.py",
+                "scripts/task_continuation_ops.py",
+                "scripts/automation_runner.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+        _capability(
             "roadmap_autopilot_continuation",
             "not_implemented",
             [
@@ -84,6 +100,21 @@ def _governance_capability_entries() -> list[dict[str, Any]]:
                 "scripts/task_ops.py",
                 "scripts/task_continuation_ops.py",
                 "scripts/automation_runner.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+        _capability(
+            "dynamic_parallel_execution_control",
+            "not_implemented",
+            [
+                "docs/governance/TASK_POLICY.yaml",
+                "docs/governance/TASK_REGISTRY.yaml",
+                "docs/governance/WORKTREE_REGISTRY.yaml",
+            ],
+            [
+                "scripts/governance_rules.py",
+                "scripts/task_worktree_ops.py",
+                "scripts/business_autopilot.py",
             ],
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
@@ -130,7 +161,7 @@ def _business_capability_entries() -> list[dict[str, Any]]:
 def capability_map_payload() -> dict[str, Any]:
     return {
         "version": "1.0",
-        "updated_at": "2026-04-04T00:00:00+08:00",
+        "updated_at": "2026-04-05T12:30:00+08:00",
         "authority_source": "docs/product/AUTHORITY_SPEC.md",
         "capabilities": [*_governance_capability_entries(), *_business_capability_entries()],
     }
@@ -139,7 +170,7 @@ def capability_map_payload() -> dict[str, Any]:
 def _roadmap_blueprint() -> dict[str, Any]:
     return {
         "blueprint_id": "roadmap_autopilot_continuation",
-        "title": "路线图自动推进编排层",
+        "title": "路线图自动续跑编排层",
         "task_kind": "coordination",
         "execution_mode": "shared_coordination",
         "stage": "automation-roadmap-continuation-v1",
@@ -266,6 +297,12 @@ def task_policy_payload() -> dict[str, Any]:
                 "default_topology": "single_worker",
                 "default_automation_mode": "manual",
                 "split_allowed": True,
+                "parallelism_mode": "dynamic",
+                "dynamic_lane_ceiling_v1": 4,
+                "min_disjoint_write_roots": 2,
+                "required_tests_complete": True,
+                "reserved_path_conflict_policy": "block_parallelism",
+                "auto_downgrade_to_single_worker_on_conflict": True,
             },
         },
         "automation_modes": {
@@ -313,32 +350,44 @@ def _stage_module(
     }
 
 
+def _core_stage_modules() -> list[dict[str, Any]]:
+    return [
+        _stage_module("stage1_orchestration", "stage1", ["source scheduling requests"], ["ingestion jobs"], [], ["src/stage1_orchestration/", "tests/stage1/"], ["stage2_ingestion"], ["pytest tests/stage1 -q"]),
+        _stage_module("stage2_ingestion", "stage2", ["ingestion jobs"], ["raw source payloads"], ["stage1_orchestration"], ["src/stage2_ingestion/", "tests/stage2/"], ["stage3_parsing"], ["pytest tests/stage2 -q"]),
+        _stage_module("stage3_parsing", "stage3", ["raw source payloads"], ["project_base"], ["stage2_ingestion"], ["src/stage3_parsing/", "tests/stage3/"], ["stage4_validation"], ["pytest tests/stage3 -q"]),
+        _stage_module("stage4_validation", "stage4", ["project_base"], ["rule_hit", "evidence", "review_request"], ["stage3_parsing"], ["src/stage4_validation/", "tests/stage4/"], ["stage5_reporting", "stage6_facts"], ["pytest tests/stage4 -q"]),
+        _stage_module("stage5_reporting", "stage5", ["validated findings"], ["report_record"], ["stage4_validation"], ["src/stage5_reporting/", "tests/stage5/"], ["stage6_facts"], ["pytest tests/stage5 -q"]),
+        _stage_module("stage6_facts", "stage6", ["validated findings", "report artifacts"], ["project_fact"], ["stage4_validation", "stage5_reporting"], ["src/stage6_facts/", "tests/stage6/"], ["stage7_sales", "stage8_contact", "stage9_delivery"], ["pytest tests/stage6 -q"]),
+    ]
+
+
+def _downstream_stage_modules() -> list[dict[str, Any]]:
+    return [
+        _stage_module("stage7_sales", "stage7", ["project_fact"], ["sales_context"], ["stage6_facts"], ["src/stage7_sales/", "tests/stage7/"], ["tests/integration/"], ["pytest tests/stage7 -q"]),
+        _stage_module("stage8_contact", "stage8", ["project_fact"], ["contact_context"], ["stage6_facts"], ["src/stage8_contact/", "tests/stage8/"], ["tests/integration/"], ["pytest tests/stage8 -q"]),
+        _stage_module("stage9_delivery", "stage9", ["project_fact", "downstream contexts"], ["delivery_payloads"], ["stage6_facts", "stage7_sales", "stage8_contact"], ["src/stage9_delivery/", "tests/stage9/"], ["tests/integration/"], ["pytest tests/stage9 -q"]),
+    ]
+
+
+def _governance_control_module() -> dict[str, Any]:
+    return {
+        "module_id": "governance_control_plane",
+        "owner_stage": "governance",
+        "inputs": ["CURRENT_TASK"],
+        "outputs": ["task updates"],
+        "depends_on": [],
+        "allowed_dirs": ["docs/governance/", "tests/governance/"],
+        "reserved_paths": ["src/stage6_facts/"],
+        "integration_points": ["tests/governance/"],
+        "required_tests": ["pytest tests/base -q"],
+    }
+
+
 def module_map_payload() -> dict[str, Any]:
     return {
         "version": "1.0",
         "updated_at": "2026-04-04T00:00:00+08:00",
-        "modules": [
-            _stage_module("stage1_orchestration", "stage1", ["source scheduling requests"], ["ingestion jobs"], [], ["src/stage1_orchestration/", "tests/stage1/"], ["stage2_ingestion"], ["pytest tests/stage1 -q"]),
-            _stage_module("stage2_ingestion", "stage2", ["ingestion jobs"], ["raw source payloads"], ["stage1_orchestration"], ["src/stage2_ingestion/", "tests/stage2/"], ["stage3_parsing"], ["pytest tests/stage2 -q"]),
-            _stage_module("stage3_parsing", "stage3", ["raw source payloads"], ["project_base"], ["stage2_ingestion"], ["src/stage3_parsing/", "tests/stage3/"], ["stage4_validation"], ["pytest tests/stage3 -q"]),
-            _stage_module("stage4_validation", "stage4", ["project_base"], ["rule_hit", "evidence", "review_request"], ["stage3_parsing"], ["src/stage4_validation/", "tests/stage4/"], ["stage5_reporting", "stage6_facts"], ["pytest tests/stage4 -q"]),
-            _stage_module("stage5_reporting", "stage5", ["validated findings"], ["report_record"], ["stage4_validation"], ["src/stage5_reporting/", "tests/stage5/"], ["stage6_facts"], ["pytest tests/stage5 -q"]),
-            _stage_module("stage6_facts", "stage6", ["validated findings", "report artifacts"], ["project_fact"], ["stage4_validation", "stage5_reporting"], ["src/stage6_facts/", "tests/stage6/"], ["stage7_sales", "stage8_contact", "stage9_delivery"], ["pytest tests/stage6 -q"]),
-            _stage_module("stage7_sales", "stage7", ["project_fact"], ["sales_context"], ["stage6_facts"], ["src/stage7_sales/", "tests/stage7/"], ["tests/integration/"], ["pytest tests/stage7 -q"]),
-            _stage_module("stage8_contact", "stage8", ["project_fact"], ["contact_context"], ["stage6_facts"], ["src/stage8_contact/", "tests/stage8/"], ["tests/integration/"], ["pytest tests/stage8 -q"]),
-            _stage_module("stage9_delivery", "stage9", ["project_fact", "downstream contexts"], ["delivery_payloads"], ["stage6_facts", "stage7_sales", "stage8_contact"], ["src/stage9_delivery/", "tests/stage9/"], ["tests/integration/"], ["pytest tests/stage9 -q"]),
-            {
-                "module_id": "governance_control_plane",
-                "owner_stage": "governance",
-                "inputs": ["CURRENT_TASK"],
-                "outputs": ["task updates"],
-                "depends_on": [],
-                "allowed_dirs": ["docs/governance/", "tests/governance/"],
-                "reserved_paths": ["src/stage6_facts/"],
-                "integration_points": ["tests/governance/"],
-                "required_tests": ["pytest tests/base -q"],
-            },
-        ],
+        "modules": [*_core_stage_modules(), *_downstream_stage_modules(), _governance_control_module()],
     }
 
 
@@ -420,6 +469,10 @@ def base_task_payload() -> dict[str, Any]:
         "required_tests": ["pytest tests/base -q"],
         "task_file": "docs/governance/tasks/TASK-BASE-001.md",
         "runlog_file": "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md",
+        "lane_count": 1,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": "not_applicable",
     }
 
 
@@ -448,6 +501,10 @@ def base_task_markdown() -> str:
         "- `automation_mode`: `assisted`\n"
         "- `worker_state`: `running`\n"
         "- `topology`: `single_worker`\n"
+        "- `lane_count`: `1`\n"
+        "- `lane_index`: `null`\n"
+        "- `parallelism_plan_id`: `null`\n"
+        "- `review_bundle_status`: `not_applicable`\n"
         "- `reserved_paths`: `[]`\n"
         "- `branch`: `main`\n"
         "- `updated_at`: `2026-04-04T00:00:00+08:00`\n"
@@ -480,5 +537,9 @@ def base_runlog_markdown() -> str:
         "- `stage`: `base-phase`\n"
         "- `branch`: `main`\n"
         "- `worker_state`: `running`\n"
+        "- `lane_count`: `1`\n"
+        "- `lane_index`: `null`\n"
+        "- `parallelism_plan_id`: `null`\n"
+        "- `review_bundle_status`: `not_applicable`\n"
         "<!-- generated:runlog-meta:end -->\n"
     )

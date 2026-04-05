@@ -17,6 +17,10 @@ IDLE_CURRENT_NULL_FIELDS = (
     "automation_mode",
     "task_file",
     "runlog_file",
+    "lane_count",
+    "lane_index",
+    "parallelism_plan_id",
+    "review_bundle_status",
 )
 IDLE_CURRENT_EMPTY_LIST_FIELDS = (
     "allowed_dirs",
@@ -50,6 +54,10 @@ def build_current_task_payload(task: dict[str, Any], next_action: str) -> dict[s
         "required_tests": task.get("required_tests", []),
         "task_file": task["task_file"],
         "runlog_file": task["runlog_file"],
+        "lane_count": task.get("lane_count", 1),
+        "lane_index": task.get("lane_index"),
+        "parallelism_plan_id": task.get("parallelism_plan_id"),
+        "review_bundle_status": task.get("review_bundle_status", "not_applicable"),
         "next_action": next_action,
         "updated_at": iso_now(),
     }
@@ -79,6 +87,10 @@ def build_idle_current_task_payload(next_action: str) -> dict[str, Any]:
         "required_tests": [],
         "task_file": None,
         "runlog_file": None,
+        "lane_count": None,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": None,
         "next_action": next_action,
         "updated_at": now,
     }

@@ -19,6 +19,7 @@ from governance_lib import (
     git_status_paths,
     is_idle_current_payload,
     load_current_task,
+    load_task_policy,
     path_hits_reserved,
     path_within_declared,
     read_roadmap,
@@ -86,6 +87,10 @@ def _resolve_current_task(root, tasks_by_id: dict[str, dict[str, Any]]):
         "required_tests": "required_tests",
         "task_file": "task_file",
         "runlog_file": "runlog_file",
+        "lane_count": "lane_count",
+        "lane_index": "lane_index",
+        "parallelism_plan_id": "parallelism_plan_id",
+        "review_bundle_status": "review_bundle_status",
     }
     for current_key, registry_key in comparisons.items():
         if current_task[current_key] != task[registry_key]:
@@ -184,8 +189,11 @@ def _validate_generated_fields(
     label: str,
     keys: tuple[str, ...],
 ) -> None:
+    def rendered(value: Any) -> str:
+        return "null" if value is None else str(value)
+
     for key in keys:
-        if generated.get(key) != str(active_task[key]):
+        if generated.get(key) != rendered(active_task[key]):
             raise GovernanceError(f"{label} generated metadata mismatch for field {key}")
 
 
@@ -206,6 +214,12 @@ def _validate_task_file_alignment(root, active_task: dict[str, Any]) -> None:
         "stage": active_task["stage"],
         "branch": active_task["branch"],
         "worker_state": active_task["worker_state"],
+        "lane_count": str(active_task.get("lane_count", 1)),
+        "lane_index": "null" if active_task.get("lane_index") is None else str(active_task.get("lane_index")),
+        "parallelism_plan_id": "null"
+        if active_task.get("parallelism_plan_id") is None
+        else str(active_task.get("parallelism_plan_id")),
+        "review_bundle_status": str(active_task.get("review_bundle_status", "not_applicable")),
     }
     _validate_artifact_fields(fields, expected, "task file")
     _validate_generated_fields(
@@ -220,6 +234,10 @@ def _validate_task_file_alignment(root, active_task: dict[str, Any]) -> None:
             "automation_mode",
             "worker_state",
             "topology",
+            "lane_count",
+            "lane_index",
+            "parallelism_plan_id",
+            "review_bundle_status",
             "branch",
         ),
     )
@@ -237,6 +255,12 @@ def _validate_runlog_alignment(root, active_task: dict[str, Any]) -> None:
         "stage": active_task["stage"],
         "branch": active_task["branch"],
         "worker_state": active_task["worker_state"],
+        "lane_count": str(active_task.get("lane_count", 1)),
+        "lane_index": "null" if active_task.get("lane_index") is None else str(active_task.get("lane_index")),
+        "parallelism_plan_id": "null"
+        if active_task.get("parallelism_plan_id") is None
+        else str(active_task.get("parallelism_plan_id")),
+        "review_bundle_status": str(active_task.get("review_bundle_status", "not_applicable")),
     }
     _validate_artifact_fields(fields, expected, "runlog")
     _validate_artifact_fields(generated, expected, "runlog generated metadata")
@@ -277,6 +301,7 @@ def _validate_modified_paths(
 
 
 def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]], worktrees: dict[str, Any]) -> None:
+    task_policy = load_task_policy(root)
     _validate_registry_entries(root, registry, worktrees)
     active_task, allowed_dirs, planned_write_paths, in_execution_context, idle_current = _resolve_active_task(
         root,
@@ -299,6 +324,6 @@ def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[
         planned_write_paths,
         in_execution_context,
     )
-    active_errors = collect_active_execution_errors(tasks_by_id, worktrees)
+    active_errors = collect_active_execution_errors(tasks_by_id, worktrees, task_policy)
     if active_errors:
         raise GovernanceError(active_errors[0])

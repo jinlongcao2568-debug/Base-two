@@ -12,6 +12,10 @@
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 ## Primary Goals
 
 - Eliminate live-task drift across current task, registry, worktree registry, task files, runlogs, and roadmap.
@@ -104,7 +108,11 @@
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `updated_at`: `2026-04-05T11:29:09+08:00`
+- `updated_at`: `2026-04-05T12:54:52+08:00`
 <!-- generated:task-meta:end -->

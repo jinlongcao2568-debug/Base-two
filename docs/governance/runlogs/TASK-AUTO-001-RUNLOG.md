@@ -7,6 +7,10 @@
 - `stage`: `automation-control-plane-v1`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 ## Execution Log
 
 - `2026-04-04T17:10:00+08:00`: created the first automation control-plane task package and governance entry set.
@@ -40,6 +44,10 @@
 - `stage`: `automation-control-plane-v1`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:end -->
 
 ## Narrative Assertions

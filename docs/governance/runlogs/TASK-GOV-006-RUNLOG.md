@@ -7,6 +7,10 @@
 - `stage`: `governance-closeout-autopilot-v2`
 - `branch`: `feat/TASK-GOV-006-closeout-autopilot-v2`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 ## Execution Log
 
 - `2026-04-05T11:28:35+08:00`: task package created
@@ -40,4 +44,8 @@
 - `stage`: `governance-closeout-autopilot-v2`
 - `branch`: `feat/TASK-GOV-006-closeout-autopilot-v2`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:end -->

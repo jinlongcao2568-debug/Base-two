@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from governance_lib import (
+    dynamic_lane_ceiling,
     GovernanceError,
     iso_now,
     load_capability_map,
@@ -141,8 +142,8 @@ def load_business_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
         raise GovernanceError("roadmap business_automation_scope is missing or invalid")
     if parallel_strategy not in PARALLEL_STRATEGY_VALUES:
         raise GovernanceError("roadmap parallel_strategy is missing or invalid")
-    if max_parallel_workers != 2:
-        raise GovernanceError("roadmap max_parallel_workers must stay pinned to 2")
+    if max_parallel_workers is not None and (not isinstance(max_parallel_workers, int) or max_parallel_workers < 1):
+        raise GovernanceError("roadmap max_parallel_workers must be a positive integer when present")
     if spec_source_policy not in SPEC_SOURCE_POLICY_VALUES:
         raise GovernanceError("roadmap spec_source_policy is missing or invalid")
     if not isinstance(gap_priority, list) or not gap_priority:
@@ -219,7 +220,13 @@ def _dependency_ready(module: dict[str, Any], modules_by_id: dict[str, dict[str,
     return True
 
 
-def _eligible_modules(root, policy: dict[str, Any], gap_kind: str, capability_map: dict[str, Any]) -> list[dict[str, Any]]:
+def _eligible_modules(
+    root,
+    policy: dict[str, Any],
+    gap_kind: str,
+    capability_map: dict[str, Any],
+    lane_ceiling: int,
+) -> list[dict[str, Any]]:
     stage_modules = _modules_by_stage(root)
     modules_by_id = {module["module_id"]: module for module in stage_modules.values()}
     stage_establishment = policy["stage_establishment"]
@@ -234,7 +241,7 @@ def _eligible_modules(root, policy: dict[str, Any], gap_kind: str, capability_ma
             continue
         if _dependency_ready(module, modules_by_id, stage_establishment):
             eligible.append(module)
-    return eligible[: policy["max_parallel_workers"]]
+    return eligible[:lane_ceiling]
 
 
 def _review_bundle_commands(root, task: dict[str, Any]) -> list[str]:
@@ -302,7 +309,10 @@ def _child_task_payload(
     blueprint: dict[str, Any],
     policy: dict[str, Any],
     contract_inputs: list[str],
+    lane_count: int,
+    lane_index: int,
 ) -> dict[str, Any]:
+    parallelism_plan_id = f"plan-{parent_task['task_id']}-{lane_count}"
     return {
         "task_id": task_id,
         "title": f"{module['module_id']} {gap_kind} lane",
@@ -325,6 +335,10 @@ def _child_task_payload(
         "required_tests": [],
         "task_file": f"docs/governance/tasks/{task_id}.md",
         "runlog_file": f"docs/governance/runlogs/{task_id}-RUNLOG.md",
+        "lane_count": lane_count,
+        "lane_index": lane_index,
+        "parallelism_plan_id": parallelism_plan_id,
+        "review_bundle_status": "not_applicable",
         "created_at": iso_now(),
         "activated_at": None,
         "closed_at": None,
@@ -363,6 +377,10 @@ def _build_parent_task(tasks: list[dict[str, Any]], blueprint: dict[str, Any], p
         "required_tests": list(blueprint["required_tests"]),
         "task_file": f"docs/governance/tasks/{task_id}.md",
         "runlog_file": f"docs/governance/runlogs/{task_id}-RUNLOG.md",
+        "lane_count": 1,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": "not_applicable",
         "created_at": iso_now(),
         "activated_at": None,
         "closed_at": None,
@@ -385,10 +403,22 @@ def _build_child_task(
     gap_kind: str,
     blueprint: dict[str, Any],
     policy: dict[str, Any],
+    lane_count: int,
+    lane_index: int,
 ) -> dict[str, Any]:
     task_id = _next_exec_task_id(tasks, parent_task["task_id"], module["module_id"])
     contract_inputs = _child_contract_inputs(module["module_id"])
-    task = _child_task_payload(task_id, parent_task, module, gap_kind, blueprint, policy, contract_inputs)
+    task = _child_task_payload(
+        task_id,
+        parent_task,
+        module,
+        gap_kind,
+        blueprint,
+        policy,
+        contract_inputs,
+        lane_count,
+        lane_index,
+    )
     task["required_tests"] = _review_bundle_commands(root, task)
     validate_task(task)
     return task
@@ -402,9 +432,10 @@ def build_business_successor_round(root, registry: dict[str, Any], task_policy: 
     policy = load_business_policy(frontmatter)
     capability_map = load_capability_map(root)
     parent_blueprint = _find_blueprint(task_policy, BUSINESS_PARENT_BLUEPRINT_ID)
+    lane_ceiling = dynamic_lane_ceiling(task_policy)
     tasks = registry.setdefault("tasks", [])
     for gap_kind in policy["gap_priority"]:
-        eligible = _eligible_modules(root, policy, gap_kind, capability_map)
+        eligible = _eligible_modules(root, policy, gap_kind, capability_map, lane_ceiling)
         if not eligible:
             continue
         parent_task = _build_parent_task(tasks, parent_blueprint, policy)
@@ -415,9 +446,21 @@ def build_business_successor_round(root, registry: dict[str, Any], task_policy: 
         )
         child_blueprint = _find_blueprint(task_policy, child_blueprint_id)
         child_tasks = [
-            _build_child_task(root, tasks, parent_task, module, gap_kind, child_blueprint, policy)
-            for module in eligible
+            _build_child_task(
+                root,
+                tasks,
+                parent_task,
+                module,
+                gap_kind,
+                child_blueprint,
+                policy,
+                len(eligible),
+                index,
+            )
+            for index, module in enumerate(eligible, start=1)
         ]
+        parent_task["lane_count"] = len(eligible)
+        parent_task["parallelism_plan_id"] = f"plan-{parent_task['task_id']}-{len(eligible)}"
         parent_task["child_task_ids"] = [task["task_id"] for task in child_tasks]
         return parent_task, child_tasks, gap_kind
     return None

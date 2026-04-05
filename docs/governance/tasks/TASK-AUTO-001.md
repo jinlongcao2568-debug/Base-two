@@ -12,6 +12,10 @@
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 ## Primary Goals
 
 - Land the first automation control-plane baseline on the main coordination worktree.
@@ -72,9 +76,13 @@
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
-- `updated_at`: `2026-04-05T11:29:09+08:00`
+- `updated_at`: `2026-04-05T12:54:52+08:00`
 <!-- generated:task-meta:end -->
 
 ## Narrative Assertions

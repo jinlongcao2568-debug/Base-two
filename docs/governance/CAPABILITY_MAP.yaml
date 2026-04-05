@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-04T23:20:00+08:00'
+updated_at: '2026-04-05T12:48:00+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 capabilities:
   - capability_id: governance_control_plane
@@ -28,6 +28,37 @@ capabilities:
     scripts:
       - scripts/task_ops.py
       - scripts/task_continuation_ops.py
+      - scripts/automation_runner.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+  - capability_id: closeout_autopilot_v2
+    status: implemented
+    source_of_truth:
+      - docs/governance/CURRENT_TASK.yaml
+      - docs/governance/TASK_REGISTRY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+    scripts:
+      - scripts/task_closeout.py
+      - scripts/task_continuation_ops.py
+      - scripts/task_ops.py
+      - scripts/automation_intent.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+  - capability_id: dynamic_parallel_execution_control
+    status: implemented
+    source_of_truth:
+      - docs/governance/TASK_POLICY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+      - docs/governance/TASK_REGISTRY.yaml
+      - docs/governance/CURRENT_TASK.yaml
+    scripts:
+      - scripts/governance_rules.py
+      - scripts/task_lifecycle_ops.py
+      - scripts/task_worktree_ops.py
+      - scripts/task_continuation_ops.py
+      - scripts/business_autopilot.py
       - scripts/automation_runner.py
     tests:
       - pytest tests/governance -q

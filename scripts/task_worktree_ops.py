@@ -9,11 +9,13 @@ from governance_lib import (
     choose_worker_owner,
     collect_active_execution_errors,
     current_branch,
+    dynamic_lane_ceiling,
     display_path,
     dump_yaml,
     find_repo_root,
     git,
     iso_now,
+    load_task_policy,
     load_task_registry,
     load_worktree_registry,
     safe_rmtree,
@@ -25,13 +27,15 @@ from task_rendering import find_task
 
 
 def validate_worktree_create_request(root: Path, task: dict, tasks_by_id: dict, worktrees: dict, destination: Path) -> None:
+    task_policy = load_task_policy(root)
     if task["task_kind"] != "execution" or task["execution_mode"] != "isolated_worktree":
         raise GovernanceError("worktree-create only supports isolated execution tasks")
-    if collect_active_execution_errors(tasks_by_id, worktrees):
+    if collect_active_execution_errors(tasks_by_id, worktrees, task_policy):
         raise GovernanceError("existing active execution conflicts must be resolved before creating a new worktree")
     active_count = sum(1 for entry in worktrees.get("entries", []) if entry.get("work_mode") == "execution" and entry.get("status") == "active")
-    if active_count >= 2:
-        raise GovernanceError("active execution worktrees already at hard limit 2")
+    lane_ceiling = dynamic_lane_ceiling(task_policy)
+    if active_count >= lane_ceiling:
+        raise GovernanceError(f"active execution worktrees already at hard limit {lane_ceiling}")
     if destination == root.resolve() or destination.is_relative_to(root.resolve()):
         raise GovernanceError("execution worktree path must be outside the main coordination directory")
 
@@ -80,6 +84,7 @@ def cmd_worktree_create(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
+    task_policy = load_task_policy(root)
     tasks_by_id = task_map(registry)
     task = tasks_by_id.get(args.task_id)
     if task is None:
@@ -87,7 +92,7 @@ def cmd_worktree_create(args: argparse.Namespace) -> int:
     destination = Path(args.path).resolve()
     validate_worktree_create_request(root, task, tasks_by_id, worktrees, destination)
     create_worktree_checkout(root, task, destination)
-    worker_owner = args.worker_owner or choose_worker_owner(worktrees.get("entries", []))
+    worker_owner = args.worker_owner or choose_worker_owner(worktrees.get("entries", []), task_policy)
     write_execution_context(destination, task, worker_owner)
     upsert_execution_entry(worktrees, task, destination, worker_owner)
     worktrees["updated_at"] = iso_now()

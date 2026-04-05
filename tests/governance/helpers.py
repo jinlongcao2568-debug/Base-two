@@ -79,6 +79,10 @@ def idle_current_payload(
         "planned_write_paths": [],
         "planned_test_paths": [],
         "required_tests": [],
+        "lane_count": None,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": None,
         "task_file": None,
         "runlog_file": None,
         "next_action": next_action,
@@ -271,7 +275,19 @@ def set_live_task_review_without_evidence(
             "- `status`: `review`\n"
             "- `stage`: `base-stage`\n"
             "- `branch`: `main`\n"
+            "- `worker_state`: `review_pending`\n\n"
+            "<!-- generated:runlog-meta:start -->\n"
+            "## Generated Task Snapshot\n\n"
+            f"- `task_id`: `{task_id}`\n"
+            "- `status`: `review`\n"
+            "- `stage`: `base-stage`\n"
+            "- `branch`: `main`\n"
             "- `worker_state`: `review_pending`\n"
+            "- `lane_count`: `1`\n"
+            "- `lane_index`: `null`\n"
+            "- `parallelism_plan_id`: `null`\n"
+            "- `review_bundle_status`: `not_applicable`\n"
+            "<!-- generated:runlog-meta:end -->\n"
         ),
         encoding="utf-8",
     )

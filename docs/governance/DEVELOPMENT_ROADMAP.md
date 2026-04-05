@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-dynamic-lane-planner-v1
+current_task_id: TASK-GOV-007
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -12,7 +12,7 @@ priority_order:
 business_automation_enabled: true
 business_automation_scope: stage1_to_stage9
 parallel_strategy: dependency_aware_disjoint_writes
-max_parallel_workers: 2
+max_parallel_workers: 4
 spec_source_policy: baseline_contracts_task_package
 business_gap_priority:
 - bootstrap_required
@@ -35,33 +35,31 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-007`: `dynamic parallel planner and worker pool` is the live coordination task for `governance-dynamic-lane-planner-v1`.
 ## Recently Closed
 
-- `TASK-GOV-001`: closed authority drift, formalized contracts and handoff assets, expanded minimum regression coverage, and hardened the governance control plane.
-- `TASK-AUTO-001`: landed the first automation control-plane baseline and closed the shared coordination setup for `automation-control-plane-v1`.
-- `TASK-AUTO-002`: formalized `continue-current` and `continue-roadmap`, successor generation, and branch switching for the live roadmap control plane.
-- `TASK-GOV-003`: closed the done-but-current gap by introducing the formal idle current-task lifecycle and rehearsal coverage.
+- `TASK-GOV-005`: closed automation-intent risk hardening and cleaned the live governance ledger before the dynamic planner phase.
+- `TASK-GOV-006`: landed closeout autopilot v2 and strengthened review/idle successor continuation checks.
 
 ## Current Phase Goal
 
-- Split the governance control kernel into explicit shared layers: state transitions, reusable rules, repo checks, and CLI orchestration.
-- Reduce control-plane hotspot concentration so `check_hygiene.py` no longer flags the main governance hotspot files for multi-responsibility or oversized helper functions.
-- Keep continuation policy aligned with the actual module order in `MODULE_MAP.yaml`, including downstream `stage7-stage9`, without claiming those downstream modules are already production-complete.
+- Replace the fixed two-lane heuristic with a dynamic planner that can safely choose `1..4` lanes for heavy tasks.
+- Upgrade execution ownership from `worker-a/worker-b` to the dynamic worker pool `worker-01..worker-04`.
+- Keep dynamic parallelism fully inside the governance control plane without changing business implementation code.
 
 ## Explicitly Out Of Scope
 
 - Do not change business-stage implementation code under `src/`.
-- Do not introduce a second task ledger, a second roadmap source, or a relaxed rule that allows `done` tasks to remain the live current task.
-- Do not claim that downstream `stage7-stage9` automation is finished; this phase only removes the artificial governance restriction and keeps continuation order aligned with the development module map.
+- Do not implement `TASK-GOV-008/009/010` behavior early; this phase only lands planner, worker-pool, and lane metadata foundations.
+- Do not open unlimited parallelism; the v1 safety ceiling remains `4` lanes.
 
 ## Exit Criteria For Current Phase
 
-- `check_hygiene.py` no longer flags `scripts/governance_controls.py`, `scripts/check_repo.py`, or `scripts/check_authority_alignment.py`.
-- `check_repo.py`, `check_authority_alignment.py`, and the governance/automation regression suites remain green after the internal split.
-- Shared state-machine helpers are covered by direct governance tests rather than only by CLI rehearsal tests.
-- Roadmap/business policy validation accepts the downstream stage order defined in `MODULE_MAP.yaml` instead of hard-pinning `stage7-stage9` to `deferred_manual`.
+- Heavy tasks can be evaluated into `1..4` lanes based on disjoint write roots, required tests, and reserved-path conflicts.
+- Active execution worktree limits and worker-owner allocation match the planner ceiling and no longer hard-code two workers.
+- Governance and automation regression suites cover the `2/3/4` lane paths plus downgrade behavior.
 
 ## Next Candidate
 
-- After this phase closes, the next automation phases can build execution playbooks, acceptance DSLs, release control, and runtime feedback on top of the shared kernel and the full `stage1-stage9` module order.
+- After this phase closes, the next governance phase can build parent/child review aggregation and child auto-close sequencing on top of the dynamic planner metadata.
+

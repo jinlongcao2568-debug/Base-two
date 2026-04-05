@@ -36,6 +36,10 @@ CURRENT_PAYLOAD_SYNC_FIELDS = (
     "required_tests",
     "task_file",
     "runlog_file",
+    "lane_count",
+    "lane_index",
+    "parallelism_plan_id",
+    "review_bundle_status",
 )
 
 

@@ -7,6 +7,10 @@
 - `stage`: `governance-test-maintainability-hardening-v1`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 ## Execution Log
 
 - `2026-04-05T07:06:56+08:00`: task package created
@@ -37,4 +41,8 @@
 - `stage`: `governance-test-maintainability-hardening-v1`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:end -->

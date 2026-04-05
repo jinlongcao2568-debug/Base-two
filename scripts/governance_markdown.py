@@ -102,6 +102,10 @@ def render_narrative_assertions_block(task: dict[str, Any]) -> str:
     return "\n".join(f"- `{field}`: `{assertions[field]}`" for field in NARRATIVE_ASSERTION_FIELDS)
 
 
+def _markdown_scalar(value: Any) -> str:
+    return "null" if value is None else str(value)
+
+
 def render_task_metadata_block(task: dict[str, Any]) -> str:
     lines = [
         "## Generated Metadata",
@@ -113,6 +117,10 @@ def render_task_metadata_block(task: dict[str, Any]) -> str:
         f"- `automation_mode`: `{task['automation_mode']}`",
         f"- `worker_state`: `{task['worker_state']}`",
         f"- `topology`: `{task['topology']}`",
+        f"- `lane_count`: `{_markdown_scalar(task.get('lane_count', 1))}`",
+        f"- `lane_index`: `{_markdown_scalar(task.get('lane_index'))}`",
+        f"- `parallelism_plan_id`: `{_markdown_scalar(task.get('parallelism_plan_id'))}`",
+        f"- `review_bundle_status`: `{_markdown_scalar(task.get('review_bundle_status', 'not_applicable'))}`",
         f"- `reserved_paths`: `{', '.join(task.get('reserved_paths', [])) or '[]'}`",
         f"- `branch`: `{task['branch']}`",
         f"- `updated_at`: `{iso_now()}`",
@@ -132,6 +140,10 @@ def render_task_baseline_section(task: dict[str, Any]) -> str:
         f"- `automation_mode`: `{task['automation_mode']}`",
         f"- `worker_state`: `{task['worker_state']}`",
         f"- `topology`: `{task['topology']}`",
+        f"- `lane_count`: `{_markdown_scalar(task.get('lane_count', 1))}`",
+        f"- `lane_index`: `{_markdown_scalar(task.get('lane_index'))}`",
+        f"- `parallelism_plan_id`: `{_markdown_scalar(task.get('parallelism_plan_id'))}`",
+        f"- `review_bundle_status`: `{_markdown_scalar(task.get('review_bundle_status', 'not_applicable'))}`",
     ]
     return "\n".join(lines)
 
@@ -145,6 +157,10 @@ def render_runlog_metadata_block(task: dict[str, Any]) -> str:
         f"- `stage`: `{task['stage']}`",
         f"- `branch`: `{task['branch']}`",
         f"- `worker_state`: `{task['worker_state']}`",
+        f"- `lane_count`: `{_markdown_scalar(task.get('lane_count', 1))}`",
+        f"- `lane_index`: `{_markdown_scalar(task.get('lane_index'))}`",
+        f"- `parallelism_plan_id`: `{_markdown_scalar(task.get('parallelism_plan_id'))}`",
+        f"- `review_bundle_status`: `{_markdown_scalar(task.get('review_bundle_status', 'not_applicable'))}`",
     ]
     return "\n".join(lines)
 
@@ -156,6 +172,10 @@ def render_runlog_status_section(task: dict[str, Any]) -> str:
         f"- `stage`: `{task['stage']}`",
         f"- `branch`: `{task['branch']}`",
         f"- `worker_state`: `{task['worker_state']}`",
+        f"- `lane_count`: `{_markdown_scalar(task.get('lane_count', 1))}`",
+        f"- `lane_index`: `{_markdown_scalar(task.get('lane_index'))}`",
+        f"- `parallelism_plan_id`: `{_markdown_scalar(task.get('parallelism_plan_id'))}`",
+        f"- `review_bundle_status`: `{_markdown_scalar(task.get('review_bundle_status', 'not_applicable'))}`",
     ]
     return "\n".join(lines)
 

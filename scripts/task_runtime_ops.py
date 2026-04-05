@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from governance_lib import GovernanceError
+from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError
 from task_continuation_ops import cmd_continue_current, cmd_continue_roadmap
 from task_lifecycle_ops import (
     cmd_activate,
@@ -89,7 +89,7 @@ def add_worktree_commands(subparsers) -> None:
     create_parser = subparsers.add_parser("worktree-create")
     create_parser.add_argument("task_id")
     create_parser.add_argument("--path", required=True)
-    create_parser.add_argument("--worker-owner", choices=["worker-a", "worker-b"])
+    create_parser.add_argument("--worker-owner", choices=list(EXECUTION_WORKER_OWNERS))
     create_parser.set_defaults(func=cmd_worktree_create)
 
     release_parser = subparsers.add_parser("worktree-release")
@@ -104,7 +104,7 @@ def add_worktree_commands(subparsers) -> None:
 def add_worker_commands(subparsers) -> None:
     worker_start_parser = subparsers.add_parser("worker-start")
     worker_start_parser.add_argument("task_id")
-    worker_start_parser.add_argument("--worker-owner", choices=["coordinator", "worker-a", "worker-b"])
+    worker_start_parser.add_argument("--worker-owner", choices=["coordinator", *EXECUTION_WORKER_OWNERS])
     worker_start_parser.add_argument("--path")
     worker_start_parser.set_defaults(func=cmd_worker_start)
 

@@ -280,6 +280,10 @@ def test_continue_roadmap_rejects_unmet_successor_dependency(tmp_path: Path) -> 
             "required_tests": ["python scripts/check_repo.py"],
             "task_file": "docs/governance/tasks/TASK-BLOCKER-001.md",
             "runlog_file": "docs/governance/runlogs/TASK-BLOCKER-001-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
             "created_at": "2026-04-04T00:00:00+08:00",
             "activated_at": None,
             "closed_at": None,
@@ -352,8 +356,13 @@ def test_continue_roadmap_generates_business_parent_and_child(tmp_path: Path) ->
     assert result.returncode == 0, result.stdout + result.stderr
     assert parent["topology"] == "parallel_parent"
     assert parent["automation_mode"] == "autonomous"
+    assert parent["lane_count"] == 1
+    assert parent["parallelism_plan_id"] == f"plan-{parent['task_id']}-1"
     assert len(children) == 1
     assert children[0]["module_id"] == "stage1_orchestration"
+    assert children[0]["lane_count"] == 1
+    assert children[0]["lane_index"] == 1
+    assert children[0]["parallelism_plan_id"] == f"plan-{parent['task_id']}-1"
     assert children[0]["authority_inputs"]
     assert children[0]["contract_inputs"]
     assert children[0]["review_policy"]
@@ -377,6 +386,8 @@ def test_continue_roadmap_respects_bootstrap_priority_before_implementation(tmp_
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert [child["module_id"] for child in children] == ["stage2_ingestion"]
+    assert parent["lane_count"] == 1
+    assert children[0]["lane_index"] == 1
 
 
 def test_continue_roadmap_blocks_stage7_successor_until_downstream_capability_is_implemented(tmp_path: Path) -> None:
@@ -417,12 +428,16 @@ def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_
     assert [child["module_id"] for child in children] == ["stage7_sales"]
 
 
-def test_continue_roadmap_limits_business_children_to_two(tmp_path: Path) -> None:
+def test_continue_roadmap_caps_business_children_at_four(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _enable_business_autopilot(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    for stage_id in ("stage3", "stage4", "stage5", "stage6"):
+        roadmap = roadmap.replace(f"  {stage_id}: implementation_ready", f"  {stage_id}: bootstrap_required", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
     module_map = read_yaml(repo / "docs/governance/MODULE_MAP.yaml")
     for module in module_map["modules"]:
-        if module["module_id"] in {"stage2_ingestion", "stage5_reporting"}:
+        if module["owner_stage"] in {"stage2", "stage3", "stage4", "stage5", "stage6"}:
             module["depends_on"] = []
     write_yaml(repo / "docs/governance/MODULE_MAP.yaml", module_map)
     _mark_current_review_ready(repo)
@@ -433,4 +448,9 @@ def test_continue_roadmap_limits_business_children_to_two(tmp_path: Path) -> Non
     children = [task for task in registry["tasks"] if task.get("parent_task_id") == parent["task_id"]]
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert len(children) == 2
+    assert len(children) == 4
+    assert parent["lane_count"] == 4
+    assert parent["parallelism_plan_id"] == f"plan-{parent['task_id']}-4"
+    assert [child["lane_index"] for child in children] == [1, 2, 3, 4]
+    assert all(child["lane_count"] == 4 for child in children)
+    assert all(child["parallelism_plan_id"] == f"plan-{parent['task_id']}-4" for child in children)

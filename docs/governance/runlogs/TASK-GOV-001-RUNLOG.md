@@ -7,6 +7,10 @@
 - `stage`: `authority-consistency-hardening`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 ## Execution Log
 
 - `2026-04-04T18:43:48+08:00`: created the governance hardening task package.
@@ -32,6 +36,10 @@
 - `stage`: `authority-consistency-hardening`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
 - `worker_state`: `completed`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
 <!-- generated:runlog-meta:end -->
 
 ## 执行记录
