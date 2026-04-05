@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-05T15:49:20+08:00'
+updated_at: '2026-04-05T15:49:54+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -758,7 +758,7 @@ tasks:
   closed_at: '2026-04-05T15:27:36+08:00'
 - task_id: TASK-GOV-012
   title: coordination 单写者治理与安全接管
-  status: review
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -766,9 +766,9 @@ tasks:
   branch: feat/TASK-GOV-012-coordination-lease
   size_class: heavy
   automation_mode: manual
-  worker_state: review_pending
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-05T15:49:20+08:00'
+  last_reported_at: '2026-04-05T15:49:54+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -804,4 +804,4 @@ tasks:
   review_bundle_status: not_applicable
   created_at: '2026-04-05T15:28:34+08:00'
   activated_at: '2026-04-05T15:29:13+08:00'
-  closed_at: null
+  closed_at: '2026-04-05T15:49:54+08:00'
