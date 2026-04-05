@@ -6,6 +6,7 @@ from typing import Any
 
 import yaml
 
+from task_publish_ops import build_publish_readiness
 from governance_lib import (
     display_path,
     dump_yaml,
@@ -461,6 +462,7 @@ def build_orchestration_status(root: Path) -> dict[str, Any]:
         "sessions": runtime["sessions"],
         "workers": runtime["workers"],
         "task_sources": runtime["task_sources"],
+        "publish_readiness": build_publish_readiness(root),
         "current_task": current_payload,
         "candidate_summary": _candidate_summary(root),
         "runner_pressure": _runner_pressure(root),

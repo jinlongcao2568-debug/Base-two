@@ -1,7 +1,7 @@
 ---
 current_phase: idle
 current_task_id: null
-next_recommended_task_id: null
+next_recommended_task_id: TASK-BIZ-001
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
 branch_switch_policy: create_or_switch_if_clean
@@ -38,27 +38,31 @@ automation_foundation: in_progress
 - no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
-- `TASK-GOV-005`: closed automation-intent risk hardening and cleaned the live governance ledger before the dynamic planner phase.
-- `TASK-GOV-006`: landed closeout autopilot v2 and strengthened review/idle successor continuation checks.
+- `TASK-GOV-013`: completed doc-driven coordination planning and explicit candidate promotion.
+- `TASK-MRG-001`: promoted the governed Git publish controls into the main repository baseline.
 
 ## Current Phase Goal
 
-- Keep the planner ceiling at `1..4` lanes, but make the live runner enforce an effective lane budget instead of preparing every child worktree at once.
-- Add governed fallback triggers for cleanup pressure, active execution budget saturation, and child review-bundle failures.
-- Emit stable runner metrics for lane count, lane conflicts, child closeout success, fallback count, and orphan cleanup failures.
+- Add a governed `publish_readiness` block to `orchestration-status` so operators can see whether the live task is ready for `commit`, `push`, and `draft PR`.
+- Reuse the existing `publish-preflight` checks instead of inventing a second Git publish gate.
+- Queue the downstream 9.5+ phases as formal task packages so the control plane has a single next candidate after `TASK-OPS-001` closes.
 
 ## Explicitly Out Of Scope
 
-- Do not change business-stage implementation code under `src/`.
-- Do not change continuation command names or add a third execution intent.
-- Do not open unlimited parallelism; the v1 safety ceiling remains `4` lanes.
+- Do not make Git publish actions implicit in continuation, runner, or closeout flows.
+- Do not implement `stage7-stage9` business automation in the current phase.
+- Do not change `src/`, `docs/contracts/`, `db/migrations/`, or `tests/integration/` in `TASK-OPS-001`.
 
 ## Exit Criteria For Current Phase
 
-- The runner prepares child worktrees in `lane_index` order and never exceeds the effective lane budget.
-- Lane conflicts and registry drift stop the cycle as hard errors, while cleanup pressure and child review failures show up as fallback metrics.
-- Governance and automation regression suites cover `2/3/4` lane cycles, budget downgrades, child review failures, and orphan-cleanup pressure.
+- `orchestration-status` contains a stable `publish_readiness` block.
+- `publish_readiness` matches the live `publish-preflight` result for blocked and ready cases.
+- The Phase 3 to Phase 5 tasks exist as queued task packages with scoped task files, runlogs, and handoffs.
 
 ## Next Candidate
 
-- After this phase closes, the next governance phase can focus on throughput scaling beyond the current runner ceiling or downstream business automation readiness.
+- `TASK-BIZ-001`: downstream contracts and test skeletons for `stage7-stage9`.
+- `TASK-BIZ-002`: governed successor generation for downstream business automation.
+- `TASK-BIZ-003`: minimum downstream runtime chain and smoke coverage.
+- `TASK-SOAK-001`: continuous soak / chaos / fallback validation.
+- `TASK-GRAD-001`: heavy default policy graduation to the 9.5+ operating mode.

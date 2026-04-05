@@ -290,6 +290,73 @@ def publish_preflight(root: Path, *, action: str, task_id: str | None = None) ->
     }
 
 
+def build_publish_readiness(root: Path) -> dict[str, Any]:
+    policy = _load_publish_policy(root)
+    remote = policy.get("default_remote", "origin")
+    base_branch = policy.get("default_base_branch", "main")
+    has_remote_origin, remote_url = _origin_url(root, remote)
+    gh_available = _gh_available()
+    gh_authenticated = _gh_authenticated(root) if gh_available else False
+    current_payload = load_current_task(root)
+
+    if is_idle_current_payload(current_payload):
+        blockers = ["no live current task; activate a review-ready task before publishing"]
+        return {
+            "status": "idle",
+            "task_id": None,
+            "branch": current_branch(root),
+            "target_remote": remote,
+            "target_remote_url": remote_url,
+            "target_base_branch": base_branch,
+            "has_remote_origin": has_remote_origin,
+            "gh_available": gh_available,
+            "gh_authenticated": gh_authenticated,
+            "existing_pr_detected": False,
+            "task_publishable": False,
+            "missing_required_tests": [],
+            "blockers": blockers,
+            "recommended_action": "activate a review or done task, or run publish-preflight with --task-id",
+        }
+
+    _, task = _resolve_publish_task(root, None)
+    preflight_result = publish_preflight(root, action="publish-task-results", task_id=task["task_id"])
+    missing_tests = missing_required_tests(root, task)
+
+    if preflight_result["status"] == "ready":
+        recommended_action = "publish-task-results"
+    elif task["status"] not in _allowed_statuses(policy):
+        recommended_action = "move the live task to review or done before publishing"
+    elif missing_tests:
+        recommended_action = "record the required tests in the runlog before publishing"
+    elif not has_remote_origin:
+        recommended_action = "configure the origin remote before pushing or creating a draft PR"
+    elif not gh_available:
+        recommended_action = "install GitHub CLI `gh` before creating a draft PR"
+    elif not gh_authenticated:
+        recommended_action = "authenticate GitHub CLI `gh` before creating a draft PR"
+    elif preflight_result["existing_pr_detected"]:
+        recommended_action = "update the existing PR instead of creating a duplicate"
+    else:
+        recommended_action = "resolve the publish blockers and rerun publish-preflight"
+
+    return {
+        "status": preflight_result["status"],
+        "task_id": preflight_result["task_id"],
+        "branch": preflight_result["branch"],
+        "target_remote": preflight_result["target_remote"],
+        "target_remote_url": preflight_result["target_remote_url"],
+        "target_base_branch": preflight_result["target_base_branch"],
+        "has_remote_origin": preflight_result["has_remote_origin"],
+        "gh_available": preflight_result["gh_available"],
+        "gh_authenticated": preflight_result["gh_authenticated"],
+        "existing_pr_detected": preflight_result["existing_pr_detected"],
+        "task_publishable": preflight_result["status"] == "ready",
+        "missing_required_tests": missing_tests,
+        "blockers": list(dict.fromkeys(preflight_result["blockers"])),
+        "recommended_action": recommended_action,
+    }
+
+
 def _default_commit_message(task: dict[str, Any]) -> str:
     return f"chore(governance): publish {task['task_id']}"
 

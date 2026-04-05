@@ -153,7 +153,7 @@ single_machine_practical_matrix:
       - session telemetry misses current command or writer state
       - runtime status does not reflect blocked or review-ready control-plane state
   single_machine_observability:
-    description: orchestration-status must provide a stable operator-facing snapshot of runtime, lease, sessions, sources, workers, and runner pressure.
+    description: orchestration-status must provide a stable operator-facing snapshot of runtime, lease, sessions, sources, workers, publish readiness, and runner pressure.
     trigger_conditions:
       - task_ops orchestration-status --format yaml
       - task_ops orchestration-status --format json
@@ -162,6 +162,7 @@ single_machine_practical_matrix:
     failure_signals:
       - status output omits required top-level sections
       - disabled sources or unsupported workers are not visible
+      - publish readiness diverges from publish-preflight gate outcomes
       - candidate summary or runner pressure is inconsistent with current ledgers
 future_scale_interface_matrix:
   task_source_adapter_contract:

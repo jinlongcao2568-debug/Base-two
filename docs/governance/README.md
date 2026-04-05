@@ -74,6 +74,9 @@ Conflict rule:
   - `commit-task-results`, `push-task-branch`, `create-task-pr`, and `publish-task-results` are manual release actions.
   - They do not run from `continue-current`, `continue-roadmap`, or automatic closeout.
   - They are gated by `docs/governance/GIT_PUBLISH_POLICY.yaml`.
+- `python scripts/task_ops.py orchestration-status --format yaml|json` now includes a `publish_readiness` block.
+  - It shows whether the live task is currently publishable.
+  - It also surfaces remote, `gh`, existing-PR, and missing-test blockers without mutating the repo.
 - Closing a live top-level coordination task without an immediately activated successor now moves the repository into a legal idle control-plane state.
 - Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
 - `stage7-stage9` remain downstream-only stages and now require both dependency satisfaction and `stage7_to_stage9_business_automation=implemented` before automation may generate them.

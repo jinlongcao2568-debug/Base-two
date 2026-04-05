@@ -1,0 +1,41 @@
+task_id: TASK-BIZ-001
+summary_status: queued
+last_handoff_at: null
+completed_items: []
+remaining_items:
+- Define the downstream contracts for stage7 sales, stage8 contact, and stage9 customer delivery.
+- Add the minimum fixtures and test skeletons needed to validate those contracts without opening src changes.
+- Keep stage6 as the only unified fact layer while documenting downstream consumption rules.
+next_step: Activate the task, fill the downstream contracts and fixture skeletons, then run the contract and governance suites.
+next_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py
+- python scripts/check_authority_alignment.py
+- python scripts/validate_contracts.py
+- pytest tests/contracts -q
+- pytest tests/stage7 -q
+- pytest tests/stage8 -q
+- pytest tests/stage9 -q
+- pytest tests/integration -q
+- pytest tests/governance -q
+current_risks:
+- Downstream contracts must not dilute the existing customer-delivery whitelist, blacklist, disclaimer, or outbound approval constraints.
+- This task must not upgrade the downstream business automation capability to implemented.
+candidate_write_paths:
+- docs/governance/
+- docs/contracts/
+- tests/contracts/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+- tests/integration/
+- tests/governance/
+candidate_test_paths:
+- tests/contracts/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+- tests/integration/
+- tests/governance/
+resume_notes:
+- Queued after TASK-OPS-001; this is the first downstream business-automation phase.

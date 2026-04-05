@@ -44,6 +44,10 @@ The runtime file is a local derived state surface. It is not a second task ledge
 - `task_sources`
   - registry-backed task-source runtime view
   - current implementation supports only `doc_local`
+- `publish_readiness`
+  - live-task Git publish gate summary
+  - remote / `gh` / existing PR visibility
+  - missing required test visibility for explicit publish actions
 
 ## Single-Machine Scope
 

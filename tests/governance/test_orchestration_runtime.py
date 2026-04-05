@@ -26,6 +26,7 @@ def test_orchestration_status_reports_required_sections(tmp_path: Path) -> None:
         "sessions",
         "workers",
         "task_sources",
+        "publish_readiness",
         "current_task",
         "candidate_summary",
         "runner_pressure",
@@ -34,6 +35,9 @@ def test_orchestration_status_reports_required_sections(tmp_path: Path) -> None:
     assert payload["runtime"]["status"] == "active"
     assert payload["task_sources"]["entries"]["linear"]["observed_status"] == "disabled"
     assert payload["workers"]["entries"]["worker-local-01"]["observed_status"] == "active"
+    assert payload["publish_readiness"]["status"] == "blocked"
+    assert payload["publish_readiness"]["task_id"] == "TASK-BASE-001"
+    assert payload["publish_readiness"]["recommended_action"].startswith("move the live task to review or done")
 
 
 def test_continue_current_records_session_runtime_telemetry(tmp_path: Path) -> None:
@@ -89,3 +93,16 @@ def test_orchestration_status_marks_remote_worker_as_unsupported(tmp_path: Path)
     payload = _status_json(repo)
 
     assert payload["workers"]["entries"]["worker-remote-01"]["observed_status"] == "unsupported_in_v1"
+
+
+def test_orchestration_status_publish_readiness_is_idle_without_live_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    from .helpers import set_idle_control_plane
+
+    set_idle_control_plane(repo)
+    payload = _status_json(repo)
+
+    assert payload["publish_readiness"]["status"] == "idle"
+    assert payload["publish_readiness"]["task_id"] is None
+    assert payload["publish_readiness"]["task_publishable"] is False
+    assert "no live current task" in payload["publish_readiness"]["blockers"][0]

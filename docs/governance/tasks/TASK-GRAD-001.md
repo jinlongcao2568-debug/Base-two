@@ -1,16 +1,16 @@
-# TASK-MRG-001 主线收口 Git 发布能力
+# TASK-GRAD-001 heavy 默认策略毕业到受控自动化
 
 ## Task Baseline
 
-- `task_id`: `TASK-MRG-001`
+- `task_id`: `TASK-GRAD-001`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `done`
-- `stage`: `governance-git-publish-mainline-v1`
-- `branch`: `feat/TASK-MRG-001-promote-git-publish-mainline`
+- `status`: `queued`
+- `stage`: `governance-heavy-autonomy-graduation-v1`
+- `branch`: `feat/TASK-GRAD-001-autonomy-graduation`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `completed`
+- `worker_state`: `idle`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -18,15 +18,15 @@
 - `review_bundle_status`: `not_applicable`
 ## Primary Goals
 
-- Promote the governed Git publish controls from the main reintegration source into the main AX9 repository baseline.
-- Preserve the existing `TASK-GOV-014` orchestration and runtime foundations while adding explicit `commit`, `push`, `create draft PR`, and end-to-end publish entrypoints.
-- Keep the main repository governance ledgers clean so the publish capability becomes a first-class mainline capability instead of an external clone-only feature.
+- Graduate heavy-task default automation from `manual` to governed `assisted` once the soak thresholds and publish readiness gates are proven.
+- Encode the autonomous entry gate so heavy tasks only become `autonomous` when planner, tests, publish readiness, lane conflict, and graduation capability checks all pass.
+- Record the final policy and capability updates that define the `9.5+` default operating mode.
 
 ## Explicitly Not Doing
 
-- Do not import `TASK-GIT-001` or `TASK-GIT-002` handoffs, runlogs, task packages, or closeout metadata into the main repository baseline.
-- Do not change `src/`, contracts, migrations, integration tests, or any stage1-stage9 business implementation in this task.
-- Do not make Git publishing implicit in continuation, runner, or closeout flows; the publish controls remain explicit operator-triggered actions.
+- Do not open `5+` lanes.
+- Do not introduce silent auto-publish.
+- Do not enable `autonomous` heavy execution when the graduation gate is not fully satisfied.
 
 ## Allowed Dirs
 
@@ -63,27 +63,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `done`
-- `closeout_state`: `closed`
+- `narrative_status`: `queued`
+- `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `closed`
-- `remaining_scope`: `none`
-- `next_gate`: `closed`
+- `completed_scope`: `not_started`
+- `remaining_scope`: `active_work_remaining`
+- `next_gate`: `activation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `done`
+- `status`: `queued`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `completed`
+- `worker_state`: `idle`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
-- `branch`: `feat/TASK-MRG-001-promote-git-publish-mainline`
+- `branch`: `feat/TASK-GRAD-001-autonomy-graduation`
 - `updated_at`: `2026-04-05T19:06:16+08:00`
 <!-- generated:task-meta:end -->

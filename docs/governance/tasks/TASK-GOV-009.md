@@ -85,5 +85,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-009-runtime-prompt-profiles`
-- `updated_at`: `2026-04-05T14:13:57+08:00`
+- `updated_at`: `2026-04-05T19:06:16+08:00`
 <!-- generated:task-meta:end -->

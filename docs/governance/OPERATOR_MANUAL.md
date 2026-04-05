@@ -85,6 +85,11 @@ Conflict rule:
   - session telemetry
   - worker registry visibility
   - task-source registry visibility
+  - publish readiness for the live task
+  - runner pressure and candidate summary
+- `publish_readiness` is read-only.
+  - It must match the same gate logic used by `publish-preflight`.
+  - It does not trigger commit, push, or draft PR creation on its own.
   - candidate summary
   - runner pressure
 - The status surface is derived state. It must not replace:

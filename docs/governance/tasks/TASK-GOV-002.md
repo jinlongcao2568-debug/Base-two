@@ -85,5 +85,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
-- `updated_at`: `2026-04-05T12:54:52+08:00`
+- `updated_at`: `2026-04-05T19:06:16+08:00`
 <!-- generated:task-meta:end -->

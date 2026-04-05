@@ -46,6 +46,7 @@ def test_runner_updates_runtime_status_after_cycle(tmp_path: Path) -> None:
     assert payload["runtime"]["mode"] == "automation_runner"
     assert payload["runtime"]["current_command"] == "automation-runner"
     assert payload["runner_pressure"]["lane_count"] == 1
+    assert payload["publish_readiness"]["task_id"] == "TASK-BASE-001"
     assert current_session_id is not None
     assert payload["sessions"]["records"][current_session_id]["mode"] == "automation_runner"
 

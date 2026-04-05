@@ -1,16 +1,16 @@
-# TASK-MRG-001 主线收口 Git 发布能力
+# TASK-BIZ-002 stage7-stage9 successor generation
 
 ## Task Baseline
 
-- `task_id`: `TASK-MRG-001`
+- `task_id`: `TASK-BIZ-002`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `done`
-- `stage`: `governance-git-publish-mainline-v1`
-- `branch`: `feat/TASK-MRG-001-promote-git-publish-mainline`
+- `status`: `queued`
+- `stage`: `governance-stage7-9-autopilot-v1`
+- `branch`: `feat/TASK-BIZ-002-stage7-9-autopilot`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `completed`
+- `worker_state`: `idle`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -18,15 +18,15 @@
 - `review_bundle_status`: `not_applicable`
 ## Primary Goals
 
-- Promote the governed Git publish controls from the main reintegration source into the main AX9 repository baseline.
-- Preserve the existing `TASK-GOV-014` orchestration and runtime foundations while adding explicit `commit`, `push`, `create draft PR`, and end-to-end publish entrypoints.
-- Keep the main repository governance ledgers clean so the publish capability becomes a first-class mainline capability instead of an external clone-only feature.
+- Open governed successor generation for `stage7_sales`, `stage8_contact`, and `stage9_delivery` behind capability gates.
+- Keep downstream generation dependent on `stage6_facts` and on upstream/downstream capability readiness instead of bypassing stage boundaries.
+- Extend continuation and runner governance so downstream tasks can be created in the correct order without weakening existing hard gates.
 
 ## Explicitly Not Doing
 
-- Do not import `TASK-GIT-001` or `TASK-GIT-002` handoffs, runlogs, task packages, or closeout metadata into the main repository baseline.
-- Do not change `src/`, contracts, migrations, integration tests, or any stage1-stage9 business implementation in this task.
-- Do not make Git publishing implicit in continuation, runner, or closeout flows; the publish controls remain explicit operator-triggered actions.
+- Do not implement `src/stage7_sales/`, `src/stage8_contact/`, or `src/stage9_delivery/` business code in this task.
+- Do not allow `stage9_delivery` to start directly from `stage6_facts` without `stage7_sales` and `stage8_contact`.
+- Do not alter continuation command names or add a new execution intent.
 
 ## Allowed Dirs
 
@@ -63,27 +63,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `done`
-- `closeout_state`: `closed`
+- `narrative_status`: `queued`
+- `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `closed`
-- `remaining_scope`: `none`
-- `next_gate`: `closed`
+- `completed_scope`: `not_started`
+- `remaining_scope`: `active_work_remaining`
+- `next_gate`: `activation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `done`
+- `status`: `queued`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `completed`
+- `worker_state`: `idle`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
-- `branch`: `feat/TASK-MRG-001-promote-git-publish-mainline`
+- `branch`: `feat/TASK-BIZ-002-stage7-9-autopilot`
 - `updated_at`: `2026-04-05T19:06:16+08:00`
 <!-- generated:task-meta:end -->
