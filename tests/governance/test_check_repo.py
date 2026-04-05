@@ -239,6 +239,16 @@ def test_check_repo_allows_review_state_with_in_scope_candidate_changes(tmp_path
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_check_repo_still_rejects_unrelated_handoff_file(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    handoff_path = repo / "docs/governance/handoffs/TASK-OTHER-001.yaml"
+    handoff_path.parent.mkdir(parents=True, exist_ok=True)
+    handoff_path.write_text("task_id: TASK-OTHER-001\n", encoding="utf-8")
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "outside allowed_dirs" in result.stdout
+
+
 def test_check_repo_fails_when_task_narrative_assertions_missing(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     task_file = repo / "docs/governance/tasks/TASK-BASE-001.md"

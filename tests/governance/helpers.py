@@ -331,6 +331,32 @@ def _prompt_module_files() -> dict[str, str]:
     }
 
 
+def _write_handoff_policy(path: Path) -> None:
+    path.write_text(
+        (
+            "version: '1.0'\n"
+            "updated_at: '2026-04-05T00:00:00+08:00'\n"
+            "authority_source: docs/governance/README.md\n"
+            "create_on_new_top_level_coordination_task: true\n"
+            "recovery_source_of_truth: docs/governance/handoffs/\n"
+            "fallback_mode: task_and_runlog\n"
+            "required_fields:\n"
+            "  - task_id\n"
+            "  - summary_status\n"
+            "  - last_handoff_at\n"
+            "  - completed_items\n"
+            "  - remaining_items\n"
+            "  - next_step\n"
+            "  - next_tests\n"
+            "  - current_risks\n"
+            "  - candidate_write_paths\n"
+            "  - candidate_test_paths\n"
+            "  - resume_notes\n"
+        ),
+        encoding="utf-8",
+    )
+
+
 def git_commit_all(repo: Path, message: str = "update") -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
     subprocess.run(["git", "commit", "-m", message], cwd=repo, check=True, capture_output=True, text=True)
@@ -446,6 +472,7 @@ def set_live_task_review_without_evidence(
 def init_structure(repo: Path) -> None:
     (repo / "docs/governance/tasks").mkdir(parents=True, exist_ok=True)
     (repo / "docs/governance/runlogs").mkdir(parents=True, exist_ok=True)
+    (repo / "docs/governance/handoffs").mkdir(parents=True, exist_ok=True)
     (repo / "src/base").mkdir(parents=True, exist_ok=True)
     (repo / "tests/base").mkdir(parents=True, exist_ok=True)
     for stage_dir in (
@@ -490,6 +517,7 @@ def write_governance_files(repo: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
     _write_automation_intents(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
+    _write_handoff_policy(repo / "docs/governance/HANDOFF_POLICY.yaml")
     _write_prompt_governance_files(repo)
     write_yaml(repo / "docs/governance/MODULE_MAP.yaml", module_map_payload())
     write_yaml(repo / "docs/governance/TEST_MATRIX.yaml", test_matrix_payload())

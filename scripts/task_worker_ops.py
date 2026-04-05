@@ -14,15 +14,55 @@ from governance_lib import (
     load_worktree_registry,
     missing_required_tests,
     sync_task_artifacts,
-    task_map,
     worktree_map,
 )
+from task_handoff import write_handoff
 from task_rendering import (
     enforce_execution_split_guards,
     find_task,
     record_blocked_split,
     update_current_task_if_active,
 )
+
+
+def _reported_completed_items(args: argparse.Namespace) -> list[str] | None:
+    items = list(getattr(args, "completed_item", []) or [])
+    return items or None
+
+
+def _reported_remaining_items(args: argparse.Namespace) -> list[str] | None:
+    items = list(getattr(args, "remaining_item", []) or [])
+    return items or None
+
+
+def _reported_next_tests(args: argparse.Namespace) -> list[str] | None:
+    items = list(getattr(args, "next_test", []) or [])
+    return items or None
+
+
+def _reported_risks(args: argparse.Namespace) -> list[str] | None:
+    items = list(getattr(args, "risk", []) or [])
+    return items or None
+
+
+def _reported_candidate_write_paths(args: argparse.Namespace) -> list[str] | None:
+    items = list(getattr(args, "candidate_write_path", []) or [])
+    if items:
+        return items
+    legacy = list(getattr(args, "candidate_paths", []) or [])
+    return legacy or None
+
+
+def _reported_candidate_test_paths(args: argparse.Namespace) -> list[str] | None:
+    items = list(getattr(args, "candidate_test_path", []) or [])
+    return items or None
+
+
+def _reported_resume_notes(args: argparse.Namespace, fallback_note: str | None = None) -> list[str] | None:
+    items = list(getattr(args, "resume_note", []) or [])
+    if fallback_note:
+        items.append(fallback_note)
+    return items or None
 
 
 def cmd_worker_start(args: argparse.Namespace) -> int:
@@ -54,7 +94,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     worktrees["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    update_current_task_if_active(root, task, "worker 宸叉帴鎵嬶紱鎸夊綋鍓嶄换鍔″寘缁х画鎺ㄨ繘銆?")
+    update_current_task_if_active(root, task, "Worker started and the task is actively running.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{iso_now()}`: worker-start owner=`{args.worker_owner or 'unknown'}`"])
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] worker started {task['task_id']}")
@@ -72,12 +112,26 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     task["last_reported_at"] = iso_now()
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    update_current_task_if_active(root, task, "worker 姝ｅ湪鎺ㄨ繘锛岀瓑寰呰繘涓€姝ュ洖鎶ャ€?")
+    update_current_task_if_active(root, task, "Worker progress was recorded for the live task.")
     bullets = [f"`{iso_now()}`: {note}" for note in args.note]
     if bullets:
         append_runlog_bullets(root, task, "Execution Log", bullets)
     if args.tests:
         append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in args.tests])
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        completed_items=_reported_completed_items(args),
+        remaining_items=_reported_remaining_items(args),
+        next_step=getattr(args, "next_step", None),
+        next_tests=_reported_next_tests(args),
+        current_risks=_reported_risks(args),
+        candidate_write_paths=_reported_candidate_write_paths(args),
+        candidate_test_paths=_reported_candidate_test_paths(args),
+        resume_notes=_reported_resume_notes(args, "Worker progress was reported."),
+        append_resume_notes=True,
+    )
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] worker reported {task['task_id']}")
     return 0
@@ -93,8 +147,21 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
     task["last_reported_at"] = iso_now()
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    update_current_task_if_active(root, task, "浠诲姟宸?blocked锛涚瓑寰呬汉宸ュ崗璋冩垨鏄惧紡瑙ｉ樆銆?")
+    update_current_task_if_active(root, task, "Task blocked; waiting for blocker resolution before more changes.")
     append_runlog_bullets(root, task, "Risk and Blockers", [f"`{iso_now()}`: {args.reason}"])
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        remaining_items=_reported_remaining_items(args) or ["Resolve the active blocker and resume the scoped work."],
+        next_step=getattr(args, "next_step", None) or "Resolve the blocker before continuing the task.",
+        next_tests=_reported_next_tests(args) or list(task.get("required_tests") or []),
+        current_risks=_reported_risks(args) or [args.reason],
+        candidate_write_paths=_reported_candidate_write_paths(args),
+        candidate_test_paths=_reported_candidate_test_paths(args),
+        resume_notes=_reported_resume_notes(args, f"Task blocked: {args.reason}"),
+        append_resume_notes=True,
+    )
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] worker blocked {task['task_id']}")
     return 0
@@ -112,12 +179,28 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         task["review_bundle_status"] = "not_applicable"
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    update_current_task_if_active(root, task, "worker 宸插畬鎴愬€欓€変氦浠橈紱绛夊緟鑷姩鏀跺彛鎴栬瘎瀹°€?")
+    update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{iso_now()}`: worker-finish `{args.summary}`"])
     if args.tests:
         append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in args.tests])
     if args.candidate_paths:
         append_runlog_bullets(root, task, "Candidate Paths", [f"`{path}`" for path in args.candidate_paths])
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        completed_items=_reported_completed_items(args) or [args.summary],
+        remaining_items=_reported_remaining_items(args)
+        or ["Validate the review-ready evidence and close the task if eligible."],
+        next_step=getattr(args, "next_step", None)
+        or "Review the required tests and use continue-current or close to finish the task.",
+        next_tests=_reported_next_tests(args) or list(task.get("required_tests") or []),
+        current_risks=_reported_risks(args) or [],
+        candidate_write_paths=_reported_candidate_write_paths(args),
+        candidate_test_paths=_reported_candidate_test_paths(args),
+        resume_notes=_reported_resume_notes(args, f"Worker finish summary: {args.summary}"),
+        append_resume_notes=True,
+    )
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] worker finished {task['task_id']}")
     return 0
@@ -224,6 +307,17 @@ def _promote_parent_after_children(
         parent["last_reported_at"] = iso_now()
         append_runlog_bullets(root, parent, "Closeout Conclusion", [f"`{iso_now()}`: all child review bundles passed"])
         update_current_task_if_active(root, parent, "All child review bundles passed; coordination task is review-ready.")
+        write_handoff(
+            root,
+            parent,
+            summary_status=parent["status"],
+            remaining_items=["Close the parent task after validating the aggregated review evidence."],
+            next_step="Review the parent task and close it when the required tests are satisfied.",
+            next_tests=list(parent.get("required_tests") or []),
+            current_risks=[],
+            resume_notes=["All child review bundles passed; the parent task is review-ready."],
+            append_resume_notes=True,
+        )
         return "review", [], []
     if blocked:
         parent["status"] = "blocked"
@@ -232,6 +326,17 @@ def _promote_parent_after_children(
         parent["last_reported_at"] = iso_now()
         append_runlog_bullets(root, parent, "Risk and Blockers", [f"`{iso_now()}`: child review bundle blocked `{', '.join(blocked)}`"])
         update_current_task_if_active(root, parent, "Child review bundle failed; coordination task is blocked pending repair.")
+        write_handoff(
+            root,
+            parent,
+            summary_status=parent["status"],
+            remaining_items=["Repair the blocked child review bundle before resuming the parent task."],
+            next_step="Repair the blocked child lane and rerun auto-close-children.",
+            next_tests=list(parent.get("required_tests") or []),
+            current_risks=[f"child review bundle blocked: {', '.join(blocked)}"],
+            resume_notes=["Parent task blocked by a child review bundle failure."],
+            append_resume_notes=True,
+        )
         return "blocked", blocked, open_children
     if open_children:
         parent["status"] = "doing"
@@ -240,6 +345,16 @@ def _promote_parent_after_children(
         parent["last_reported_at"] = iso_now()
         append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: waiting on child review bundles `{', '.join(open_children)}`"])
         update_current_task_if_active(root, parent, "Child review bundles are still running; coordination task remains active.")
+        write_handoff(
+            root,
+            parent,
+            summary_status=parent["status"],
+            remaining_items=[f"Wait for child review bundles: {', '.join(open_children)}"],
+            next_step="Wait for the remaining child review bundles to finish and rerun auto-close-children.",
+            next_tests=list(parent.get("required_tests") or []),
+            resume_notes=["Parent task is still waiting on child review bundles."],
+            append_resume_notes=True,
+        )
         return "doing", [], open_children
     return None, [], []
 

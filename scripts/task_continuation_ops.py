@@ -33,6 +33,7 @@ from governance_lib import (
     write_roadmap,
 )
 from task_closeout import assess_live_closeout
+from task_handoff import build_recovery_pack, render_recovery_lines
 from task_rendering import (
     find_task,
     pause_other_doing_tasks,
@@ -452,6 +453,10 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
         raise GovernanceError(f"current task is blocked: {reason}")
     if task["status"] == "done":
         raise GovernanceError("current task is already done; use continue-roadmap or explicit activation")
+
+    recovery_pack, recovery_source, recovery_warnings = build_recovery_pack(root, task)
+    for line in render_recovery_lines(recovery_pack, recovery_source, recovery_warnings):
+        print(line)
 
     branch_action = _switch_or_create_branch(root, task["branch"])
     if task["status"] == "review":

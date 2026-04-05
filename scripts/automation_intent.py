@@ -28,6 +28,7 @@ from governance_lib import (
 from governance_repo_checks import run_repo_checks
 from task_closeout import assess_live_closeout
 from task_continuation_ops import _resolve_roadmap_successor
+from task_handoff import build_recovery_pack
 from task_rendering import find_task
 
 
@@ -176,6 +177,11 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
     blockers = _dirty_blockers(root)
     current_payload, current_task = _load_live_task(root)
     closeout = assess_live_closeout(root, current_payload=current_payload, current_task=current_task)
+    recovery_pack = None
+    recovery_source = None
+    recovery_warnings: list[str] = []
+    if current_task is not None:
+        recovery_pack, recovery_source, recovery_warnings = build_recovery_pack(root, current_task)
     if current_payload.get("status") == "idle":
         blockers.append("CURRENT_TASK.yaml 当前为 idle；请改用路线图推进，或先显式激活任务。")
     elif current_task is not None:
@@ -194,6 +200,9 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
             "explanation": "已识别为继续当前任务，但前置条件不满足。",
             "blockers": _dedupe_items(blockers),
             "closeout_recommendation": closeout,
+            "recovery_pack": recovery_pack,
+            "recovery_source": recovery_source,
+            "recovery_warnings": recovery_warnings,
         }
 
     task_id = current_task["task_id"] if current_task is not None else current_payload.get("current_task_id")
@@ -206,6 +215,9 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
         "explanation": f"将继续 live 当前任务 `{task_id}`，当前状态为 `{task_status}`，不会选择后继任务。",
         "blockers": [],
         "closeout_recommendation": closeout,
+        "recovery_pack": recovery_pack,
+        "recovery_source": recovery_source,
+        "recovery_warnings": recovery_warnings,
     }
 
 
@@ -283,6 +295,9 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
             "explanation": explanation,
             "blockers": [],
             "closeout_recommendation": None,
+            "recovery_pack": None,
+            "recovery_source": None,
+            "recovery_warnings": [],
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)

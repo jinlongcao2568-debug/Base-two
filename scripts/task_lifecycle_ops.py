@@ -25,6 +25,7 @@ from governance_lib import (
     validate_task,
     worktree_map,
 )
+from task_handoff import ensure_handoff_file, write_handoff
 from task_rendering import (
     find_task,
     load_roadmap_state,
@@ -91,6 +92,7 @@ def cmd_new(args: argparse.Namespace) -> int:
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     update_task_file(root, task)
     update_runlog_file(root, task)
+    ensure_handoff_file(root, task)
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] created task {args.task_id}")
     return 0
@@ -118,6 +120,17 @@ def cmd_activate(args: argparse.Namespace) -> int:
     upsert_coordination_entry(worktrees, task, root)
     worktrees["updated_at"] = iso_now()
     persist_activation_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, touched_tasks)
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        next_step="Continue the scoped implementation and keep the control plane aligned.",
+        next_tests=list(task.get("required_tests") or []),
+        candidate_write_paths=list(task.get("planned_write_paths") or []),
+        candidate_test_paths=list(task.get("planned_test_paths") or []),
+        resume_notes=["Task activated in the main coordination worktree."],
+        append_resume_notes=True,
+    )
     print(f"[OK] activated {task['task_id']}")
     return 0
 
@@ -141,6 +154,15 @@ def cmd_pause(args: argparse.Namespace) -> int:
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     if current_task["current_task_id"] == task["task_id"]:
         dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "Task paused; waiting for explicit reactivation."))
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        next_step="Reactivate the task before making further changes.",
+        next_tests=list(task.get("required_tests") or []),
+        resume_notes=["Task paused; resume requires explicit reactivation."],
+        append_resume_notes=True,
+    )
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] paused {task['task_id']}")
     return 0
@@ -184,7 +206,17 @@ def cmd_close(args: argparse.Namespace) -> int:
                 root / CURRENT_TASK_FILE,
                 build_current_task_payload(task, "Waiting for explicit successor activation."),
             )
-        sync_task_artifacts(root, registry, touched_task_ids)
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        remaining_items=[],
+        next_step="No further implementation is required; this task is closed.",
+        current_risks=[],
+        resume_notes=["Task closed."],
+        append_resume_notes=True,
+    )
+    sync_task_artifacts(root, registry, touched_task_ids)
     print(f"[OK] closed {task['task_id']}")
     return 0
 

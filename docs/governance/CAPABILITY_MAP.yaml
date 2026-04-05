@@ -19,6 +19,21 @@ capabilities:
     tests:
       - pytest tests/governance -q
       - pytest tests/automation -q
+  - capability_id: handoff_recovery_v1
+    status: implemented
+    source_of_truth:
+      - docs/governance/HANDOFF_POLICY.yaml
+      - docs/governance/handoffs/
+      - docs/governance/runlogs/
+    scripts:
+      - scripts/task_handoff.py
+      - scripts/task_worker_ops.py
+      - scripts/task_continuation_ops.py
+      - scripts/automation_intent.py
+      - scripts/task_lifecycle_ops.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
   - capability_id: roadmap_autopilot_continuation
     status: implemented
     source_of_truth:

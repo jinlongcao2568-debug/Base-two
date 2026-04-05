@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-011`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-handoff-recovery-v1`
 - `branch`: `feat/TASK-GOV-011-handoff-recovery`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -14,28 +14,27 @@
 ## Execution Log
 
 - `2026-04-05T14:57:03+08:00`: task package created
-
+- `2026-04-05T15:21:23+08:00`: worker-finish `formal handoff recovery is implemented and validated`
 ## Test Log
 
 - to-be-filled
-
+- `pytest tests/automation -q`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-011`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-handoff-recovery-v1`
 - `branch`: `feat/TASK-GOV-011-handoff-recovery`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

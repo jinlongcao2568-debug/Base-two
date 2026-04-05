@@ -33,6 +33,7 @@ from governance_lib import (
     TASK_MARKER_END,
     TASK_MARKER_START,
 )
+from task_handoff import is_top_level_coordination_task
 
 
 ROADMAP_ADVANCE_MODES = {"explicit_or_generated"}
@@ -287,9 +288,20 @@ def _validate_modified_paths(
     planned_write_paths: list[str],
     in_execution_context: bool,
 ) -> None:
+    active_handoff_path = None
+    if active_task.get("task_id") is not None:
+        active_handoff_path = f"docs/governance/handoffs/{active_task['task_id']}.yaml"
     if active_task["status"] == "done" and modified_paths:
         raise GovernanceError("implementation changes are not allowed when task status is done")
     for path in modified_paths:
+        if (
+            active_handoff_path is not None
+            and
+            not in_execution_context
+            and is_top_level_coordination_task(active_task)
+            and path == active_handoff_path
+        ):
+            continue
         if not path_within_declared(path, allowed_dirs):
             raise GovernanceError(f"modified path outside allowed_dirs: {path}")
         if not path_within_declared(path, planned_write_paths):
