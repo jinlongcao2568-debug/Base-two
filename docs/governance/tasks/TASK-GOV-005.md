@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-005`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-automation-risk-hardening-v1`
 - `branch`: `feat/TASK-GOV-005-automation-intent-hardening`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 ## Primary Goals
 
@@ -30,7 +30,6 @@
 - `scripts/`
 - `tests/governance/`
 - `tests/automation/`
-- `14条写提示词的秘籍-提炼版.md`
 
 ## Planned Write Paths
 
@@ -38,7 +37,6 @@
 - `scripts/`
 - `tests/governance/`
 - `tests/automation/`
-- `14条写提示词的秘籍-提炼版.md`
 
 ## Planned Test Paths
 
@@ -60,23 +58,23 @@
 - none
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-005-automation-intent-hardening`
-- `updated_at`: `2026-04-05T10:31:04+08:00`
+- `updated_at`: `2026-04-05T11:26:30+08:00`
 <!-- generated:task-meta:end -->
