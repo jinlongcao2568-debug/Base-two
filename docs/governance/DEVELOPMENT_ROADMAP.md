@@ -1,6 +1,6 @@
 ---
-current_phase: governance-parallel-closeout-pipeline-v1
-current_task_id: TASK-GOV-008
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-GOV-008`: `多 lane 父子聚合与 closeout 流水线` is the live coordination task for `governance-parallel-closeout-pipeline-v1`.
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-005`: closed automation-intent risk hardening and cleaned the live governance ledger before the dynamic planner phase.
