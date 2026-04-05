@@ -1,6 +1,6 @@
 ---
-current_phase: governance-git-publish-mainline-v1
-current_task_id: TASK-MRG-001
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-MRG-001`: `主线收口 Git 发布能力` is the live coordination task for `governance-git-publish-mainline-v1`.
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-005`: closed automation-intent risk hardening and cleaned the live governance ledger before the dynamic planner phase.

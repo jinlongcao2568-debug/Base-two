@@ -1,21 +1,17 @@
 task_id: TASK-MRG-001
-summary_status: review
-last_handoff_at: '2026-04-05T18:16:52+08:00'
+summary_status: done
+last_handoff_at: '2026-04-05T18:17:39+08:00'
 completed_items:
 - Integrated explicit Git publish commands into task_ops runtime entrypoints.
 - Added governed publish policy, publish preflight, and natural-language publish intent
   routing.
 - Added governance fixtures and regression tests for commit/push/draft-PR publish
   actions.
-remaining_items:
-- Close the task after the review-ready ledger is validated.
-next_step: Validate can-close and then close TASK-MRG-001 back to the formal idle
-  state.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/task_ops.py can-close TASK-MRG-001
-current_risks:
-- Publish push and draft PR actions remain environment-gated until origin and gh authentication
-  are configured.
+current_risks: []
 candidate_write_paths:
 - docs/governance/
 - scripts/
@@ -30,3 +26,4 @@ resume_notes:
 - Task activated in the main coordination worktree.
 - 'Worker finish summary: Integrated governed Git publish controls into the main repository
   baseline.'
+- Task closed.
