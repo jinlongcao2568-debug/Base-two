@@ -28,6 +28,7 @@ RESERVED_PATHS = [
     "docs/governance/CURRENT_TASK.yaml",
 ]
 STATUS_VALUES = {"queued", "doing", "blocked", "paused", "review", "done"}
+CURRENT_STATUS_VALUES = STATUS_VALUES | {"idle"}
 TASK_KIND_VALUES = {"coordination", "execution"}
 EXECUTION_MODE_VALUES = {"shared_coordination", "isolated_worktree"}
 SIZE_CLASS_VALUES = {"micro", "standard", "heavy"}

@@ -7,6 +7,7 @@ from governance_lib import (
     GovernanceError,
     append_runlog_bullets,
     build_current_task_payload,
+    build_idle_current_task_payload,
     collect_split_errors,
     display_path,
     dump_yaml,
@@ -14,6 +15,7 @@ from governance_lib import (
     load_current_task,
     read_roadmap,
     render_narrative_assertions_block,
+    sync_named_section,
     sync_task_artifacts,
     worktree_map,
     write_roadmap,
@@ -128,7 +130,7 @@ def update_runlog_file(root: Path, task: dict) -> None:
 
 def update_current_task_if_active(root: Path, task: dict, next_action: str) -> None:
     current_task = load_current_task(root)
-    if current_task["current_task_id"] == task["task_id"]:
+    if current_task.get("current_task_id") == task["task_id"]:
         dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, next_action))
 
 
@@ -197,6 +199,11 @@ def persist_activation_state(
     roadmap_body: str,
     touched_tasks: list[str],
 ) -> None:
+    roadmap_body = sync_named_section(
+        roadmap_body,
+        "## Current Task",
+        f"- `{task['task_id']}`: `{task['title']}` is the live coordination task for `{task['stage']}`.",
+    )
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
     dump_yaml(
@@ -212,12 +219,37 @@ def persist_activation_state(
     sync_task_artifacts(root, registry, touched_tasks)
 
 
+def persist_idle_state(
+    root: Path,
+    registry: dict,
+    worktrees: dict,
+    roadmap_frontmatter: dict,
+    roadmap_body: str,
+    touched_tasks: list[str],
+    next_action: str = "wait_for_successor_or_explicit_activation",
+) -> None:
+    roadmap_body = sync_named_section(
+        roadmap_body,
+        "## Current Task",
+        "- no live current task; waiting for explicit activation or roadmap continuation.",
+    )
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    dump_yaml(root / CURRENT_TASK_FILE, build_idle_current_task_payload(next_action))
+    roadmap_frontmatter["current_task_id"] = None
+    roadmap_frontmatter["current_phase"] = "idle"
+    write_roadmap(root, roadmap_frontmatter, roadmap_body)
+    sync_task_artifacts(root, registry, touched_tasks)
+
+
 def resolve_query_task(root: Path, task_id: str | None) -> tuple[dict, dict, dict]:
     from governance_lib import load_current_task, load_task_registry, load_worktree_registry
 
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
+    if task_id is None and current_task.get("current_task_id") is None:
+        raise GovernanceError("no live current task; task_id is required")
     resolved_id = task_id or current_task["current_task_id"]
     task = find_task(registry["tasks"], resolved_id)
     return task, registry, worktrees

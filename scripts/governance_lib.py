@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from governance_controls import (
     build_current_task_payload,
+    build_idle_current_task_payload,
     choose_worker_owner,
     collect_active_execution_errors,
     collect_split_errors,
@@ -10,6 +11,7 @@ from governance_controls import (
     ensure_task_and_runlog_exist,
     infer_default_automation_mode,
     infer_default_topology,
+    is_idle_current_payload,
     missing_required_tests,
     path_hits_reserved,
     path_to_scope_root,
@@ -19,6 +21,7 @@ from governance_controls import (
     task_required_tests_for_matrix,
     task_reserved_conflicts,
     task_reserved_paths,
+    validate_idle_current_payload,
     validate_task,
     validate_worktree_entry,
 )

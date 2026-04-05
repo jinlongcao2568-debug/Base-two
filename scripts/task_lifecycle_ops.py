@@ -28,6 +28,7 @@ from task_rendering import (
     load_roadmap_state,
     pause_other_doing_tasks,
     persist_activation_state,
+    persist_idle_state,
     resolve_query_task,
     update_current_task_if_active,
     update_runlog_file,
@@ -47,7 +48,8 @@ def cmd_new(args: argparse.Namespace) -> int:
         "title": args.title,
         "status": args.status,
         "task_kind": args.task_kind,
-        "execution_mode": args.execution_mode or ("shared_coordination" if args.task_kind == "coordination" else "isolated_worktree"),
+        "execution_mode": args.execution_mode
+        or ("shared_coordination" if args.task_kind == "coordination" else "isolated_worktree"),
         "parent_task_id": args.parent_task_id,
         "stage": args.stage,
         "branch": args.branch or f"feat/{args.task_id}-work",
@@ -128,7 +130,7 @@ def cmd_pause(args: argparse.Namespace) -> int:
         dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     if current_task["current_task_id"] == task["task_id"]:
-        dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "任务已暂停；等待显式激活下一个任务。"))
+        dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "Task paused; waiting for explicit reactivation."))
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] paused {task['task_id']}")
     return 0
@@ -154,12 +156,25 @@ def cmd_close(args: argparse.Namespace) -> int:
         entry["status"] = "closed"
         if entry["work_mode"] == "execution":
             entry["cleanup_state"] = "pending"
-        worktrees["updated_at"] = iso_now()
+    worktrees["updated_at"] = iso_now()
+    touched_task_ids = [task["task_id"]]
+    is_live_top_level_current = (
+        current_task.get("current_task_id") == task["task_id"]
+        and task["task_kind"] == "coordination"
+        and task.get("parent_task_id") is None
+    )
+    if is_live_top_level_current:
+        roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
+        persist_idle_state(root, registry, worktrees, roadmap_frontmatter, roadmap_body, touched_task_ids)
+    else:
+        dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
         dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    if current_task["current_task_id"] == task["task_id"]:
-        dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "等待显式切换到下一个任务"))
-    sync_task_artifacts(root, registry, [task["task_id"]])
+        if current_task.get("current_task_id") == task["task_id"]:
+            dump_yaml(
+                root / CURRENT_TASK_FILE,
+                build_current_task_payload(task, "Waiting for explicit successor activation."),
+            )
+        sync_task_artifacts(root, registry, touched_task_ids)
     print(f"[OK] closed {task['task_id']}")
     return 0
 
@@ -168,6 +183,8 @@ def cmd_can_start(args: argparse.Namespace) -> int:
     root = find_repo_root()
     task, _, worktrees = resolve_query_task(root, args.task_id)
     current = load_current_task(root)
+    if current.get("current_task_id") is None:
+        raise GovernanceError("no live current task is startable")
     if task["task_id"] != current["current_task_id"]:
         raise GovernanceError("can-start only supports the live current task")
     if task["status"] in {"done", "review"}:
@@ -208,7 +225,11 @@ def cmd_sync(args: argparse.Namespace) -> int:
 def cmd_split_check(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
-    tasks = [task for task in registry.get("tasks", []) if task.get("parent_task_id") == args.parent_task_id and task.get("task_kind") == "execution"]
+    tasks = [
+        task
+        for task in registry.get("tasks", [])
+        if task.get("parent_task_id") == args.parent_task_id and task.get("task_kind") == "execution"
+    ]
     errors = collect_split_errors(tasks)
     if errors:
         for error in errors:
@@ -227,7 +248,7 @@ def cmd_decide_topology(args: argparse.Namespace) -> int:
     task["last_reported_at"] = iso_now()
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    update_current_task_if_active(root, task, "已更新任务拓扑；继续按当前任务包推进。")
+    update_current_task_if_active(root, task, "Task topology updated; continue under the live task package.")
     sync_task_artifacts(root, registry, [task["task_id"]])
     print(f"[OK] {task['task_id']} topology={topology} reason={reason}")
     return 0

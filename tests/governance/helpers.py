@@ -53,6 +53,54 @@ def read_yaml(path: Path) -> Any:
         return yaml.safe_load(handle)
 
 
+def idle_current_payload(
+    *,
+    timestamp: str = "2026-04-04T00:00:00+08:00",
+    next_action: str = "wait_for_successor_or_explicit_activation",
+) -> dict[str, Any]:
+    return {
+        "current_task_id": None,
+        "title": None,
+        "status": "idle",
+        "task_kind": None,
+        "execution_mode": None,
+        "parent_task_id": None,
+        "stage": None,
+        "branch": None,
+        "size_class": None,
+        "automation_mode": None,
+        "worker_state": "idle",
+        "blocked_reason": None,
+        "last_reported_at": timestamp,
+        "topology": None,
+        "allowed_dirs": [],
+        "reserved_paths": [],
+        "planned_write_paths": [],
+        "planned_test_paths": [],
+        "required_tests": [],
+        "task_file": None,
+        "runlog_file": None,
+        "next_action": next_action,
+        "updated_at": timestamp,
+    }
+
+
+def read_roadmap(path: Path) -> tuple[dict[str, Any], str]:
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        raise AssertionError("roadmap frontmatter is missing")
+    _, remainder = text.split("---\n", 1)
+    frontmatter_text, body = remainder.split("\n---\n", 1)
+    return yaml.safe_load(frontmatter_text) or {}, body.lstrip("\n")
+
+
+def write_roadmap(path: Path, frontmatter: dict[str, Any], body: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    frontmatter_text = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False).strip()
+    rendered_body = body.strip()
+    path.write_text(f"---\n{frontmatter_text}\n---\n\n{rendered_body}\n", encoding="utf-8", newline="\n")
+
+
 def run_python(script: Path, repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(script), *args],
@@ -65,6 +113,59 @@ def run_python(script: Path, repo: Path, *args: str) -> subprocess.CompletedProc
 def git_commit_all(repo: Path, message: str = "update") -> None:
     subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
     subprocess.run(["git", "commit", "-m", message], cwd=repo, check=True, capture_output=True, text=True)
+
+
+def set_idle_control_plane(
+    repo: Path,
+    *,
+    timestamp: str = "2026-04-04T00:00:00+08:00",
+    next_action: str = "wait_for_successor_or_explicit_activation",
+) -> None:
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", idle_current_payload(timestamp=timestamp, next_action=next_action))
+
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    for entry in worktrees.get("entries", []):
+        if entry.get("work_mode") == "coordination":
+            entry["status"] = "closed"
+    worktrees["updated_at"] = timestamp
+    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+
+    roadmap_path = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    frontmatter, body = read_roadmap(roadmap_path)
+    frontmatter["current_task_id"] = None
+    frontmatter["current_phase"] = "idle"
+    body = (
+        "# Roadmap\n\n"
+        "## Current Task\n\n"
+        "- no live current task; waiting for explicit activation or roadmap continuation."
+    )
+    write_roadmap(roadmap_path, frontmatter, body)
+
+
+def close_live_task_to_idle(
+    repo: Path,
+    *,
+    task_id: str = "TASK-BASE-001",
+    required_test: str = "pytest tests/base -q",
+    summary: str = "review ready",
+    commit_after_close: bool = False,
+) -> None:
+    finished = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        task_id,
+        "--summary",
+        summary,
+        "--tests",
+        required_test,
+    )
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    git_commit_all(repo, f"prepare {task_id} closeout")
+    closed = run_python(TASK_OPS_SCRIPT, repo, "close", task_id)
+    assert closed.returncode == 0, closed.stdout + closed.stderr
+    if commit_after_close:
+        git_commit_all(repo, f"close {task_id} to idle")
 
 
 def init_structure(repo: Path) -> None:

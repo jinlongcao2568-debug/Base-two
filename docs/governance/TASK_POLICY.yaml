@@ -38,6 +38,8 @@ stop_conditions:
 closeout_rules:
   - required_tests must appear in the runlog
   - task status must not remain doing after formal closeout
+  - closing a live top-level coordination task without successor activation must write the formal idle CURRENT_TASK payload
+  - idle closeout must set roadmap current_task_id to null, roadmap current_phase to idle, and leave no active coordination worktree
   - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied
   - child execution auto-close requires the full review bundle to pass inside the execution worktree
 task_blueprints:

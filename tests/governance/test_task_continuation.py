@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .helpers import CHECK_REPO_SCRIPT, TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
+from .helpers import (
+    CHECK_REPO_SCRIPT,
+    TASK_OPS_SCRIPT,
+    close_live_task_to_idle,
+    git_commit_all,
+    init_governance_repo,
+    read_yaml,
+    run_python,
+    set_idle_control_plane,
+    write_yaml,
+)
 
 
 def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
@@ -110,6 +120,14 @@ def test_continue_current_rejects_blocked_task(tmp_path: Path) -> None:
     assert "blocked" in result.stdout
 
 
+def test_continue_current_rejects_idle_state(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-current")
+    assert result.returncode == 1
+    assert "no live current task" in result.stdout
+
+
 def test_continue_roadmap_closes_review_task_and_activates_explicit_successor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)
@@ -128,6 +146,24 @@ def test_continue_roadmap_closes_review_task_and_activates_explicit_successor(tm
     assert current_task["current_task_id"] == "TASK-NEXT-001"
     assert tasks["TASK-BASE-001"]["status"] == "done"
     assert tasks["TASK-NEXT-001"]["status"] == "doing"
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
+def test_continue_roadmap_activates_explicit_successor_from_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    close_live_task_to_idle(repo, commit_after_close=True)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert current_task["status"] == "doing"
     assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
 
 
@@ -169,6 +205,29 @@ def test_continue_roadmap_generates_task_auto_002_when_gap_is_open(tmp_path: Pat
     assert tasks["TASK-AUTO-002"]["status"] == "doing"
     assert autopilot["status"] == "in_progress"
     assert "next_recommended_task_id: TASK-AUTO-002" in roadmap_text
+
+
+def test_continue_roadmap_generates_task_auto_002_from_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo, "TASK-AUTO-001")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    auto_task = next(task for task in registry["tasks"] if task["task_id"] == "TASK-AUTO-001")
+    auto_task["status"] = "done"
+    auto_task["worker_state"] = "completed"
+    auto_task["activated_at"] = "2026-04-04T00:00:00+08:00"
+    auto_task["closed_at"] = "2026-04-04T00:00:00+08:00"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    close_live_task_to_idle(repo, commit_after_close=True)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    tasks = {task["task_id"]: task for task in registry["tasks"]}
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-AUTO-002"
+    assert tasks["TASK-AUTO-002"]["status"] == "doing"
+    assert tasks["TASK-AUTO-002"]["depends_on_task_ids"] == []
 
 
 def test_continue_roadmap_rejects_unmet_successor_dependency(tmp_path: Path) -> None:

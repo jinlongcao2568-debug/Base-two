@@ -1,30 +1,28 @@
-current_task_id: TASK-GOV-002
-title: 测试热点 warning 预防性收口
-status: done
+current_task_id: TASK-GOV-003
+title: 任务生命周期闭环补齐
+status: doing
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: governance-test-maintainability-hardening-v1
-branch: feat/TASK-GOV-002-test-maintainability-hardening
+stage: governance-task-lifecycle-closure-v1
+branch: feat/TASK-GOV-003-governance-task-lifecycle-closure
 size_class: standard
 automation_mode: manual
-worker_state: completed
+worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-05T07:26:51+08:00'
+last_reported_at: '2026-04-05T07:40:13+08:00'
 topology: single_worker
 allowed_dirs:
+- docs/governance/
+- scripts/
 - tests/governance/
 - tests/automation/
-- docs/governance/
-reserved_paths:
-- src/
-- docs/contracts/
-- tests/integration/
-- scripts/check_hygiene.py
+reserved_paths: []
 planned_write_paths:
+- docs/governance/
+- scripts/
 - tests/governance/
 - tests/automation/
-- docs/governance/
 planned_test_paths:
 - tests/governance/
 - tests/automation/
@@ -32,11 +30,12 @@ required_tests:
 - python scripts/check_authority_alignment.py
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
-- pytest tests/governance/test_check_hygiene.py -q
 - pytest tests/governance -q
 - pytest tests/automation -q
+- pytest tests/contracts -q
+- pytest tests/integration -q
 - pytest -q
-task_file: docs/governance/tasks/TASK-GOV-002.md
-runlog_file: docs/governance/runlogs/TASK-GOV-002-RUNLOG.md
-next_action: 等待显式切换到下一个任务
-updated_at: '2026-04-05T07:26:51+08:00'
+task_file: docs/governance/tasks/TASK-GOV-003.md
+runlog_file: docs/governance/runlogs/TASK-GOV-003-RUNLOG.md
+next_action: Implement the live task package and keep branch/control-plane state aligned.
+updated_at: '2026-04-05T07:40:13+08:00'

@@ -4,19 +4,19 @@ import yaml
 
 from business_autopilot import load_business_policy
 from governance_lib import (
-    CURRENT_TASK_FILE,
     EXECUTION_CONTEXT_FILE,
     GovernanceError,
     WORKER_STATE_VALUES,
     collect_active_execution_errors,
     current_branch,
-    expected_narrative_assertions,
     ensure_task_and_runlog_exist,
+    expected_narrative_assertions,
     extract_generated_fields,
     extract_markdown_fields,
     extract_narrative_assertions,
     find_repo_root,
     git_status_paths,
+    is_idle_current_payload,
     load_current_task,
     load_task_registry,
     load_worktree_registry,
@@ -25,6 +25,7 @@ from governance_lib import (
     read_roadmap,
     read_text,
     task_map,
+    validate_idle_current_payload,
     validate_task,
     validate_worktree_entry,
     worktree_map,
@@ -62,6 +63,8 @@ def resolve_execution_context_task(root, tasks_by_id: dict, execution_context_pa
 
 def resolve_current_task(root, tasks_by_id: dict):
     current_task = load_current_task(root)
+    if is_idle_current_payload(current_task):
+        raise GovernanceError("no live current task; repository is in idle state")
     task = tasks_by_id.get(current_task["current_task_id"])
     if task is None:
         raise GovernanceError(f"current task missing from registry: {current_task['current_task_id']}")
@@ -98,6 +101,15 @@ def resolve_current_task(root, tasks_by_id: dict):
     return task, current_task.get("allowed_dirs", []), current_task.get("planned_write_paths", [])
 
 
+def resolve_current_state(root, tasks_by_id: dict):
+    current_task = load_current_task(root)
+    if is_idle_current_payload(current_task):
+        validate_idle_current_payload(current_task)
+        return current_task, [], [], True
+    task, allowed_dirs, planned_write_paths = resolve_current_task(root, tasks_by_id)
+    return task, allowed_dirs, planned_write_paths, False
+
+
 def validate_current_worktree_entry(active_task: dict, worktrees: dict) -> None:
     entry = worktree_map(worktrees).get(active_task["task_id"])
     if entry is None:
@@ -110,12 +122,18 @@ def validate_current_worktree_entry(active_task: dict, worktrees: dict) -> None:
         raise GovernanceError("current task worktree entry branch mismatch")
 
 
-def validate_roadmap_alignment(root, active_task: dict, tasks_by_id: dict[str, dict]) -> None:
-    roadmap_frontmatter, _ = read_roadmap(root)
-    if roadmap_frontmatter.get("current_task_id") != active_task["task_id"]:
-        raise GovernanceError("roadmap current_task_id mismatch")
-    if roadmap_frontmatter.get("current_phase") != active_task["stage"]:
-        raise GovernanceError("roadmap current_phase mismatch")
+def validate_idle_worktree_state(worktrees: dict) -> None:
+    active_coordination = [
+        entry
+        for entry in worktrees.get("entries", [])
+        if entry.get("work_mode") == "coordination" and entry.get("status") == "active"
+    ]
+    if active_coordination:
+        task_ids = ", ".join(entry["task_id"] for entry in active_coordination)
+        raise GovernanceError(f"idle current state cannot keep active coordination worktrees: {task_ids}")
+
+
+def _validate_roadmap_policy(roadmap_frontmatter: dict, tasks_by_id: dict[str, dict]) -> None:
     if roadmap_frontmatter.get("advance_mode") not in ROADMAP_ADVANCE_MODES:
         raise GovernanceError("roadmap advance_mode is missing or invalid")
     if not isinstance(roadmap_frontmatter.get("auto_create_missing_task"), bool):
@@ -138,6 +156,23 @@ def validate_roadmap_alignment(root, active_task: dict, tasks_by_id: dict[str, d
         raise GovernanceError("roadmap next_recommended_task_id missing from registry")
 
 
+def validate_roadmap_alignment(root, current_state: dict, tasks_by_id: dict[str, dict]) -> None:
+    roadmap_frontmatter, roadmap_body = read_roadmap(root)
+    _validate_roadmap_policy(roadmap_frontmatter, tasks_by_id)
+    if is_idle_current_payload(current_state):
+        if roadmap_frontmatter.get("current_task_id") is not None:
+            raise GovernanceError("roadmap current_task_id mismatch for idle current state")
+        if roadmap_frontmatter.get("current_phase") != "idle":
+            raise GovernanceError("roadmap current_phase mismatch for idle current state")
+        if "no live current task" not in roadmap_body.lower():
+            raise GovernanceError("roadmap body missing idle current-task zero-state text")
+        return
+    if roadmap_frontmatter.get("current_task_id") != current_state["task_id"]:
+        raise GovernanceError("roadmap current_task_id mismatch")
+    if roadmap_frontmatter.get("current_phase") != current_state["stage"]:
+        raise GovernanceError("roadmap current_phase mismatch")
+
+
 def validate_task_file_alignment(root, active_task: dict) -> None:
     text = read_text(root / active_task["task_file"])
     fields = extract_markdown_fields(text)
@@ -153,7 +188,16 @@ def validate_task_file_alignment(root, active_task: dict) -> None:
     for key, value in expected.items():
         if fields.get(key) != value:
             raise GovernanceError(f"task file mismatch for field {key}")
-    for key in ("status", "task_kind", "execution_mode", "size_class", "automation_mode", "worker_state", "topology", "branch"):
+    for key in (
+        "status",
+        "task_kind",
+        "execution_mode",
+        "size_class",
+        "automation_mode",
+        "worker_state",
+        "topology",
+        "branch",
+    ):
         if generated.get(key) != str(active_task[key]):
             raise GovernanceError(f"task generated metadata mismatch for field {key}")
     for key, value in expected_narrative_assertions(active_task).items():
@@ -191,9 +235,9 @@ def resolve_active_task(root, tasks_by_id: dict):
             tasks_by_id,
             execution_context_path,
         )
-        return task, allowed_dirs, planned_write_paths, True
-    task, allowed_dirs, planned_write_paths = resolve_current_task(root, tasks_by_id)
-    return task, allowed_dirs, planned_write_paths, False
+        return task, allowed_dirs, planned_write_paths, True, False
+    task_or_payload, allowed_dirs, planned_write_paths, idle_current = resolve_current_state(root, tasks_by_id)
+    return task_or_payload, allowed_dirs, planned_write_paths, False, idle_current
 
 
 def validate_modified_paths(
@@ -223,12 +267,19 @@ def main() -> int:
         tasks_by_id = task_map(registry)
         worktrees = load_worktree_registry(root)
         validate_registry_entries(root, registry, worktrees)
-        active_task, allowed_dirs, planned_write_paths, in_execution_context = resolve_active_task(root, tasks_by_id)
+        active_task, allowed_dirs, planned_write_paths, in_execution_context, idle_current = resolve_active_task(
+            root,
+            tasks_by_id,
+        )
         if not in_execution_context:
-            validate_current_worktree_entry(active_task, worktrees)
-            validate_roadmap_alignment(root, active_task, tasks_by_id)
-            validate_task_file_alignment(root, active_task)
-            validate_runlog_alignment(root, active_task)
+            if idle_current:
+                validate_idle_worktree_state(worktrees)
+                validate_roadmap_alignment(root, active_task, tasks_by_id)
+            else:
+                validate_current_worktree_entry(active_task, worktrees)
+                validate_roadmap_alignment(root, active_task, tasks_by_id)
+                validate_task_file_alignment(root, active_task)
+                validate_runlog_alignment(root, active_task)
         modified_paths = git_status_paths(root)
         validate_modified_paths(
             active_task,

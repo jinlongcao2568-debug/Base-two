@@ -21,6 +21,7 @@ BUILDERS_SPEC.loader.exec_module(BUILDERS)
 AUTOMATION_RUNNER_SCRIPT = HELPERS.AUTOMATION_RUNNER_SCRIPT
 TASK_OPS_SCRIPT = HELPERS.TASK_OPS_SCRIPT
 CHECK_REPO_SCRIPT = HELPERS.CHECK_REPO_SCRIPT
+close_live_task_to_idle = HELPERS.close_live_task_to_idle
 init_governance_repo = HELPERS.init_governance_repo
 git_commit_all = HELPERS.git_commit_all
 read_yaml = HELPERS.read_yaml
@@ -204,6 +205,24 @@ def test_runner_continue_roadmap_advances_review_task(tmp_path: Path) -> None:
     assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
 
 
+def test_runner_continue_roadmap_advances_idle_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    close_live_task_to_idle(repo, commit_after_close=True)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert current_task["status"] == "doing"
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
 def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
@@ -211,6 +230,19 @@ def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None
     autopilot["status"] = "implemented"
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
     mark_review_ready(repo)
+
+    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    assert result.returncode == 1
+    assert "no successor" in result.stdout
+
+
+def test_runner_continue_roadmap_fails_without_successor_from_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
+    autopilot = next(item for item in capability_map["capabilities"] if item["capability_id"] == "roadmap_autopilot_continuation")
+    autopilot["status"] = "implemented"
+    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
+    close_live_task_to_idle(repo, commit_after_close=True)
 
     result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
     assert result.returncode == 1

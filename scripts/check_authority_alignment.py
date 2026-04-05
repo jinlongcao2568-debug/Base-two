@@ -9,8 +9,10 @@ from typing import Callable
 import yaml
 
 from check_repo import (
+    resolve_current_state,
     resolve_current_task,
     validate_current_worktree_entry,
+    validate_idle_worktree_state,
     validate_registry_entries,
     validate_roadmap_alignment,
     validate_runlog_alignment,
@@ -19,6 +21,7 @@ from check_repo import (
 from governance_lib import (
     GovernanceError,
     find_repo_root,
+    is_idle_current_payload,
     load_current_task,
     load_task_registry,
     load_worktree_registry,
@@ -191,19 +194,23 @@ def _collect_live_task_alignment_errors(root: Path) -> list[str]:
         tasks_by_id = task_map(registry)
         worktrees = load_worktree_registry(root)
         validate_registry_entries(root, registry, worktrees)
-        active_task, _, _ = resolve_current_task(root, tasks_by_id)
-        validate_current_worktree_entry(active_task, worktrees)
-        validate_roadmap_alignment(root, active_task, tasks_by_id)
-        validate_task_file_alignment(root, active_task)
-        validate_runlog_alignment(root, active_task)
+        current_state, _, _, idle_current = resolve_current_state(root, tasks_by_id)
+        validate_roadmap_alignment(root, current_state, tasks_by_id)
+        if idle_current:
+            validate_idle_worktree_state(worktrees)
+        else:
+            validate_current_worktree_entry(current_state, worktrees)
+            validate_task_file_alignment(root, current_state)
+            validate_runlog_alignment(root, current_state)
         active_coordination = [
             entry
             for entry in worktrees.get("entries", [])
             if entry.get("work_mode") == "coordination" and entry.get("status") == "active"
         ]
-        if len(active_coordination) != 1:
+        expected_active = 0 if idle_current else 1
+        if len(active_coordination) != expected_active:
             errors.append(
-                f"coordination worktree count drift: expected 1 active entry, got {len(active_coordination)}"
+                f"coordination worktree count drift: expected {expected_active} active entry, got {len(active_coordination)}"
             )
     except GovernanceError as error:
         errors.append(str(error))
@@ -313,12 +320,20 @@ def _evaluate_consistency(root: Path, live_task_errors: list[str]) -> list[str]:
     _reject_legacy_words(readme, "README.md", errors)
     _reject_legacy_words(governance_readme, "docs/governance/README.md", errors)
 
-    if roadmap_frontmatter.get("current_task_id") != current_task.get("current_task_id"):
-        errors.append("roadmap current_task_id conflicts with CURRENT_TASK.yaml")
-    if roadmap_frontmatter.get("current_phase") != current_task.get("stage"):
-        errors.append("roadmap current_phase conflicts with CURRENT_TASK.yaml")
-    if current_task.get("current_task_id") not in roadmap_body:
-        errors.append("roadmap body does not mention the live current task")
+    if is_idle_current_payload(current_task):
+        if roadmap_frontmatter.get("current_task_id") is not None:
+            errors.append("roadmap current_task_id conflicts with idle CURRENT_TASK.yaml")
+        if roadmap_frontmatter.get("current_phase") != "idle":
+            errors.append("roadmap current_phase conflicts with idle CURRENT_TASK.yaml")
+        if "no live current task" not in roadmap_body.lower():
+            errors.append("roadmap body does not describe the idle current-task state")
+    else:
+        if roadmap_frontmatter.get("current_task_id") != current_task.get("current_task_id"):
+            errors.append("roadmap current_task_id conflicts with CURRENT_TASK.yaml")
+        if roadmap_frontmatter.get("current_phase") != current_task.get("stage"):
+            errors.append("roadmap current_phase conflicts with CURRENT_TASK.yaml")
+        if current_task.get("current_task_id") not in roadmap_body:
+            errors.append("roadmap body does not mention the live current task")
 
     if capability_map.get("authority_source") != AUTHORITY_SPEC:
         errors.append("CAPABILITY_MAP authority_source drift")
@@ -518,7 +533,10 @@ def _evaluate_development_control_layer(root: Path, live_task_errors: list[str])
         if required not in stop_conditions:
             errors.append(f"TASK_POLICY missing stop condition: {required}")
     required_tests = current_task.get("required_tests") or []
-    if "python scripts/check_authority_alignment.py" not in required_tests:
+    if is_idle_current_payload(current_task):
+        if required_tests:
+            errors.append("idle CURRENT_TASK required_tests must stay empty")
+    elif "python scripts/check_authority_alignment.py" not in required_tests:
         errors.append("CURRENT_TASK required_tests missing authority alignment script")
     return errors
 

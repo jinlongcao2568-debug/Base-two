@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .helpers import CHECK_REPO_SCRIPT, TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
+from .helpers import (
+    CHECK_REPO_SCRIPT,
+    TASK_OPS_SCRIPT,
+    close_live_task_to_idle,
+    git_commit_all,
+    init_governance_repo,
+    read_roadmap,
+    read_yaml,
+    run_python,
+    write_yaml,
+)
 from .scenario_builders import create_cleanup_orphan, create_review_ready_child
 
 
@@ -34,6 +44,33 @@ def test_can_close_requires_required_tests_in_runlog(tmp_path: Path) -> None:
     result = run_python(TASK_OPS_SCRIPT, repo, "can-close")
     assert result.returncode == 1
     assert "required tests missing from runlog" in result.stdout
+
+
+def test_close_moves_live_coordination_task_to_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    close_live_task_to_idle(repo)
+
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    roadmap_frontmatter, roadmap_body = read_roadmap(repo / "docs/governance/DEVELOPMENT_ROADMAP.md")
+
+    assert current_task["status"] == "idle"
+    assert current_task["current_task_id"] is None
+    assert current_task["stage"] is None
+    assert current_task["branch"] is None
+    assert current_task["task_file"] is None
+    assert current_task["runlog_file"] is None
+    assert current_task["allowed_dirs"] == []
+    assert current_task["planned_write_paths"] == []
+    assert current_task["required_tests"] == []
+    assert current_task["worker_state"] == "idle"
+    assert roadmap_frontmatter["current_task_id"] is None
+    assert roadmap_frontmatter["current_phase"] == "idle"
+    assert "no live current task" in roadmap_body.lower()
+    assert registry["tasks"][0]["status"] == "done"
+    assert registry["tasks"][0]["worker_state"] == "completed"
+    assert worktrees["entries"][0]["status"] == "closed"
 
 
 def test_new_task_templates_include_narrative_assertions(tmp_path: Path) -> None:

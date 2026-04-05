@@ -36,7 +36,9 @@ def roadmap_text() -> str:
         "  stage8: not_established\n"
         "  stage9: not_established\n"
         "automation_foundation: not_established\n"
-        "---\n\n# Roadmap\n"
+        "---\n\n# Roadmap\n\n"
+        "## Current Task\n\n"
+        "- `TASK-BASE-001`: `base coordination task` is the live coordination task for `base-phase`.\n"
     )
 
 

@@ -6,6 +6,7 @@ from typing import Any, Iterable
 from governance_runtime import (
     AUTOMATION_MODE_VALUES,
     CLEANUP_STATE_VALUES,
+    CURRENT_STATUS_VALUES,
     EXECUTION_MODE_VALUES,
     GovernanceError,
     RESERVED_PATHS,
@@ -21,6 +22,28 @@ from governance_runtime import (
     iso_now,
     load_test_matrix,
     read_text,
+)
+
+
+IDLE_CURRENT_NULL_FIELDS = (
+    "current_task_id",
+    "title",
+    "task_kind",
+    "execution_mode",
+    "parent_task_id",
+    "stage",
+    "branch",
+    "size_class",
+    "automation_mode",
+    "task_file",
+    "runlog_file",
+)
+IDLE_CURRENT_EMPTY_LIST_FIELDS = (
+    "allowed_dirs",
+    "reserved_paths",
+    "planned_write_paths",
+    "planned_test_paths",
+    "required_tests",
 )
 
 
@@ -159,6 +182,60 @@ def build_current_task_payload(task: dict[str, Any], next_action: str) -> dict[s
     }
 
 
+def build_idle_current_task_payload(next_action: str) -> dict[str, Any]:
+    now = iso_now()
+    return {
+        "current_task_id": None,
+        "title": None,
+        "status": "idle",
+        "task_kind": None,
+        "execution_mode": None,
+        "parent_task_id": None,
+        "stage": None,
+        "branch": None,
+        "size_class": None,
+        "automation_mode": None,
+        "worker_state": "idle",
+        "blocked_reason": None,
+        "last_reported_at": now,
+        "topology": None,
+        "allowed_dirs": [],
+        "reserved_paths": [],
+        "planned_write_paths": [],
+        "planned_test_paths": [],
+        "required_tests": [],
+        "task_file": None,
+        "runlog_file": None,
+        "next_action": next_action,
+        "updated_at": now,
+    }
+
+
+def is_idle_current_payload(current_task: dict[str, Any]) -> bool:
+    return current_task.get("status") == "idle"
+
+
+def validate_idle_current_payload(current_task: dict[str, Any]) -> None:
+    if current_task.get("status") not in CURRENT_STATUS_VALUES:
+        raise GovernanceError(f"invalid current task status: {current_task.get('status')}")
+    if current_task.get("status") != "idle":
+        raise GovernanceError("current task payload is not idle")
+    for field in IDLE_CURRENT_NULL_FIELDS:
+        if current_task.get(field) is not None:
+            raise GovernanceError(f"idle current task field must be null: {field}")
+    if current_task.get("worker_state") != "idle":
+        raise GovernanceError("idle current task worker_state must be idle")
+    if current_task.get("topology") is not None:
+        raise GovernanceError("idle current task topology must be null")
+    if current_task.get("blocked_reason") is not None:
+        raise GovernanceError("idle current task blocked_reason must be null")
+    for field in IDLE_CURRENT_EMPTY_LIST_FIELDS:
+        if current_task.get(field) != []:
+            raise GovernanceError(f"idle current task field must be empty: {field}")
+    if not current_task.get("next_action"):
+        raise GovernanceError("idle current task next_action must be present")
+
+
 def validate_task(task: dict[str, Any]) -> None:
     required_fields = {"task_id", "title", "status", "task_kind", "execution_mode", "stage", "branch", "size_class", "automation_mode", "worker_state", "topology", "allowed_dirs", "reserved_paths", "planned_write_paths", "planned_test_paths", "required_tests", "task_file", "runlog_file"}
     missing = sorted(required_fields - set(task))
@@ -238,6 +315,8 @@ def infer_default_automation_mode(task: dict[str, Any]) -> str:
 
 
 def runner_action_gate(task: dict[str, Any]) -> dict[str, Any]:
+    if task.get("status") == "idle":
+        return {"prepare_worktrees": False, "auto_close_children": False, "reason": "idle current state has no live task to advance"}
     if task["automation_mode"] == "manual":
         return {"prepare_worktrees": False, "auto_close_children": False, "reason": "manual mode requires human coordination before automation actions"}
     if task["automation_mode"] == "assisted":

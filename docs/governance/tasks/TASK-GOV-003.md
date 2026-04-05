@@ -5,20 +5,24 @@
 - `task_id`: `TASK-GOV-003`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-task-lifecycle-closure-v1`
 - `branch`: `feat/TASK-GOV-003-governance-task-lifecycle-closure`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 ## Primary Goals
 
-- to-be-filled
+- Introduce a formal idle current-task state so closeout no longer leaves the control plane red when no successor is immediately active.
+- Make `close`, `continue-roadmap`, and the live repo gates treat `review -> done -> idle -> successor` as a valid lifecycle.
+- Prove the lifecycle with governance and automation rehearsal tests that cover idle recovery and successor activation.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not change contracts, business-stage implementation code, or `stage7-stage9` automation policy.
+- Do not introduce a second task ledger, second roadmap source, or a relaxed rule that allows `done` tasks to remain live current tasks.
+- Do not auto-activate a successor during closeout unless an explicit continuation command requests it.
 
 ## Allowed Dirs
 
@@ -52,27 +56,28 @@
 
 ## Reserved Paths
 
-- to-be-filled
+- `src/`
+- `docs/contracts/`
+- `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-003-governance-task-lifecycle-closure`
-- `updated_at`: `2026-04-05T07:40:01+08:00`
+- `updated_at`: `2026-04-05T07:40:13+08:00`
 <!-- generated:task-meta:end -->

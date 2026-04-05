@@ -1,6 +1,6 @@
 ---
-current_phase: governance-test-maintainability-hardening-v1
-current_task_id: TASK-GOV-002
+current_phase: governance-task-lifecycle-closure-v1
+current_task_id: TASK-GOV-003
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-GOV-002`: reduce the current automation/governance test warning hotspots by introducing reusable scenario builders and a hygiene regression guard.
+- `TASK-GOV-003`: formalize the idle current-task lifecycle so `review -> done -> idle -> successor` remains green and recoverable.
 
 ## Recently Closed
 
@@ -45,23 +45,23 @@ automation_foundation: in_progress
 
 ## Current Phase Goal
 
-- Remove the current automation/governance test hotspot warnings without loosening hygiene thresholds.
-- Consolidate repetitive task/worktree setup behind reusable scenario builders so new review-bundle and continuation tests do not keep growing long setup bodies.
-- Add a hygiene regression guard that keeps the current hotspot files out of future warning output.
+- Introduce a formal idle current-task payload in `CURRENT_TASK.yaml` without creating a second control-plane ledger.
+- Make closeout, repo gates, authority scoring, and roadmap continuation accept `idle` as the only legal zero-state after a live task is closed without an immediate successor.
+- Prove the lifecycle with governance and automation rehearsals that cover `review -> done -> idle -> successor`.
 
 ## Explicitly Out Of Scope
 
-- Do not change `check_hygiene.py` thresholds or warning semantics.
-- Do not refactor runtime scripts or business implementation code.
-- Do not chase low-value warnings outside the current hotspot test files.
+- Do not change contracts, business-stage implementation code, or `stage7-stage9` automation policy.
+- Do not introduce a second task ledger, a second roadmap source, or a relaxed rule that allows `done` tasks to remain live current tasks.
+- Do not auto-activate a successor during closeout unless an explicit continuation command requests it.
 
 ## Exit Criteria For Current Phase
 
-- `check_hygiene.py` no longer reports warnings for `tests/automation/test_automation_runner.py`.
-- `check_hygiene.py` no longer reports warnings for `tests/governance/fixture_payloads.py`, `tests/governance/test_check_repo.py`, and `tests/governance/test_task_ops.py`.
-- Governance and automation tests keep passing after scenario-builder extraction and builder-backed assertions.
-- A dedicated regression test fails if those hotspot files reappear in future hygiene warning output.
+- `check_repo.py` passes after a live current task is closed into the formal idle state.
+- `check_authority_alignment.py` returns all category scores to `100`, including consistency, single source of truth, and development control.
+- `continue-roadmap` can safely activate an explicit or generated successor from the idle state.
+- Governance and automation rehearsal tests prove the full `review -> done -> idle -> successor` lifecycle without manual ledger edits.
 
 ## Next Candidate
 
-- After this phase closes, roadmap continuation can resume `stage1-stage6` business successor generation on top of a cleaner automation/governance test base.
+- After this phase closes, roadmap continuation can resume `stage1-stage6` business successor generation from either a freshly closed review task or the formal idle state.

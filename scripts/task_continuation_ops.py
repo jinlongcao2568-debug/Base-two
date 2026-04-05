@@ -19,6 +19,7 @@ from governance_lib import (
     ensure_clean_worktree,
     find_repo_root,
     git,
+    is_idle_current_payload,
     iso_now,
     load_capability_map,
     load_current_task,
@@ -136,9 +137,9 @@ def _dependency_errors(task: dict[str, Any], tasks_by_id: dict[str, dict[str, An
 
 
 def _validate_successor_candidate(
-    task: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]], current_task_id: str
+    task: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]], current_task_id: str | None
 ) -> None:
-    if task["task_id"] == current_task_id:
+    if current_task_id is not None and task["task_id"] == current_task_id:
         raise GovernanceError("successor cannot equal the current task")
     if task.get("parent_task_id") is not None:
         raise GovernanceError("successor must be a top-level coordination task")
@@ -156,13 +157,16 @@ def _validate_successor_candidate(
 
 
 def _ensure_unique_successor_landscape(
-    tasks: list[dict[str, Any]], current_task_id: str, successor_id: str
+    tasks: list[dict[str, Any]], current_task_id: str | None, successor_id: str
 ) -> None:
+    excluded_ids = {successor_id}
+    if current_task_id is not None:
+        excluded_ids.add(current_task_id)
     conflicting = [
         task["task_id"]
         for task in tasks
         if task.get("task_kind") == "coordination"
-        and task["task_id"] not in {current_task_id, successor_id}
+        and task["task_id"] not in excluded_ids
         and task.get("parent_task_id") is None
         and task["status"] not in {"done", "blocked"}
     ]
@@ -171,7 +175,9 @@ def _ensure_unique_successor_landscape(
         raise GovernanceError(f"successor landscape is not unique: {successor_id} conflicts with {joined}")
 
 
-def _resolve_explicit_successor(registry: dict[str, Any], frontmatter: dict[str, Any], current_task_id: str):
+def _resolve_explicit_successor(
+    registry: dict[str, Any], frontmatter: dict[str, Any], current_task_id: str | None
+):
     explicit_id = frontmatter.get("next_recommended_task_id")
     if not explicit_id:
         return None
@@ -240,7 +246,9 @@ def _mark_capability_in_progress(capability_map: dict[str, Any]) -> None:
     capabilities.append(_default_autopilot_capability())
 
 
-def _build_generated_task(registry: dict[str, Any], blueprint: dict[str, Any], current_task_id: str) -> dict[str, Any]:
+def _build_generated_task(
+    registry: dict[str, Any], blueprint: dict[str, Any], current_task_id: str | None
+) -> dict[str, Any]:
     task_id = _next_auto_task_id(registry.get("tasks", []))
     task = {
         "task_id": task_id,
@@ -267,7 +275,7 @@ def _build_generated_task(registry: dict[str, Any], blueprint: dict[str, Any], c
         "created_at": iso_now(),
         "activated_at": None,
         "closed_at": None,
-        "depends_on_task_ids": [current_task_id],
+        "depends_on_task_ids": [current_task_id] if current_task_id is not None else [],
         "generated_from_blueprint": blueprint["blueprint_id"],
     }
     validate_task(task)
@@ -280,7 +288,7 @@ def _resolve_generated_successor(
     capability_map: dict[str, Any],
     task_policy: dict[str, Any],
     policy: dict[str, Any],
-    current_task_id: str,
+    current_task_id: str | None,
 ):
     if not policy["auto_create_missing_task"]:
         return None
@@ -300,7 +308,7 @@ def _resolve_generated_successor(
             if generated is None:
                 continue
             parent_task, child_tasks, _ = generated
-            parent_task["depends_on_task_ids"] = [current_task_id]
+            parent_task["depends_on_task_ids"] = [current_task_id] if current_task_id is not None else []
             registry.setdefault("tasks", []).append(parent_task)
             registry.setdefault("tasks", []).extend(child_tasks)
             return parent_task
@@ -338,11 +346,15 @@ def _load_continue_roadmap_state(root):
     capability_map = load_capability_map(root)
     task_policy = load_task_policy(root)
     current_task_payload = load_current_task(root)
-    current_task = find_task(registry["tasks"], current_task_payload["current_task_id"])
-    return registry, worktrees, capability_map, task_policy, current_task
+    current_task = None
+    if not is_idle_current_payload(current_task_payload):
+        current_task = find_task(registry["tasks"], current_task_payload["current_task_id"])
+    return registry, worktrees, capability_map, task_policy, current_task_payload, current_task
 
 
-def _close_review_task_if_needed(root, current_task: dict[str, Any], worktrees: dict[str, Any]) -> None:
+def _close_review_task_if_needed(root, current_task: dict[str, Any] | None, worktrees: dict[str, Any]) -> None:
+    if current_task is None:
+        return
     ensure_clean_worktree(root)
     if current_branch(root) != current_task["branch"]:
         _switch_or_create_branch(root, current_task["branch"])
@@ -361,7 +373,7 @@ def _resolve_roadmap_successor(
     capability_map: dict[str, Any],
     task_policy: dict[str, Any],
     frontmatter: dict[str, Any],
-    current_task_id: str,
+    current_task_id: str | None,
 ):
     policy = _load_continuation_policy(frontmatter)
     successor = _resolve_explicit_successor(registry, frontmatter, current_task_id)
@@ -387,15 +399,16 @@ def _activate_successor(
     capability_map: dict[str, Any],
     frontmatter: dict[str, Any],
     body: str,
-    current_task: dict[str, Any],
+    current_task: dict[str, Any] | None,
     successor: dict[str, Any],
 ) -> str:
     tasks_by_id = task_map(registry)
-    _validate_successor_candidate(successor, tasks_by_id, current_task["task_id"])
-    _ensure_unique_successor_landscape(registry["tasks"], current_task["task_id"], successor["task_id"])
+    current_task_id = current_task["task_id"] if current_task is not None else None
+    _validate_successor_candidate(successor, tasks_by_id, current_task_id)
+    _ensure_unique_successor_landscape(registry["tasks"], current_task_id, successor["task_id"])
     branch_action = _switch_or_create_branch(root, successor["branch"])
     touched_task_ids = pause_other_doing_tasks(registry["tasks"], successor["task_id"])
-    if current_task["task_id"] not in touched_task_ids:
+    if current_task_id is not None and current_task_id not in touched_task_ids:
         touched_task_ids.append(current_task["task_id"])
     _activate_task(successor)
     update_task_file(root, successor)
@@ -426,6 +439,8 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
+    if is_idle_current_payload(current_task):
+        raise GovernanceError("no live current task; use continue-roadmap or explicit activation")
     task = find_task(registry["tasks"], current_task["current_task_id"])
 
     if task["status"] == "blocked":
@@ -461,11 +476,11 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
 
 def cmd_continue_roadmap(args: argparse.Namespace) -> int:
     root = find_repo_root()
-    registry, worktrees, capability_map, task_policy, current_task = _load_continue_roadmap_state(root)
+    registry, worktrees, capability_map, task_policy, current_task_payload, current_task = _load_continue_roadmap_state(root)
 
-    if current_task["status"] in {"doing", "paused"}:
+    if current_task_payload["status"] in {"doing", "paused"}:
         return cmd_continue_current(args)
-    if current_task["status"] == "blocked":
+    if current_task_payload["status"] == "blocked":
         reason = current_task.get("blocked_reason") or "blocked without recorded reason"
         raise GovernanceError(f"current task is blocked: {reason}")
 
@@ -477,7 +492,7 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         capability_map,
         task_policy,
         frontmatter,
-        current_task["task_id"],
+        current_task["task_id"] if current_task is not None else None,
     )
     branch_action = _activate_successor(
         root,

@@ -6,6 +6,7 @@ Conflict rule:
 - If this directory conflicts with `docs/product/AUTHORITY_SPEC.md`, the product authority wins.
 - If this directory conflicts with `docs/governance/OPERATOR_MANUAL.md`, the operator manual wins for execution procedure.
 - `CURRENT_TASK.yaml` remains the only live execution entry.
+  - It may hold either a live current-task payload or the formal `idle` zero-state.
 
 ## Live Files
 
@@ -54,6 +55,7 @@ Conflict rule:
 - No public business API is registered yet; the interface catalog stays in an explicit zero-state until one exists.
 - Continuation now has two formal entry points:
   - `continue-current` resumes only the live current task.
-  - `continue-roadmap` closes a review-ready live task and resolves the next valid successor.
+  - `continue-roadmap` closes a review-ready live task or resumes from the formal idle state, then resolves the next valid successor.
+- Closing a live top-level coordination task without an immediately activated successor now moves the repository into a legal idle control-plane state.
 - Roadmap continuation can now generate only `stage1-stage6` business successor rounds after governance continuation is in place.
 - `stage7-stage9` remain deferred manual stages and must not be auto-generated or auto-activated.

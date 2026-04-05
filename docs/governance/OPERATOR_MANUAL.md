@@ -18,6 +18,7 @@ Conflict rule:
 ## Start Rules
 
 - Do not implement without a live `current_task_id`.
+- If `CURRENT_TASK.yaml` is in `idle`, use `continue-roadmap` or explicit activation before implementation.
 - Do not modify files outside the current task's `allowed_dirs`.
 - Do not bypass stage 6 or introduce a second truth surface.
 - Run:
@@ -38,9 +39,11 @@ Conflict rule:
 
 - `python scripts/task_ops.py continue-current`
   - keep or reactivate the live current task
+  - fails from the formal idle state
   - never selects a successor
 - `python scripts/task_ops.py continue-roadmap`
   - closes a review-ready live task when the worktree starts clean
+  - may also resume directly from the formal idle state
   - then resolves the next unique successor from roadmap policy or approved blueprints
 - `python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees`
   - runs the normal repository gates first
@@ -61,6 +64,8 @@ Conflict rule:
 - Record executed tests in the task runlog.
 - Use `python scripts/task_ops.py can-close` before closing.
 - Do not leave the live current task in `done`; either keep it `doing` while work continues or move it to `review` when implementation is complete and no new writes are expected.
+- Closing a live top-level coordination task without immediate successor activation must write the formal idle payload into `CURRENT_TASK.yaml`.
+- The idle closeout state must also set roadmap frontmatter to `current_task_id: null` and `current_phase: idle`, and leave no active coordination worktree entry.
 - Do not auto-switch to a successor when the worktree is dirty.
 - Autonomous child closeout is allowed only after the full review bundle passes.
 

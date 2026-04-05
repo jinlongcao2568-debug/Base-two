@@ -2,7 +2,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .helpers import CHECK_REPO_SCRIPT, TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
+import pytest
+
+from .helpers import (
+    CHECK_REPO_SCRIPT,
+    TASK_OPS_SCRIPT,
+    git_commit_all,
+    init_governance_repo,
+    read_roadmap,
+    read_yaml,
+    run_python,
+    set_idle_control_plane,
+    write_roadmap,
+    write_yaml,
+)
 from .scenario_builders import (
     append_registry_task,
     append_worktree_entry,
@@ -70,6 +83,61 @@ def test_check_repo_fails_when_current_task_is_done(tmp_path: Path) -> None:
     result = run_python(CHECK_REPO_SCRIPT, repo)
     assert result.returncode == 1
     assert "cannot remain on a done task" in result.stdout
+
+
+def test_check_repo_passes_when_current_state_is_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    git_commit_all(repo, "set idle current state")
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected"),
+    [
+        ("branch", "main", "idle current task field must be null: branch"),
+        ("task_file", "docs/governance/tasks/TASK-BASE-001.md", "idle current task field must be null: task_file"),
+        ("allowed_dirs", ["docs/governance/"], "idle current task field must be empty: allowed_dirs"),
+    ],
+)
+def test_check_repo_rejects_invalid_idle_payload_fields(
+    tmp_path: Path,
+    field: str,
+    value: object,
+    expected: str,
+) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    current_task[field] = value
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert expected in result.stdout
+
+
+def test_check_repo_rejects_idle_roadmap_drift(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    roadmap_path = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    frontmatter, body = read_roadmap(roadmap_path)
+    frontmatter["current_task_id"] = "TASK-BASE-001"
+    write_roadmap(roadmap_path, frontmatter, body)
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "roadmap current_task_id mismatch for idle current state" in result.stdout
+
+
+def test_check_repo_rejects_active_coordination_worktree_during_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    worktrees["entries"][0]["status"] = "active"
+    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+    assert result.returncode == 1
+    assert "idle current state cannot keep active coordination worktrees" in result.stdout
 
 
 def test_check_repo_fails_when_roadmap_current_task_drifts(tmp_path: Path) -> None:
