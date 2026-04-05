@@ -76,6 +76,16 @@ capabilities:
     tests:
       - pytest tests/governance -q
       - pytest tests/automation -q
+  - capability_id: runtime_prompt_profiles
+    status: implemented
+    source_of_truth:
+      - docs/governance/PROMPT_MODULE_CATALOG.yaml
+      - docs/governance/prompt_modules/
+      - docs/governance/runtime_prompts/
+    scripts:
+      - scripts/render_runtime_prompts.py
+    tests:
+      - pytest tests/governance -q
   - capability_id: stage1_to_stage6_business_automation
     status: implemented
     source_of_truth:

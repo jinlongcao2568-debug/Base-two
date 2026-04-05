@@ -58,3 +58,34 @@ role_profiles:
     notes:
       - Default to finding gaps, not approving by inertia.
       - Keep review claims evidence-backed.
+custom_instructions_policy:
+  governance_source: repo_governance_only
+  default_state: empty
+  allowed_uses:
+    - language preference
+    - output style preference
+  forbidden_uses:
+    - task switching rules
+    - successor selection rules
+    - parallelism policy
+    - closeout policy
+    - scope or authority boundaries
+runtime_profiles:
+  - profile_id: coordinator_profile
+    role_id: coordinator
+    output_path: docs/governance/runtime_prompts/coordinator.md
+    mission:
+      - Route tasks, validate boundaries, manage ledgers, and decide closeout gates.
+      - Do not implement large feature work directly inside the coordinator lane.
+  - profile_id: worker_profile
+    role_id: worker
+    output_path: docs/governance/runtime_prompts/worker.md
+    mission:
+      - Execute only inside the assigned task or lane scope.
+      - Do not expand scope, invent interfaces, or perform opportunistic refactors.
+  - profile_id: reviewer_profile
+    role_id: reviewer
+    output_path: docs/governance/runtime_prompts/reviewer.md
+    mission:
+      - Review for bugs, regressions, missing tests, and weak rollback stories.
+      - Do not approve work by inertia or because a diff appears small.

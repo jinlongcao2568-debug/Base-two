@@ -27,7 +27,8 @@
 - `paused`: reactivate the live current task and restore its branch/worktree alignment.
 - `blocked`: stop immediately and report the blocker.
 - `idle`: stop immediately and require `continue-roadmap` or explicit activation.
-- `review` or `done`: do not select a successor; instruct the operator or automation runner to use `continue-roadmap`.
+- `review`: if the live task satisfies formal closeout rules, close it to the formal idle state and stop without selecting a successor.
+- `done`: never remain as the live current state; require explicit repair or roadmap continuation.
 
 ### `continue-roadmap`
 
@@ -70,6 +71,14 @@
   - module tests from `TEST_MATRIX.yaml`
   - authority-critical integration tests when the child touches the live stage chain
 - Review bundle failure must block only the failing lane unless every remaining lane is also closed or blocked.
+
+## Prompt Runtime
+
+- Prompt source of truth remains `docs/governance/PROMPT_MODULE_CATALOG.yaml` and `docs/governance/prompt_modules/`.
+- Generated runtime prompts live under `docs/governance/runtime_prompts/`.
+- Runtime prompts are derived artifacts and must be regenerated from the catalog instead of edited by hand.
+- App-level custom instructions are not a governance execution source.
+- Keep app-level custom instructions empty by default; if they are present, restrict them to language and output-style preferences.
 
 ## Automation Runner
 

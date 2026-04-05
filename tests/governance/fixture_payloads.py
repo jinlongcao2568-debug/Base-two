@@ -59,6 +59,10 @@ def _capability(
 
 
 def _governance_capability_entries() -> list[dict[str, Any]]:
+    return [*_governance_control_capabilities(), *_governance_prompt_capabilities()]
+
+
+def _governance_control_capabilities() -> list[dict[str, Any]]:
     return [
         _capability(
             "governance_control_plane",
@@ -103,6 +107,11 @@ def _governance_capability_entries() -> list[dict[str, Any]]:
             ],
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
+    ]
+
+
+def _governance_prompt_capabilities() -> list[dict[str, Any]]:
+    return [
         _capability(
             "dynamic_parallel_execution_control",
             "not_implemented",
@@ -132,6 +141,17 @@ def _governance_capability_entries() -> list[dict[str, Any]]:
                 "scripts/automation_runner.py",
             ],
             ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
+        _capability(
+            "runtime_prompt_profiles",
+            "not_implemented",
+            [
+                "docs/governance/PROMPT_MODULE_CATALOG.yaml",
+                "docs/governance/prompt_modules/",
+                "docs/governance/runtime_prompts/",
+            ],
+            ["scripts/render_runtime_prompts.py"],
+            ["pytest tests/governance -q"],
         ),
     ]
 
@@ -447,6 +467,7 @@ def base_allowed_dirs() -> list[str]:
         "docs/governance/AUTOMATION_INTENTS.yaml",
         "docs/governance/PROMPT_MODULE_CATALOG.yaml",
         "docs/governance/prompt_modules/",
+        "docs/governance/runtime_prompts/",
         "docs/governance/TASK_REGISTRY.yaml",
         "docs/governance/WORKTREE_REGISTRY.yaml",
         "docs/governance/MODULE_MAP.yaml",

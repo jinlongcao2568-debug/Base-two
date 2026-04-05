@@ -47,6 +47,7 @@ Conflict rule:
   - delegates only when preflight returns `ready`
 - `python scripts/task_ops.py continue-current`
   - keep or reactivate the live current task
+  - may also close a review-ready live current task back to the formal idle state
   - fails from the formal idle state
   - never selects a successor
 - `python scripts/task_ops.py continue-roadmap`
@@ -71,8 +72,11 @@ Conflict rule:
 ## Prompt Governance
 
 - The prompt source of truth is `docs/governance/PROMPT_MODULE_CATALOG.yaml` and `docs/governance/prompt_modules/`.
+- Generated runtime prompt outputs live under `docs/governance/runtime_prompts/`.
 - Root-level scratch prompt notes are not live prompt inputs.
 - Load only the role modules required by the active lane instead of pasting a full memo into every prompt.
+- App-level custom instructions are not a governance execution source.
+- Keep app-level custom instructions empty by default; if they exist, they may only carry language or output-style preferences.
 
 ## Closeout Rules
 

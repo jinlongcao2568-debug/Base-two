@@ -41,6 +41,7 @@ AUTOMATION_INTENT_SCRIPT = REPO_ROOT / "scripts" / "automation_intent.py"
 CHECK_REPO_SCRIPT = REPO_ROOT / "scripts" / "check_repo.py"
 CHECK_HYGIENE_SCRIPT = REPO_ROOT / "scripts" / "check_hygiene.py"
 AUTOMATION_RUNNER_SCRIPT = REPO_ROOT / "scripts" / "automation_runner.py"
+RENDER_RUNTIME_PROMPTS_SCRIPT = REPO_ROOT / "scripts" / "render_runtime_prompts.py"
 
 
 def write_yaml(path: Path, data: Any) -> None:
@@ -167,21 +168,167 @@ def _write_automation_intents(path: Path) -> None:
 
 
 def _write_prompt_governance_files(root: Path) -> None:
-    (root / "docs/governance/PROMPT_MODULE_CATALOG.yaml").write_text(
-        (
-            "version: '1.0'\n"
-            "source_root: docs/governance/prompt_modules/\n"
-            "modules:\n"
-            "  - module_id: boundary_first\n"
-            "    path: docs/governance/prompt_modules/boundary_first.md\n"
+    _write_prompt_catalog(root)
+    _write_prompt_module_docs(root)
+
+
+def _write_prompt_catalog(root: Path) -> None:
+    (root / "docs/governance/PROMPT_MODULE_CATALOG.yaml").write_text(_prompt_catalog_text(), encoding="utf-8")
+
+
+def _prompt_catalog_text() -> str:
+    return "".join(
+        [
+            _prompt_catalog_header(),
+            _prompt_catalog_modules_section(),
+            _prompt_catalog_role_profiles_section(),
+            _prompt_catalog_policy_section(),
+            _prompt_catalog_runtime_profiles_section(),
+        ]
+    )
+
+
+def _prompt_catalog_header() -> str:
+    return (
+        "version: '1.0'\n"
+        "authority_source: docs/governance/README.md\n"
+        "source_root: docs/governance/prompt_modules/\n"
+    )
+
+
+def _prompt_catalog_modules_section() -> str:
+    return (
+        "modules:\n"
+        "  - module_id: boundary_first\n"
+        "    path: docs/governance/prompt_modules/boundary_first.md\n"
+        "    purpose: Define forbidden actions and scope boundaries before execution steps.\n"
+        "    roles:\n"
+        "      - coordinator\n"
+        "      - worker\n"
+        "      - reviewer\n"
+        "  - module_id: reporting_discipline\n"
+        "    path: docs/governance/prompt_modules/reporting_discipline.md\n"
+        "    purpose: Keep status reporting factual, bounded, and stop-aware.\n"
+        "    roles:\n"
+        "      - coordinator\n"
+        "      - worker\n"
+        "      - reviewer\n"
+        "  - module_id: tool_boundaries\n"
+        "    path: docs/governance/prompt_modules/tool_boundaries.md\n"
+        "    purpose: Bind tools to explicit scenarios and preserve auditability.\n"
+        "    roles:\n"
+        "      - worker\n"
+        "      - reviewer\n"
+        "  - module_id: role_overrides\n"
+        "    path: docs/governance/prompt_modules/role_overrides.md\n"
+        "    purpose: Add role-specific prompt overrides for coordinator, worker, and reviewer lanes.\n"
+        "    roles:\n"
+        "      - coordinator\n"
+        "      - worker\n"
+        "      - reviewer\n"
+    )
+
+
+def _prompt_catalog_role_profiles_section() -> str:
+    return (
+        "role_profiles:\n"
+        "  - role_id: coordinator\n"
+        "    modules:\n"
+        "      - boundary_first\n"
+        "      - reporting_discipline\n"
+        "      - role_overrides\n"
+        "    notes:\n"
+        "      - Resolve scope before execution.\n"
+        "      - Report blockers early.\n"
+        "      - Do not auto-expand into adjacent work.\n"
+        "  - role_id: worker\n"
+        "    modules:\n"
+        "      - boundary_first\n"
+        "      - tool_boundaries\n"
+        "      - role_overrides\n"
+        "    notes:\n"
+        "      - Stay inside allowed paths.\n"
+        "      - Read before editing.\n"
+        "      - Do not infer missing requirements.\n"
+        "  - role_id: reviewer\n"
+        "    modules:\n"
+        "      - boundary_first\n"
+        "      - reporting_discipline\n"
+        "      - tool_boundaries\n"
+        "      - role_overrides\n"
+        "    notes:\n"
+        "      - Default to finding gaps, not approving by inertia.\n"
+        "      - Keep review claims evidence-backed.\n"
+    )
+
+
+def _prompt_catalog_policy_section() -> str:
+    return (
+        "custom_instructions_policy:\n"
+        "  governance_source: repo_governance_only\n"
+        "  default_state: empty\n"
+        "  allowed_uses:\n"
+        "    - language preference\n"
+        "    - output style preference\n"
+        "  forbidden_uses:\n"
+        "    - task switching rules\n"
+        "    - successor selection rules\n"
+        "    - parallelism policy\n"
+        "    - closeout policy\n"
+        "    - scope or authority boundaries\n"
+    )
+
+
+def _prompt_catalog_runtime_profiles_section() -> str:
+    return (
+        "runtime_profiles:\n"
+        "  - profile_id: coordinator_profile\n"
+        "    role_id: coordinator\n"
+        "    output_path: docs/governance/runtime_prompts/coordinator.md\n"
+        "    mission:\n"
+        "      - Route tasks, validate boundaries, manage ledgers, and decide closeout gates.\n"
+        "      - Do not implement large feature work directly inside the coordinator lane.\n"
+        "  - profile_id: worker_profile\n"
+        "    role_id: worker\n"
+        "    output_path: docs/governance/runtime_prompts/worker.md\n"
+        "    mission:\n"
+        "      - Execute only inside the assigned task or lane scope.\n"
+        "      - Do not expand scope, invent interfaces, or perform opportunistic refactors.\n"
+        "  - profile_id: reviewer_profile\n"
+        "    role_id: reviewer\n"
+        "    output_path: docs/governance/runtime_prompts/reviewer.md\n"
+        "    mission:\n"
+        "      - Review for bugs, regressions, missing tests, and weak rollback stories.\n"
+        "      - Do not approve work by inertia or because a diff appears small.\n"
+    )
+
+
+def _write_prompt_module_docs(root: Path) -> None:
+    prompt_root = root / "docs/governance/prompt_modules"
+    prompt_root.mkdir(parents=True, exist_ok=True)
+    for relative_path, content in _prompt_module_files().items():
+        (prompt_root / relative_path).write_text(content, encoding="utf-8")
+
+
+def _prompt_module_files() -> dict[str, str]:
+    return {
+        "README.md": (
+            "# Prompt Modules\n\n"
+            "This directory is the governed prompt source of truth for AX9 automation roles.\n\n"
+            "Root-level scratch notes are not a live prompt source.\n"
         ),
-        encoding="utf-8",
-    )
-    (root / "docs/governance/prompt_modules").mkdir(parents=True, exist_ok=True)
-    (root / "docs/governance/prompt_modules/README.md").write_text(
-        "# Prompt Modules\n\nRoot-level scratch notes are not a live prompt source.\n",
-        encoding="utf-8",
-    )
+        "boundary_first.md": "# Boundary First\n\n- State forbidden actions before desired actions.\n",
+        "reporting_discipline.md": "# Reporting Discipline\n\n- Report facts before interpretation.\n",
+        "tool_boundaries.md": (
+            "# Tool Boundaries\n\n"
+            "- Match tools to scenarios instead of using every available tool by default.\n"
+        ),
+        "role_overrides.md": (
+            "# Role Overrides\n\n"
+            "## Coordinator\n\n"
+            "- Resolve ownership, scope, and next gate before assigning work.\n"
+        ),
+    }
 
 
 def git_commit_all(repo: Path, message: str = "update") -> None:

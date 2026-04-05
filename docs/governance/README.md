@@ -24,6 +24,8 @@ Conflict rule:
   - repository boundary map
 - `PROMPT_MODULE_CATALOG.yaml`
   - governed prompt module catalog and role assembly in `docs/governance/PROMPT_MODULE_CATALOG.yaml`
+- `runtime_prompts/`
+  - generated runtime prompts for coordinator, worker, and reviewer roles
 - `MODULE_MAP.yaml`
   - machine-readable module boundaries and reserved paths
 - `TEST_MATRIX.yaml`
@@ -60,7 +62,7 @@ Conflict rule:
 - The minimum authority-critical chain `stage3 -> stage4 -> stage6` is covered by fixtures and integration tests.
 - No public business API is registered yet; the interface catalog stays in an explicit zero-state until one exists.
 - Continuation now has two formal entry points:
-  - `continue-current` resumes only the live current task.
+  - `continue-current` keeps or reactivates the live current task and may close a review-ready live task back to formal idle.
   - `continue-roadmap` closes a review-ready live task or resumes from the formal idle state, then resolves the next valid successor.
 - `python scripts/automation_intent.py preflight --utterance "<text>"` is the governed free-form continuation entrypoint.
   - It may recognize broader natural-language continue requests.
@@ -70,3 +72,5 @@ Conflict rule:
 - Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
 - `stage7-stage9` remain downstream-only stages and now require both dependency satisfaction and `stage7_to_stage9_business_automation=implemented` before automation may generate them.
 - Prompt source of truth now lives under `docs/governance/prompt_modules/`; root-level scratch notes are not live prompt inputs.
+- Generated runtime prompts now live under `docs/governance/runtime_prompts/`; they are derived artifacts, not a second prompt authority.
+- App-level custom instructions are not part of the governance control plane and should stay empty unless they are only carrying language or output-style preferences.

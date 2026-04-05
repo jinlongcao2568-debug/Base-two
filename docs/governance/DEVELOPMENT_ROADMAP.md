@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-runtime-prompt-profiles-v1
+current_task_id: TASK-GOV-009
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-009`: `自动化开发 runtime prompt 体系` is the live coordination task for `governance-runtime-prompt-profiles-v1`.
 ## Recently Closed
 
 - `TASK-GOV-005`: closed automation-intent risk hardening and cleaned the live governance ledger before the dynamic planner phase.
