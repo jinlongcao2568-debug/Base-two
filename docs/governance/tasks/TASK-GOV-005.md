@@ -76,5 +76,5 @@
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-005-automation-intent-hardening`
-- `updated_at`: `2026-04-05T11:26:30+08:00`
+- `updated_at`: `2026-04-05T11:29:09+08:00`
 <!-- generated:task-meta:end -->
