@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-016`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-local-multi-agent-dispatch-v1`
 - `branch`: `feat/TASK-GOV-016-local-multi-agent-dispatch`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -17,7 +17,7 @@
 - `2026-04-05T21:10:35+08:00`: `TASK-GOV-015` was checkpointed and `continue-roadmap` activated `TASK-GOV-016`
 - `2026-04-05T21:31:00+08:00`: added execution worktree runtime fields, governed local lane launcher, `worker-heartbeat`, and runner dispatch/timeout flow
 - `2026-04-05T21:31:00+08:00`: parent aggregation now keeps the parent `doing` while blocked and open child lanes coexist
-
+- `2026-04-06T07:32:41+08:00`: worker-finish `local multi-lane dispatch v1 implemented and validated`
 ## Test Log
 
 - `python scripts/check_repo.py`
@@ -31,20 +31,20 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-016`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-local-multi-agent-dispatch-v1`
 - `branch`: `feat/TASK-GOV-016-local-multi-agent-dispatch`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

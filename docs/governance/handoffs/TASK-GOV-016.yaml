@@ -1,10 +1,10 @@
 task_id: TASK-GOV-016
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+summary_status: done
+last_handoff_at: '2026-04-06T07:32:49+08:00'
+completed_items:
+- local multi-lane dispatch v1 implemented and validated
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
@@ -22,3 +22,5 @@ candidate_test_paths:
 - tests/automation/
 resume_notes:
 - Formal handoff has not been recorded yet.
+- 'Worker finish summary: local multi-lane dispatch v1 implemented and validated'
+- Task closed.
