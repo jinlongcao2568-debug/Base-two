@@ -36,6 +36,7 @@ from task_closeout import assess_live_closeout
 from task_rendering import (
     find_task,
     pause_other_doing_tasks,
+    persist_idle_state,
     update_runlog_file,
     update_task_file,
     upsert_coordination_entry,
@@ -441,18 +442,46 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
-    current_task = load_current_task(root)
-    if is_idle_current_payload(current_task):
+    current_payload = load_current_task(root)
+    if is_idle_current_payload(current_payload):
         raise GovernanceError("no live current task; use continue-roadmap or explicit activation")
-    task = find_task(registry["tasks"], current_task["current_task_id"])
+    task = find_task(registry["tasks"], current_payload["current_task_id"])
 
     if task["status"] == "blocked":
         reason = task.get("blocked_reason") or "blocked without recorded reason"
         raise GovernanceError(f"current task is blocked: {reason}")
-    if task["status"] in {"review", "done"}:
-        raise GovernanceError("current task is in review/done state; use continue-roadmap")
+    if task["status"] == "done":
+        raise GovernanceError("current task is already done; use continue-roadmap or explicit activation")
 
     branch_action = _switch_or_create_branch(root, task["branch"])
+    if task["status"] == "review":
+        assessment = assess_live_closeout(
+            root,
+            registry=registry,
+            worktrees=worktrees,
+            current_payload=current_payload,
+            current_task=task,
+        )
+        if assessment["status"] != "ready":
+            details = [*assessment.get("blockers", []), *assessment.get("diagnostics", [])]
+            if not details:
+                details = [assessment.get("summary", "current review task cannot auto-close")]
+            raise GovernanceError("; ".join(details))
+        frontmatter, body = _read_roadmap_state(root)
+        _mark_task_done(task, worktrees)
+        registry["updated_at"] = iso_now()
+        worktrees["updated_at"] = iso_now()
+        persist_idle_state(
+            root,
+            registry,
+            worktrees,
+            frontmatter,
+            body,
+            [task["task_id"]],
+            "continue-current closed the review-ready task and returned the control plane to idle.",
+        )
+        print(f"[OK] continue-current closed {task['task_id']} to idle branch={branch_action}")
+        return 0
     if task["status"] == "doing":
         print(f"[OK] continue-current {task['task_id']} branch={branch_action}")
         return 0

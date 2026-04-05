@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-05T13:09:05+08:00'
+updated_at: '2026-04-05T13:23:31+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -107,6 +107,16 @@ entries:
   branch: feat/TASK-GOV-007-dynamic-lane-planner
   path: D:/Base One/Base-two/AX9
   status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-008
+  work_mode: coordination
+  parent_task_id: null
+  branch: feat/TASK-GOV-008-parallel-closeout-pipeline
+  path: D:/Base One/Base-two/AX9
+  status: active
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null

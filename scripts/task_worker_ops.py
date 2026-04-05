@@ -39,6 +39,8 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     task["worker_state"] = "running"
     task["blocked_reason"] = None
     task["last_reported_at"] = iso_now()
+    if task["task_kind"] == "execution":
+        task["review_bundle_status"] = "not_applicable"
     if task["activated_at"] is None:
         task["activated_at"] = iso_now()
     entry = worktree_map(worktrees).get(task["task_id"])
@@ -106,6 +108,8 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     task["worker_state"] = "review_pending"
     task["blocked_reason"] = None
     task["last_reported_at"] = iso_now()
+    if task["task_kind"] == "execution":
+        task["review_bundle_status"] = "not_applicable"
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     update_current_task_if_active(root, task, "worker 宸插畬鎴愬€欓€変氦浠橈紱绛夊緟鑷姩鏀跺彛鎴栬瘎瀹°€?")
@@ -129,6 +133,7 @@ def _mark_review_bundle_failure(root: Path, task: dict, reason: str) -> None:
     task["status"] = "blocked"
     task["worker_state"] = "blocked"
     task["blocked_reason"] = reason
+    task["review_bundle_status"] = "failed"
     task["last_reported_at"] = iso_now()
     append_runlog_bullets(root, task, "Review Bundle", [f"`{iso_now()}`: blocked `{reason}`"])
 
@@ -170,6 +175,7 @@ def _mark_child_done(task: dict, worktrees: dict) -> None:
     task["status"] = "done"
     task["worker_state"] = "completed"
     task["blocked_reason"] = None
+    task["review_bundle_status"] = "passed"
     task["closed_at"] = iso_now()
     task["last_reported_at"] = iso_now()
     entry = worktree_map(worktrees)[task["task_id"]]
@@ -177,10 +183,17 @@ def _mark_child_done(task: dict, worktrees: dict) -> None:
     entry["cleanup_state"] = "pending"
 
 
+def _mark_review_bundle_pending(root: Path, task: dict) -> None:
+    task["review_bundle_status"] = "pending"
+    task["last_reported_at"] = iso_now()
+    append_runlog_bullets(root, task, "Review Bundle", [f"`{iso_now()}`: pending"])
+
+
 def _close_ready_child(root: Path, worktrees: dict, task: dict) -> str | None:
     worktree_path, error = _resolve_execution_worktree(worktrees, task)
     if error:
         return error
+    _mark_review_bundle_pending(root, task)
     failure = _run_review_bundle(root, task, worktree_path)
     if failure:
         return failure
@@ -189,7 +202,11 @@ def _close_ready_child(root: Path, worktrees: dict, task: dict) -> str | None:
     return None
 
 
-def _promote_parent_after_children(root: Path, registry: dict, parent_task_id: str) -> tuple[str | None, list[str]]:
+def _promote_parent_after_children(
+    root: Path,
+    registry: dict,
+    parent_task_id: str,
+) -> tuple[str | None, list[str], list[str]]:
     parent = find_task(registry["tasks"], parent_task_id)
     children = [
         task
@@ -197,7 +214,7 @@ def _promote_parent_after_children(root: Path, registry: dict, parent_task_id: s
         if task.get("parent_task_id") == parent_task_id and task["task_kind"] == "execution"
     ]
     if not children:
-        return None, []
+        return None, [], []
     blocked = [task["task_id"] for task in children if task["status"] == "blocked"]
     open_children = [task["task_id"] for task in children if task["status"] not in {"done", "blocked"}]
     if all(task["status"] == "done" for task in children):
@@ -207,16 +224,24 @@ def _promote_parent_after_children(root: Path, registry: dict, parent_task_id: s
         parent["last_reported_at"] = iso_now()
         append_runlog_bullets(root, parent, "Closeout Conclusion", [f"`{iso_now()}`: all child review bundles passed"])
         update_current_task_if_active(root, parent, "All child review bundles passed; coordination task is review-ready.")
-        return "review", []
-    if blocked and not open_children:
+        return "review", [], []
+    if blocked:
         parent["status"] = "blocked"
         parent["worker_state"] = "blocked"
         parent["blocked_reason"] = f"child_review_bundle_failed: {', '.join(blocked)}"
         parent["last_reported_at"] = iso_now()
         append_runlog_bullets(root, parent, "Risk and Blockers", [f"`{iso_now()}`: child review bundle blocked `{', '.join(blocked)}`"])
         update_current_task_if_active(root, parent, "Child review bundle failed; coordination task is blocked pending repair.")
-        return "blocked", blocked
-    return None, blocked
+        return "blocked", blocked, open_children
+    if open_children:
+        parent["status"] = "doing"
+        parent["worker_state"] = "running"
+        parent["blocked_reason"] = None
+        parent["last_reported_at"] = iso_now()
+        append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: waiting on child review bundles `{', '.join(open_children)}`"])
+        update_current_task_if_active(root, parent, "Child review bundles are still running; coordination task remains active.")
+        return "doing", [], open_children
+    return None, [], []
 
 
 def cmd_auto_close_children(args: argparse.Namespace) -> int:
@@ -225,6 +250,7 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
     worktrees = load_worktree_registry(root)
     closed: list[str] = []
     blocked: list[str] = []
+    open_children: list[str] = []
     for task in registry.get("tasks", []):
         if task.get("parent_task_id") != args.parent_task_id or task["task_kind"] != "execution":
             continue
@@ -236,7 +262,7 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
             blocked.append(f"{task['task_id']}: {failure.split(' :: ', 1)[0]}")
             continue
         closed.append(task["task_id"])
-    parent_state, parent_blocked = _promote_parent_after_children(root, registry, args.parent_task_id)
+    parent_state, parent_blocked, open_children = _promote_parent_after_children(root, registry, args.parent_task_id)
     registry["updated_at"] = iso_now()
     worktrees["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
@@ -251,6 +277,8 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
     print(f"[OK] auto-closed children: {', '.join(closed)}" if closed else "[OK] no child tasks closed")
     if parent_state == "review":
         print(f"[OK] parent review-ready: {args.parent_task_id}")
+    if parent_state == "doing":
+        print(f"[OK] parent still doing: {args.parent_task_id} waiting on {', '.join(open_children)}")
     for item in blocked:
         print(f"[BLOCKED] {item}")
     if parent_state == "blocked":

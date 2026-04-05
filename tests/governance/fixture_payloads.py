@@ -118,6 +118,21 @@ def _governance_capability_entries() -> list[dict[str, Any]]:
             ],
             ["pytest tests/governance -q", "pytest tests/automation -q"],
         ),
+        _capability(
+            "parallel_closeout_pipeline_v1",
+            "not_implemented",
+            [
+                "docs/governance/TASK_REGISTRY.yaml",
+                "docs/governance/WORKTREE_REGISTRY.yaml",
+                "docs/governance/CURRENT_TASK.yaml",
+            ],
+            [
+                "scripts/task_worker_ops.py",
+                "scripts/task_continuation_ops.py",
+                "scripts/automation_runner.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
     ]
 
 

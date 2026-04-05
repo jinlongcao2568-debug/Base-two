@@ -414,43 +414,6 @@ def test_worker_state_transitions(tmp_path: Path) -> None:
     assert task["worker_state"] == "review_pending"
 
 
-def test_auto_close_children_closes_review_tasks(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    create_parent = run_python(
-        TASK_OPS_SCRIPT,
-        repo,
-        "new",
-        "TASK-PARENT-001",
-        "--title",
-        "parent task",
-        "--stage",
-        "parallel-stage",
-        "--branch",
-        "main",
-        "--size-class",
-        "heavy",
-        "--planned-write-paths",
-        "src/base/",
-        "tests/base/",
-    )
-    assert create_parent.returncode == 0
-    create_review_ready_child(
-        repo,
-        "TASK-EXEC-001",
-        write_path="src/exec1/",
-        title="execution task",
-        parent_task_id="TASK-PARENT-001",
-        summary="done",
-        tmp_path=tmp_path,
-        with_worktree=True,
-    )
-    close = run_python(TASK_OPS_SCRIPT, repo, "auto-close-children", "TASK-PARENT-001")
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-001")
-    assert close.returncode == 0
-    assert child["status"] == "done"
-
-
 def test_split_check_detects_task_reserved_path_conflict(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     first = run_python(

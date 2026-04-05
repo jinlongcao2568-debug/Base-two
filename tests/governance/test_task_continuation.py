@@ -62,6 +62,76 @@ def _mark_current_review_ready(repo: Path) -> None:
     git_commit_all(repo, "prepare review successor")
 
 
+def _prepare_review_ready_parallel_parent(repo: Path, tmp_path: Path) -> None:
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    for task in (current_task, registry["tasks"][0]):
+        task["size_class"] = "heavy"
+        task["topology"] = "parallel_parent"
+        task["automation_mode"] = "autonomous"
+        task["lane_count"] = 1
+        task["parallelism_plan_id"] = "plan-TASK-BASE-001-1"
+        task["review_bundle_status"] = "not_applicable"
+    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+    sync = run_python(TASK_OPS_SCRIPT, repo, "sync", "--write")
+    assert sync.returncode == 0, sync.stdout + sync.stderr
+    parent_report = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-report",
+        "TASK-BASE-001",
+        "--note",
+        "parent coordination ready for closeout",
+        "--tests",
+        "pytest tests/base -q",
+    )
+    assert parent_report.returncode == 0, parent_report.stdout + parent_report.stderr
+    create_child = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-001",
+        "--title",
+        "execution lane",
+        "--stage",
+        "parallel-stage",
+        "--branch",
+        "feat/TASK-EXEC-001",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--parent-task-id",
+        "TASK-BASE-001",
+        "--size-class",
+        "standard",
+        "--required-tests",
+        "pytest tests/base -q",
+        "--planned-write-paths",
+        "src/exec1/",
+    )
+    assert create_child.returncode == 0, create_child.stdout + create_child.stderr
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-001"
+    created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-001", "--path", str(destination))
+    assert created.returncode == 0, created.stdout + created.stderr
+    finished = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-EXEC-001",
+        "--summary",
+        "execution ready",
+        "--tests",
+        "pytest tests/base -q",
+    )
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    closed = run_python(TASK_OPS_SCRIPT, repo, "auto-close-children", "TASK-BASE-001")
+    assert closed.returncode == 0, closed.stdout + closed.stderr
+    git_commit_all(repo, "prepare parallel parent closeout")
+
+
 def _enable_business_autopilot(repo: Path, *, include_downstream: bool = False) -> None:
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
     for capability in capability_map["capabilities"]:
@@ -119,6 +189,21 @@ def test_continue_current_rejects_idle_state(tmp_path: Path) -> None:
     assert "no live current task" in result.stdout
 
 
+def test_continue_current_closes_review_ready_parallel_parent_to_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _prepare_review_ready_parallel_parent(repo, tmp_path)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-current")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    parent = next(task for task in registry["tasks"] if task["task_id"] == "TASK-BASE-001")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["status"] == "idle"
+    assert current_task["current_task_id"] is None
+    assert parent["status"] == "done"
+
+
 def test_continue_roadmap_closes_review_task_and_activates_explicit_successor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)
@@ -138,6 +223,25 @@ def test_continue_roadmap_closes_review_task_and_activates_explicit_successor(tm
     assert tasks["TASK-BASE-001"]["status"] == "done"
     assert tasks["TASK-NEXT-001"]["status"] == "doing"
     assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
+def test_continue_roadmap_closes_review_ready_parallel_parent_and_activates_successor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _prepare_review_ready_parallel_parent(repo, tmp_path)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    tasks = {task["task_id"]: task for task in registry["tasks"]}
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert tasks["TASK-BASE-001"]["status"] == "done"
+    assert tasks["TASK-NEXT-001"]["status"] == "doing"
 
 
 def test_continue_roadmap_activates_explicit_successor_from_idle(tmp_path: Path) -> None:

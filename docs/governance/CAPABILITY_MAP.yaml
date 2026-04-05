@@ -63,6 +63,19 @@ capabilities:
     tests:
       - pytest tests/governance -q
       - pytest tests/automation -q
+  - capability_id: parallel_closeout_pipeline_v1
+    status: implemented
+    source_of_truth:
+      - docs/governance/TASK_REGISTRY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+      - docs/governance/CURRENT_TASK.yaml
+    scripts:
+      - scripts/task_worker_ops.py
+      - scripts/task_continuation_ops.py
+      - scripts/automation_runner.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
   - capability_id: stage1_to_stage6_business_automation
     status: implemented
     source_of_truth:
