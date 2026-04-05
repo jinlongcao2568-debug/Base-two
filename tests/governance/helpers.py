@@ -177,6 +177,20 @@ def _write_prompt_governance_files(root: Path) -> None:
     _write_prompt_module_docs(root)
 
 
+def _write_coordination_planner_policy(path: Path) -> None:
+    path.write_text(
+        (
+            "version: '1.0'\n"
+            "updated_at: '2026-04-05T00:00:00+08:00'\n"
+            "authority_source: docs/governance/README.md\n"
+            "candidate_generation_mode: candidate_then_activate\n"
+            "candidate_output_dir: .codex/local/coordination_candidates/\n"
+            "allow_generated_blueprints_when_no_candidates: true\n"
+        ),
+        encoding="utf-8",
+    )
+
+
 def _write_prompt_catalog(root: Path) -> None:
     (root / "docs/governance/PROMPT_MODULE_CATALOG.yaml").write_text(_prompt_catalog_text(), encoding="utf-8")
 
@@ -529,6 +543,7 @@ def write_governance_files(repo: Path) -> None:
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
     _write_automation_intents(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
     _write_handoff_policy(repo / "docs/governance/HANDOFF_POLICY.yaml")
+    _write_coordination_planner_policy(repo / "docs/governance/COORDINATION_PLANNER_POLICY.yaml")
     _write_prompt_governance_files(repo)
     write_yaml(repo / "docs/governance/MODULE_MAP.yaml", module_map_payload())
     write_yaml(repo / "docs/governance/TEST_MATRIX.yaml", test_matrix_payload())

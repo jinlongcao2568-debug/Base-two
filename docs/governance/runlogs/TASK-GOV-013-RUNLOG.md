@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-013`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-doc-driven-coordination-planner-v1`
 - `branch`: `feat/TASK-GOV-013-coordination-planner`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -14,28 +14,34 @@
 ## Execution Log
 
 - `2026-04-05T15:50:45+08:00`: task package created
-
+- `2026-04-05T16:09:47+08:00`: worker-finish `Implemented the document-driven coordination planner, candidate promotion flow, and planner-aware governance policy updates.`
 ## Test Log
 
 - to-be-filled
-
+- `python scripts/check_repo.py`
+- `python scripts/check_hygiene.py`
+- `python scripts/check_authority_alignment.py`
+- `python -m pytest tests/governance/test_coordination_planner.py -q`
+- `python -m pytest tests/governance/test_task_ops.py -q`
+- `python -m pytest tests/governance -q`
+- `python -m pytest tests/automation -q`
+- `python scripts/task_ops.py plan-coordination`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-013`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-doc-driven-coordination-planner-v1`
 - `branch`: `feat/TASK-GOV-013-coordination-planner`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

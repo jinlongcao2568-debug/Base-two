@@ -61,6 +61,7 @@ supported_intents:
       - --continue-roadmap
       - --prepare-worktrees
     description: Continue by roadmap, allowing review closeout and successor activation when governance gates pass.
+    planner_preflight_hint: Use plan-coordination when no unique successor is available or when the next coordination package must be generated first.
     examples:
       - 按路线图继续推进
       - 继续按照路线图开发

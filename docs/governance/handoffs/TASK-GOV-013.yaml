@@ -1,24 +1,35 @@
 task_id: TASK-GOV-013
-summary_status: queued
-last_handoff_at: null
-completed_items: []
+summary_status: review
+last_handoff_at: '2026-04-05T16:09:47+08:00'
+completed_items:
+- Added governed coordination planner policy, planner commands, and candidate output
+  contract.
+- Implemented candidate promotion with optional activation and no silent live-state
+  mutation.
+- Covered planner ranking, serial-vs-parallel classification, promotion, and activation
+  in governance tests.
 remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+- Validate the review-ready evidence and close the task if eligible.
+next_step: Review the recorded evidence and close TASK-GOV-013 if the live ledgers
+  remain aligned.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
 - python scripts/check_authority_alignment.py
-- pytest tests/governance -q
-- pytest tests/automation -q
-current_risks: []
+current_risks:
+- Candidate generation remains intentionally operator-promoted; planner does not auto-activate
+  live work.
 candidate_write_paths:
 - docs/governance/
 - scripts/
 - tests/governance/
-- tests/automation/
 candidate_test_paths:
 - tests/governance/
 - tests/automation/
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.
+- Planner smoke check on the live repo generated no candidates and did not mutate
+  tracked ledgers.
+- 'Worker finish summary: Implemented the document-driven coordination planner, candidate
+  promotion flow, and planner-aware governance policy updates.'

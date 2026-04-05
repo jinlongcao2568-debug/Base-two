@@ -5,6 +5,7 @@ import argparse
 from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError
 from task_continuation_ops import cmd_continue_current, cmd_continue_roadmap
 from task_coordination_ops import cmd_handoff, cmd_release, cmd_takeover
+from task_coordination_planner import cmd_plan_coordination, cmd_promote_candidate
 from task_lifecycle_ops import (
     cmd_activate,
     cmd_can_close,
@@ -84,6 +85,14 @@ def add_task_lifecycle_commands(subparsers) -> None:
 
     continue_roadmap_parser = subparsers.add_parser("continue-roadmap")
     continue_roadmap_parser.set_defaults(func=cmd_continue_roadmap)
+
+    planner_parser = subparsers.add_parser("plan-coordination")
+    planner_parser.set_defaults(func=cmd_plan_coordination)
+
+    promote_parser = subparsers.add_parser("promote-candidate")
+    promote_parser.add_argument("candidate_id")
+    promote_parser.add_argument("--activate", action="store_true")
+    promote_parser.set_defaults(func=cmd_promote_candidate)
 
     handoff_parser = subparsers.add_parser("handoff")
     handoff_parser.add_argument("task_id")

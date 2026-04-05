@@ -48,6 +48,22 @@ closeout_rules:
   - idle closeout must set roadmap current_task_id to null, roadmap current_phase to idle, and leave no active coordination worktree
   - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied
   - child execution auto-close requires the full review bundle to pass inside the execution worktree
+coordination_planner:
+  policy_file: docs/governance/COORDINATION_PLANNER_POLICY.yaml
+  candidate_output_dir: .codex/local/coordination_candidates/
+  candidate_generation_mode: candidate_then_activate
+  required_candidate_fields:
+    - priority_rank
+    - reason
+    - serial_or_parallel
+    - parent_candidate
+    - child_candidates
+    - allowed_dirs
+    - planned_write_paths
+    - planned_test_paths
+    - required_tests
+    - depends_on_task_ids
+    - candidate_branch
 task_blueprints:
   - blueprint_id: roadmap_autopilot_continuation
     title: 路线图自动推进编排层

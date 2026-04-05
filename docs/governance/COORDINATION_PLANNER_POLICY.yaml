@@ -1,0 +1,35 @@
+version: '1.0'
+updated_at: '2026-04-05T00:00:00+08:00'
+authority_source: docs/governance/README.md
+candidate_generation_mode: candidate_then_activate
+candidate_output_dir: .codex/local/coordination_candidates/
+allow_generated_blueprints_when_no_candidates: true
+inputs:
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/runlogs/
+  - docs/governance/handoffs/
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/CAPABILITY_MAP.yaml
+output_fields:
+  - priority_rank
+  - reason
+  - serial_or_parallel
+  - parent_candidate
+  - child_candidates
+  - allowed_dirs
+  - planned_write_paths
+  - planned_test_paths
+  - required_tests
+  - depends_on_task_ids
+  - candidate_branch
+parallel_candidate_rules:
+  - dependencies must be satisfied
+  - boundaries must be complete
+  - planned write and test paths must be explicit
+  - reserved path conflicts downgrade to serial
+promotion_rules:
+  - promotion must not update CURRENT_TASK.yaml unless --activate is supplied
+  - planner output must stay outside repo-tracked ledgers until promotion
