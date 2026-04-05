@@ -1,0 +1,28 @@
+task_id: TASK-MRG-001
+summary_status: queued
+last_handoff_at: '2026-04-05T18:05:13+08:00'
+completed_items: []
+remaining_items:
+- Activate the task on the dedicated Phase 1 branch.
+- Reintegrate the governed Git publish controls from the main reintegration source into the main repository baseline.
+- Validate the merged runtime entrypoints and governance tests, then close the task cleanly.
+next_step: Activate the task and merge the Phase 1 Git publish capability into the main repository baseline.
+next_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py
+- python scripts/check_authority_alignment.py
+- pytest tests/governance -q
+- pytest tests/automation -q
+current_risks:
+- The main repository already contains orchestration-runtime changes from TASK-GOV-014, so shared governance entrypoints must be merged conservatively.
+- The publish capability must remain explicit-only and must not leak into continuation or closeout defaults.
+candidate_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+candidate_test_paths:
+- tests/governance/
+- tests/automation/
+resume_notes:
+- Task package created for Phase 1 of the 9.5+ program; next action is activation followed by mainline reintegration.
