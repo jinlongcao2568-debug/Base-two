@@ -16,3 +16,4 @@ htmlcov/
 tmp/
 temp/
 out/
+.codex/local/

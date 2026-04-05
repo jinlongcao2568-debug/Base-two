@@ -4,6 +4,7 @@ from pathlib import Path
 import importlib.util
 import subprocess
 import sys
+import os
 from typing import Any
 
 import yaml
@@ -107,7 +108,10 @@ def write_roadmap(path: Path, frontmatter: dict[str, Any], body: str) -> None:
     path.write_text(f"---\n{frontmatter_text}\n---\n\n{rendered_body}\n", encoding="utf-8", newline="\n")
 
 
-def run_python(script: Path, repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+def run_python(script: Path, repo: Path, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
     return subprocess.run(
         [sys.executable, str(script), *args],
         cwd=repo,
@@ -115,6 +119,7 @@ def run_python(script: Path, repo: Path, *args: str) -> subprocess.CompletedProc
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        env=merged_env,
     )
 
 
@@ -340,6 +345,12 @@ def _write_handoff_policy(path: Path) -> None:
             "create_on_new_top_level_coordination_task: true\n"
             "recovery_source_of_truth: docs/governance/handoffs/\n"
             "fallback_mode: task_and_runlog\n"
+            "lease_mode: strict_lease\n"
+            "stale_after_minutes: 30\n"
+            "takeover_rules:\n"
+            "  - active_other_session_requires_explicit_takeover\n"
+            "  - stale_lease_allows_reclaim_on_continue_current\n"
+            "  - release_does_not_change_task_status\n"
             "required_fields:\n"
             "  - task_id\n"
             "  - summary_status\n"

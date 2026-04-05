@@ -4,6 +4,7 @@ import argparse
 
 from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError
 from task_continuation_ops import cmd_continue_current, cmd_continue_roadmap
+from task_coordination_ops import cmd_handoff, cmd_release, cmd_takeover
 from task_lifecycle_ops import (
     cmd_activate,
     cmd_can_close,
@@ -83,6 +84,33 @@ def add_task_lifecycle_commands(subparsers) -> None:
 
     continue_roadmap_parser = subparsers.add_parser("continue-roadmap")
     continue_roadmap_parser.set_defaults(func=cmd_continue_roadmap)
+
+    handoff_parser = subparsers.add_parser("handoff")
+    handoff_parser.add_argument("task_id")
+    handoff_parser.add_argument("--completed-item", action="append", default=[])
+    handoff_parser.add_argument("--remaining-item", action="append", default=[])
+    handoff_parser.add_argument("--next-step")
+    handoff_parser.add_argument("--next-test", action="append", default=[])
+    handoff_parser.add_argument("--risk", action="append", default=[])
+    handoff_parser.add_argument("--candidate-write-path", action="append", default=[])
+    handoff_parser.add_argument("--candidate-test-path", action="append", default=[])
+    handoff_parser.add_argument("--resume-note", action="append", default=[])
+    handoff_parser.set_defaults(func=cmd_handoff)
+
+    release_parser = subparsers.add_parser("release")
+    release_parser.add_argument("task_id")
+    release_parser.add_argument("--next-test", action="append", default=[])
+    release_parser.set_defaults(func=cmd_release)
+
+    takeover_parser = subparsers.add_parser("takeover")
+    takeover_parser.add_argument("task_id")
+    takeover_parser.add_argument("--next-step")
+    takeover_parser.add_argument("--next-test", action="append", default=[])
+    takeover_parser.add_argument("--risk", action="append", default=[])
+    takeover_parser.add_argument("--candidate-write-path", action="append", default=[])
+    takeover_parser.add_argument("--candidate-test-path", action="append", default=[])
+    takeover_parser.add_argument("--resume-note", action="append", default=[])
+    takeover_parser.set_defaults(func=cmd_takeover)
 
 
 def add_worktree_commands(subparsers) -> None:

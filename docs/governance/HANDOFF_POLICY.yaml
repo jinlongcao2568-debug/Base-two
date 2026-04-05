@@ -4,9 +4,15 @@ authority_source: docs/governance/README.md
 create_on_new_top_level_coordination_task: true
 recovery_source_of_truth: docs/governance/handoffs/
 fallback_mode: task_and_runlog
+lease_mode: strict_lease
+stale_after_minutes: 30
+takeover_rules:
+- active_other_session_requires_explicit_takeover
+- stale_lease_allows_reclaim_on_continue_current
+- release_does_not_change_task_status
 required_fields:
-  - task_id
-  - summary_status
+- task_id
+- summary_status
   - last_handoff_at
   - completed_items
   - remaining_items

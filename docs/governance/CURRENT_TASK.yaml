@@ -1,27 +1,48 @@
-current_task_id: null
-title: null
-status: idle
-task_kind: null
-execution_mode: null
+current_task_id: TASK-GOV-012
+title: coordination 单写者治理与安全接管
+status: review
+task_kind: coordination
+execution_mode: shared_coordination
 parent_task_id: null
-stage: null
-branch: null
-size_class: null
-automation_mode: null
-worker_state: idle
+stage: governance-coordination-lease-v1
+branch: feat/TASK-GOV-012-coordination-lease
+size_class: heavy
+automation_mode: manual
+worker_state: review_pending
 blocked_reason: null
-last_reported_at: '2026-04-05T15:27:36+08:00'
-topology: null
-allowed_dirs: []
-reserved_paths: []
-planned_write_paths: []
-planned_test_paths: []
-required_tests: []
-task_file: null
-runlog_file: null
-lane_count: null
+last_reported_at: '2026-04-05T15:49:20+08:00'
+topology: single_worker
+allowed_dirs:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+- .gitignore
+reserved_paths:
+- src/
+- docs/contracts/
+- db/migrations/
+- tests/integration/
+planned_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+- .gitignore
+planned_test_paths:
+- tests/governance/
+- tests/automation/
+required_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py
+- python scripts/check_authority_alignment.py
+- pytest tests/governance -q
+- pytest tests/automation -q
+task_file: docs/governance/tasks/TASK-GOV-012.md
+runlog_file: docs/governance/runlogs/TASK-GOV-012-RUNLOG.md
+lane_count: 1
 lane_index: null
 parallelism_plan_id: null
-review_bundle_status: null
-next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-05T15:27:36+08:00'
+review_bundle_status: not_applicable
+next_action: Worker finished implementation; the task is now review-ready.
+updated_at: '2026-04-05T15:49:20+08:00'

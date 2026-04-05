@@ -34,6 +34,23 @@ capabilities:
     tests:
       - pytest tests/governance -q
       - pytest tests/automation -q
+  - capability_id: coordination_single_writer_v1
+    status: implemented
+    source_of_truth:
+      - docs/governance/HANDOFF_POLICY.yaml
+      - .gitignore
+      - .codex/local/COORDINATION_RUNTIME.yaml
+    scripts:
+      - scripts/task_coordination_lease.py
+      - scripts/task_coordination_ops.py
+      - scripts/task_continuation_ops.py
+      - scripts/task_lifecycle_ops.py
+      - scripts/task_worker_ops.py
+      - scripts/automation_intent.py
+      - scripts/task_runtime_ops.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
   - capability_id: roadmap_autopilot_continuation
     status: implemented
     source_of_truth:

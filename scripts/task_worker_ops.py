@@ -16,6 +16,7 @@ from governance_lib import (
     sync_task_artifacts,
     worktree_map,
 )
+from task_coordination_lease import claim_coordination_lease
 from task_handoff import write_handoff
 from task_rendering import (
     enforce_execution_split_guards,
@@ -81,6 +82,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
+    claim_coordination_lease(root, task, reason="worker-start")
     try:
         enforce_execution_split_guards(registry, task)
     except GovernanceError:
@@ -116,6 +118,7 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     task = find_task(registry["tasks"], args.task_id)
+    claim_coordination_lease(root, task, reason="worker-report")
     task["worker_state"] = "running"
     if task["status"] == "queued":
         task["status"] = "doing"
@@ -153,6 +156,7 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     task = find_task(registry["tasks"], args.task_id)
+    claim_coordination_lease(root, task, reason="worker-blocked")
     task["status"] = "blocked"
     task["worker_state"] = "blocked"
     task["blocked_reason"] = args.reason
@@ -183,6 +187,7 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     task = find_task(registry["tasks"], args.task_id)
+    claim_coordination_lease(root, task, reason="worker-finish")
     task["status"] = "review"
     task["worker_state"] = "review_pending"
     task["blocked_reason"] = None
@@ -376,6 +381,8 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
+    parent = find_task(registry["tasks"], args.parent_task_id)
+    claim_coordination_lease(root, parent, reason="auto-close-children")
     closed: list[str] = []
     blocked: list[str] = []
     open_children: list[str] = []

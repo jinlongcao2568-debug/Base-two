@@ -33,6 +33,7 @@ from governance_lib import (
     write_roadmap,
 )
 from task_closeout import assess_live_closeout
+from task_coordination_lease import assess_coordination_lease, claim_coordination_lease
 from task_handoff import build_recovery_pack, render_recovery_lines
 from task_rendering import (
     find_task,
@@ -412,6 +413,7 @@ def _activate_successor(
     _validate_successor_candidate(successor, tasks_by_id, current_task_id)
     _ensure_unique_successor_landscape(registry["tasks"], current_task_id, successor["task_id"])
     branch_action = _switch_or_create_branch(root, successor["branch"])
+    claim_coordination_lease(root, successor, reason="continue-roadmap successor activation")
     touched_task_ids = pause_other_doing_tasks(registry["tasks"], successor["task_id"])
     if current_task_id is not None and current_task_id not in touched_task_ids:
         touched_task_ids.append(current_task["task_id"])
@@ -457,6 +459,16 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
     recovery_pack, recovery_source, recovery_warnings = build_recovery_pack(root, task)
     for line in render_recovery_lines(recovery_pack, recovery_source, recovery_warnings):
         print(line)
+
+    lease = assess_coordination_lease(root, task)
+    if lease["enforced"] and not lease["can_write"]:
+        print(
+            f"[READONLY] continue-current recovery only: active coordination lease is owned by "
+            f"`{lease['owner_session_id']}`; use handoff, release, or takeover before writing."
+        )
+        return 0
+    if lease["enforced"]:
+        claim_coordination_lease(root, task, reason="continue-current")
 
     branch_action = _switch_or_create_branch(root, task["branch"])
     if task["status"] == "review":
@@ -522,6 +534,8 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         raise GovernanceError(f"current task is blocked: {reason}")
 
     frontmatter, body = _read_roadmap_state(root)
+    if current_task is not None:
+        claim_coordination_lease(root, current_task, reason="continue-roadmap")
     _close_review_task_if_needed(root, current_task, worktrees)
     successor, source = _resolve_roadmap_successor(
         root,

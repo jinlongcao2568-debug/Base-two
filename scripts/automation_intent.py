@@ -27,6 +27,7 @@ from governance_lib import (
 )
 from governance_repo_checks import run_repo_checks
 from task_closeout import assess_live_closeout
+from task_coordination_lease import assess_coordination_lease
 from task_continuation_ops import _resolve_roadmap_successor
 from task_handoff import build_recovery_pack
 from task_rendering import find_task
@@ -180,8 +181,10 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
     recovery_pack = None
     recovery_source = None
     recovery_warnings: list[str] = []
+    lease = None
     if current_task is not None:
         recovery_pack, recovery_source, recovery_warnings = build_recovery_pack(root, current_task)
+        lease = assess_coordination_lease(root, current_task)
     if current_payload.get("status") == "idle":
         blockers.append("CURRENT_TASK.yaml 当前为 idle；请改用路线图推进，或先显式激活任务。")
     elif current_task is not None:
@@ -190,6 +193,10 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
             blockers.append(f"当前任务已阻塞：{reason}")
         elif current_task["status"] in {"review", "done"}:
             blockers.append("当前任务处于 review/done；请改用路线图推进完成关账或切换。")
+        if lease is not None and lease["enforced"] and not lease["can_write"]:
+            blockers.append(
+                f"当前任务写租约已被其他窗口持有：{lease['owner_session_id']}；默认仅允许只读恢复，请先执行 release 或 takeover"
+            )
 
     if blockers:
         return {
@@ -229,6 +236,12 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
     current_payload, current_task = _load_live_task(root)
     status = current_payload.get("status")
     closeout = assess_live_closeout(root, current_payload=current_payload, current_task=current_task)
+    if current_task is not None:
+        lease = assess_coordination_lease(root, current_task)
+        if lease["enforced"] and not lease["can_write"]:
+            blockers.append(
+                f"当前任务写租约已被其他窗口持有：{lease['owner_session_id']}；请先执行 release 或 takeover"
+            )
     if status == "blocked":
         reason = None if current_task is None else current_task.get("blocked_reason")
         blockers.append(f"当前任务已阻塞：{reason or 'blocked without recorded reason'}")

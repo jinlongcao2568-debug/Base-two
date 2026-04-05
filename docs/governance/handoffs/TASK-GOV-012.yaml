@@ -1,17 +1,25 @@
 task_id: TASK-GOV-012
-summary_status: queued
-last_handoff_at: null
-completed_items: []
+summary_status: review
+last_handoff_at: '2026-04-05T15:49:20+08:00'
+completed_items:
+- Added a local coordination lease runtime that stays outside repo-tracked ledgers.
+- Implemented governed handoff, release, and takeover commands with auditable task/runlog
+  records.
+- Blocked non-owner writes on continue-current, lifecycle, worker, and automation-intent
+  paths unless the lease is stale or explicitly taken over.
 remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+- Close the review-ready task after preserving the validated test evidence.
+next_step: Commit the validated Batch 2 changes and close TASK-GOV-012 without activating
+  a successor.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
 - python scripts/check_authority_alignment.py
 - pytest tests/governance -q
 - pytest tests/automation -q
-current_risks: []
+current_risks:
+- No blocking implementation risk remains; local lease state must stay inside .codex/local/
+  and out of git.
 candidate_write_paths:
 - docs/governance/
 - scripts/
@@ -23,3 +31,8 @@ candidate_test_paths:
 - tests/automation/
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.
+- Batch 2 is review-ready; the next operator should verify the clean review state,
+  then close the task.
+- 'Worker finish summary: single-writer coordination lease and safe takeover controls
+  are implemented'

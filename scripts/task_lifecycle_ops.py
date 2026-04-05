@@ -25,6 +25,7 @@ from governance_lib import (
     validate_task,
     worktree_map,
 )
+from task_coordination_lease import claim_coordination_lease, release_coordination_lease
 from task_handoff import ensure_handoff_file, write_handoff
 from task_rendering import (
     find_task,
@@ -109,6 +110,7 @@ def cmd_activate(args: argparse.Namespace) -> int:
     ensure_clean_worktree(root)
     if current_branch(root) != task["branch"]:
         raise GovernanceError(f"branch mismatch: expected {task['branch']}, got {current_branch(root)}")
+    claim_coordination_lease(root, task, reason="activate")
     touched_tasks = pause_other_doing_tasks(registry["tasks"], task["task_id"])
     task["status"] = "doing"
     task["worker_state"] = "running"
@@ -141,6 +143,7 @@ def cmd_pause(args: argparse.Namespace) -> int:
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
     task = find_task(registry["tasks"], args.task_id or current_task["current_task_id"])
+    claim_coordination_lease(root, task, reason="pause")
     task["status"] = "paused"
     task["worker_state"] = "idle"
     task["blocked_reason"] = None
@@ -174,6 +177,7 @@ def cmd_close(args: argparse.Namespace) -> int:
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
     task = find_task(registry["tasks"], args.task_id or current_task["current_task_id"])
+    claim_coordination_lease(root, task, reason="close")
     missing = missing_required_tests(root, task)
     if missing:
         raise GovernanceError(f"required tests missing from runlog: {', '.join(missing)}")
@@ -216,6 +220,7 @@ def cmd_close(args: argparse.Namespace) -> int:
         resume_notes=["Task closed."],
         append_resume_notes=True,
     )
+    release_coordination_lease(root, task, reason="close")
     sync_task_artifacts(root, registry, touched_task_ids)
     print(f"[OK] closed {task['task_id']}")
     return 0
