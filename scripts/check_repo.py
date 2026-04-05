@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from governance_lib import GovernanceError, find_repo_root, load_task_registry, load_worktree_registry, task_map
+from governance_lib import (
+    GovernanceError,
+    configure_utf8_stdio,
+    find_repo_root,
+    load_task_registry,
+    load_worktree_registry,
+    task_map,
+)
 from governance_repo_checks import run_repo_checks
 
 
 def main() -> int:
     try:
+        configure_utf8_stdio()
         root = find_repo_root()
         registry = load_task_registry(root)
         tasks_by_id = task_map(registry)

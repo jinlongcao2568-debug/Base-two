@@ -1,0 +1,60 @@
+version: "1.0"
+updated_at: "2026-04-05T11:10:00+08:00"
+authority_source: docs/governance/README.md
+source_root: docs/governance/prompt_modules/
+modules:
+  - module_id: boundary_first
+    path: docs/governance/prompt_modules/boundary_first.md
+    purpose: Define forbidden actions and scope boundaries before execution steps.
+    roles:
+      - coordinator
+      - worker
+      - reviewer
+  - module_id: reporting_discipline
+    path: docs/governance/prompt_modules/reporting_discipline.md
+    purpose: Keep status reporting factual, bounded, and stop-aware.
+    roles:
+      - coordinator
+      - worker
+      - reviewer
+  - module_id: tool_boundaries
+    path: docs/governance/prompt_modules/tool_boundaries.md
+    purpose: Bind tools to explicit scenarios and preserve auditability.
+    roles:
+      - worker
+      - reviewer
+  - module_id: role_overrides
+    path: docs/governance/prompt_modules/role_overrides.md
+    purpose: Add role-specific prompt overrides for coordinator, worker, and reviewer lanes.
+    roles:
+      - coordinator
+      - worker
+      - reviewer
+role_profiles:
+  - role_id: coordinator
+    modules:
+      - boundary_first
+      - reporting_discipline
+      - role_overrides
+    notes:
+      - Resolve scope before execution.
+      - Report blockers early.
+      - Do not auto-expand into adjacent work.
+  - role_id: worker
+    modules:
+      - boundary_first
+      - tool_boundaries
+      - role_overrides
+    notes:
+      - Stay inside allowed paths.
+      - Read before editing.
+      - Do not infer missing requirements.
+  - role_id: reviewer
+    modules:
+      - boundary_first
+      - reporting_discipline
+      - tool_boundaries
+      - role_overrides
+    notes:
+      - Default to finding gaps, not approving by inertia.
+      - Keep review claims evidence-backed.

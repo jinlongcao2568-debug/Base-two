@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-automation-risk-hardening-v1
+current_task_id: TASK-GOV-005
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-005`: `自动续跑风控收口与提示词模块化` is the live coordination task for `governance-automation-risk-hardening-v1`.
 ## Recently Closed
 
 - `TASK-GOV-001`: closed authority drift, formalized contracts and handoff assets, expanded minimum regression coverage, and hardened the governance control plane.

@@ -3,9 +3,21 @@
 ## Scope
 
 - The live automation layer now supports:
+  - `automation_intent preflight/execute`
   - `continue-current`
   - `continue-roadmap`
   - dependency-aware business successor generation that follows the ordered stages in `docs/governance/MODULE_MAP.yaml`
+
+## Intent Router
+
+- `python scripts/automation_intent.py preflight --utterance "<text>"`
+  - performs a non-mutating continuation preflight
+  - supports governed free-form intent recognition
+  - may resolve only to `continue-current` or `continue-roadmap`
+  - must return `unsupported` or `blocked` when intent is ambiguous
+- `python scripts/automation_intent.py execute --utterance "<text>"`
+  - reruns the same preflight
+  - executes the mapped command only when the preflight result is `ready`
 
 ## Continuation Semantics
 
@@ -36,6 +48,7 @@
 - A generated business successor round must:
   - obey `MODULE_MAP.yaml` dependency order;
   - respect the live roadmap scope and stage establishment policy;
+  - keep `stage7-stage9` closed unless `stage7_to_stage9_business_automation` is implemented in `CAPABILITY_MAP.yaml`;
   - select at most 2 child execution lanes;
   - declare authority inputs, contract inputs, module scope, and review policy on each child task.
 

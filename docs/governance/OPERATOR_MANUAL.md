@@ -37,6 +37,14 @@ Conflict rule:
 
 ## Continuation Commands
 
+- `python scripts/automation_intent.py preflight --utterance "<text>"`
+  - performs a non-mutating preflight for free-form continuation requests
+  - may recognize broader natural-language continue requests
+  - still routes only to the two formal intents below
+  - blocks instead of guessing when the request could imply a task switch
+- `python scripts/automation_intent.py execute --utterance "<text>"`
+  - reruns the same preflight
+  - delegates only when preflight returns `ready`
 - `python scripts/task_ops.py continue-current`
   - keep or reactivate the live current task
   - fails from the formal idle state
@@ -58,6 +66,13 @@ Conflict rule:
   - formal contracts
   - the generated task package
 - `stage7-stage9` are downstream-only stages; they may be generated or activated only when `stage6_facts` and any additional declared dependencies are already satisfied.
+- `stage7-stage9` also require `docs/governance/CAPABILITY_MAP.yaml` to declare `stage7_to_stage9_business_automation: implemented` before automation may generate those lanes.
+
+## Prompt Governance
+
+- The prompt source of truth is `docs/governance/PROMPT_MODULE_CATALOG.yaml` and `docs/governance/prompt_modules/`.
+- Root-level scratch prompt notes are not live prompt inputs.
+- Load only the role modules required by the active lane instead of pasting a full memo into every prompt.
 
 ## Closeout Rules
 

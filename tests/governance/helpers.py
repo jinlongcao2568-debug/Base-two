@@ -37,6 +37,7 @@ except ImportError:
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TASK_OPS_SCRIPT = REPO_ROOT / "scripts" / "task_ops.py"
+AUTOMATION_INTENT_SCRIPT = REPO_ROOT / "scripts" / "automation_intent.py"
 CHECK_REPO_SCRIPT = REPO_ROOT / "scripts" / "check_repo.py"
 CHECK_HYGIENE_SCRIPT = REPO_ROOT / "scripts" / "check_hygiene.py"
 AUTOMATION_RUNNER_SCRIPT = REPO_ROOT / "scripts" / "automation_runner.py"
@@ -107,6 +108,75 @@ def run_python(script: Path, repo: Path, *args: str) -> subprocess.CompletedProc
         cwd=repo,
         text=True,
         capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+
+def _write_automation_intents(path: Path) -> None:
+    path.write_text(
+        (
+            "version: '1.0'\n"
+            "recognition_mode: heuristic_free_form\n"
+            "generic_continue_signals:\n"
+            "  - 继续\n"
+            "  - 接着\n"
+            "supported_intents:\n"
+            "  - intent_id: continue-current\n"
+            "    canonical_phrase: 继续当前任务\n"
+            "    mapped_command: python scripts/task_ops.py continue-current\n"
+            "    command_argv:\n"
+            "      - python\n"
+            "      - scripts/task_ops.py\n"
+            "      - continue-current\n"
+            "    examples:\n"
+            "      - 继续当前任务\n"
+            "    action_any:\n"
+            "      - 继续\n"
+            "      - 接着\n"
+            "    context_any:\n"
+            "      - 当前任务\n"
+            "      - 手头任务\n"
+            "    disallow_any:\n"
+            "      - 路线图\n"
+            "      - 下一步\n"
+            "  - intent_id: continue-roadmap\n"
+            "    canonical_phrase: 按路线图继续推进\n"
+            "    mapped_command: python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees\n"
+            "    command_argv:\n"
+            "      - python\n"
+            "      - scripts/automation_runner.py\n"
+            "      - once\n"
+            "      - --continue-roadmap\n"
+            "      - --prepare-worktrees\n"
+            "    examples:\n"
+            "      - 按路线图继续推进\n"
+            "    action_any:\n"
+            "      - 继续\n"
+            "      - 推进\n"
+            "    context_any:\n"
+            "      - 路线图\n"
+            "      - 下一步\n"
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_prompt_governance_files(root: Path) -> None:
+    (root / "docs/governance/PROMPT_MODULE_CATALOG.yaml").write_text(
+        (
+            "version: '1.0'\n"
+            "source_root: docs/governance/prompt_modules/\n"
+            "modules:\n"
+            "  - module_id: boundary_first\n"
+            "    path: docs/governance/prompt_modules/boundary_first.md\n"
+        ),
+        encoding="utf-8",
+    )
+    (root / "docs/governance/prompt_modules").mkdir(parents=True, exist_ok=True)
+    (root / "docs/governance/prompt_modules/README.md").write_text(
+        "# Prompt Modules\n\nRoot-level scratch notes are not a live prompt source.\n",
+        encoding="utf-8",
     )
 
 
@@ -214,6 +284,8 @@ def write_governance_files(repo: Path) -> None:
     task = base_task_payload()
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
+    _write_automation_intents(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
+    _write_prompt_governance_files(repo)
     write_yaml(repo / "docs/governance/MODULE_MAP.yaml", module_map_payload())
     write_yaml(repo / "docs/governance/TEST_MATRIX.yaml", test_matrix_payload())
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map_payload())

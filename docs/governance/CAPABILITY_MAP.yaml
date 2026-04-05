@@ -9,6 +9,7 @@ capabilities:
       - docs/governance/TASK_REGISTRY.yaml
       - docs/governance/WORKTREE_REGISTRY.yaml
     scripts:
+      - scripts/automation_intent.py
       - scripts/check_authority_alignment.py
       - scripts/check_repo.py
       - scripts/check_hygiene.py

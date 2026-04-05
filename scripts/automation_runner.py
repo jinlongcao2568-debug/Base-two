@@ -26,6 +26,8 @@ def run_step(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         cwd=root,
         text=True,
         capture_output=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 

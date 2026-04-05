@@ -72,6 +72,7 @@ from governance_runtime import (
     actual_path,
     branch_exists,
     current_branch,
+    configure_utf8_stdio,
     declared_path,
     display_path,
     dump_yaml,

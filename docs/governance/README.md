@@ -18,8 +18,12 @@ Conflict rule:
   - worktree and coordination ownership
 - `DEVELOPMENT_ROADMAP.md`
   - live phase and current-task roadmap context
+- `AUTOMATION_INTENTS.yaml`
+  - natural-language intent routing policy for governed continuation entrypoints in `docs/governance/AUTOMATION_INTENTS.yaml`
 - `DIRECTORY_MAP.md`
   - repository boundary map
+- `PROMPT_MODULE_CATALOG.yaml`
+  - governed prompt module catalog and role assembly in `docs/governance/PROMPT_MODULE_CATALOG.yaml`
 - `MODULE_MAP.yaml`
   - machine-readable module boundaries and reserved paths
 - `TEST_MATRIX.yaml`
@@ -38,6 +42,8 @@ Conflict rule:
   - formal interface catalog or professional zero-state
 - `owners.yaml`
   - role-based ownership map for formal paths
+- `prompt_modules/`
+  - governed prompt rule modules for coordinator, worker, and reviewer roles
 
 ## Execution Order
 
@@ -56,6 +62,11 @@ Conflict rule:
 - Continuation now has two formal entry points:
   - `continue-current` resumes only the live current task.
   - `continue-roadmap` closes a review-ready live task or resumes from the formal idle state, then resolves the next valid successor.
+- `python scripts/automation_intent.py preflight --utterance "<text>"` is the governed free-form continuation entrypoint.
+  - It may recognize broader natural-language continue requests.
+  - It still routes only to `continue-current` or `continue-roadmap`.
+  - Ambiguous requests must stop instead of guessing through a task switch.
 - Closing a live top-level coordination task without an immediately activated successor now moves the repository into a legal idle control-plane state.
 - Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
-- `stage7-stage9` are no longer hard-pinned to a governance-only deferred state; they remain downstream stages that may advance only when their dependencies, task package boundaries, and required tests are satisfied.
+- `stage7-stage9` remain downstream-only stages and now require both dependency satisfaction and `stage7_to_stage9_business_automation=implemented` before automation may generate them.
+- Prompt source of truth now lives under `docs/governance/prompt_modules/`; root-level scratch notes are not live prompt inputs.

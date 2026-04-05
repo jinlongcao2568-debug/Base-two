@@ -11,6 +11,7 @@ import yaml
 from governance_repo_checks import run_repo_checks
 from governance_lib import (
     GovernanceError,
+    configure_utf8_stdio,
     find_repo_root,
     is_idle_current_payload,
     load_current_task,
@@ -42,6 +43,9 @@ REQUIRED_GOVERNANCE_FILES = [
     "docs/governance/README.md",
     "docs/governance/DEVELOPMENT_ROADMAP.md",
     "docs/governance/DIRECTORY_MAP.md",
+    "docs/governance/AUTOMATION_INTENTS.yaml",
+    "docs/governance/PROMPT_MODULE_CATALOG.yaml",
+    "docs/governance/prompt_modules/README.md",
     "docs/governance/MODULE_MAP.yaml",
     "docs/governance/TEST_MATRIX.yaml",
     "docs/governance/TASK_POLICY.yaml",
@@ -51,6 +55,7 @@ REQUIRED_GOVERNANCE_FILES = [
     "docs/governance/OPERATOR_MANUAL.md",
 ]
 REQUIRED_AUTOMATION_SCRIPTS = [
+    "scripts/automation_intent.py",
     "scripts/check_repo.py",
     "scripts/check_hygiene.py",
     "scripts/task_ops.py",
@@ -60,6 +65,7 @@ REQUIRED_AUTOMATION_SCRIPTS = [
     "scripts/check_authority_alignment.py",
 ]
 REQUIRED_AUTOMATION_TESTS = [
+    "tests/governance/test_automation_intent.py",
     "tests/governance/test_check_repo.py",
     "tests/governance/test_task_continuation.py",
     "tests/governance/test_task_ops.py",
@@ -288,6 +294,8 @@ def _append_consistency_doc_checks(readme: str, governance_readme: str, errors: 
             "CURRENT_TASK.yaml` remains the only live execution entry.",
             "docs/product/AUTHORITY_SPEC.md",
             "docs/governance/OPERATOR_MANUAL.md",
+            "docs/governance/AUTOMATION_INTENTS.yaml",
+            "docs/governance/PROMPT_MODULE_CATALOG.yaml",
         ],
         "docs/governance/README.md",
         errors,
@@ -524,6 +532,8 @@ def _evaluate_development_control_layer(root: Path, live_task_errors: list[str])
             "Use `python scripts/task_ops.py can-close` before closing.",
             "Do not leave the live current task in `done`",
             "Do not modify files outside the current task's `allowed_dirs`.",
+            "python scripts/automation_intent.py preflight",
+            "prompt source of truth",
         ],
         OPERATOR_MANUAL,
         errors,
@@ -575,6 +585,8 @@ def _evaluate_automation_layer(root: Path) -> list[str]:
     else:
         scripts = governance_capability.get("scripts") or []
         tests = governance_capability.get("tests") or []
+        if "scripts/automation_intent.py" not in scripts:
+            errors.append("governance_control_plane capability must list scripts/automation_intent.py")
         if "scripts/check_authority_alignment.py" not in scripts:
             errors.append("governance_control_plane capability must list scripts/check_authority_alignment.py")
         if "scripts/task_continuation_ops.py" not in scripts:
@@ -593,6 +605,7 @@ def _print_category(result: _CategoryResult) -> None:
 
 
 def main() -> int:
+    configure_utf8_stdio()
     root = find_repo_root()
     registry_errors, authority_enum_errors, bundle_statuses, bundle_errors = _collect_contract_state()
     live_task_errors = _collect_live_task_alignment_errors(root)
@@ -600,8 +613,8 @@ def main() -> int:
     core_results = [
         _CategoryResult("权威性", _evaluate_authority(root, authority_enum_errors, bundle_statuses)),
         _CategoryResult("一致性", _evaluate_consistency(root, live_task_errors)),
-        _CategoryResult("展开完整度", _evaluate_completeness(root, registry_errors, bundle_errors)),
-        _CategoryResult("专业落地度", _evaluate_professionalization(root)),
+        _CategoryResult("完整度", _evaluate_completeness(root, registry_errors, bundle_errors)),
+        _CategoryResult("专业化", _evaluate_professionalization(root)),
         _CategoryResult("单一真源程度", _evaluate_single_source(root, live_task_errors, registry_errors)),
     ]
     layer_results = [
@@ -613,7 +626,7 @@ def main() -> int:
     ]
     comprehensive_score = round(sum(result.score for result in layer_results) / len(layer_results))
 
-    print("关键对象状态:")
+    print("关键对象状态")
     for object_name in KEY_FORMAL_OBJECTS:
         status = bundle_statuses.get(object_name, "缺失")
         print(f"- {object_name}: {status}")

@@ -1,0 +1,85 @@
+version: "1.0"
+updated_at: "2026-04-05T11:10:00+08:00"
+authority_source: docs/governance/OPERATOR_MANUAL.md
+recognition_mode: heuristic_free_form
+ambiguity_policy: block_on_successor_switch_ambiguity
+generic_continue_signals:
+  - 继续
+  - 接着
+  - 恢复
+  - 继续做
+  - 接着做
+  - 继续开发
+  - 接着开发
+  - 恢复开发
+  - 继续推进
+supported_intents:
+  - intent_id: continue-current
+    canonical_phrase: 继续当前任务
+    mapped_command: python scripts/task_ops.py continue-current
+    command_argv:
+      - python
+      - scripts/task_ops.py
+      - continue-current
+    description: Resume only the live current task and never pick a successor.
+    examples:
+      - 继续当前任务
+      - 回到现在这个任务继续做
+      - 继续手头这个任务
+    action_any:
+      - 继续
+      - 接着
+      - 恢复
+      - 回到
+      - 继续开发
+      - 继续做
+    context_any:
+      - 当前
+      - 当前任务
+      - 手头
+      - 手头任务
+      - 本任务
+      - 这个任务
+      - 现有任务
+      - 现在这个任务
+    disallow_any:
+      - 路线图
+      - roadmap
+      - 下一步
+      - 下一任务
+      - 下一个任务
+      - 后续任务
+      - 按计划
+      - 按路线
+  - intent_id: continue-roadmap
+    canonical_phrase: 按路线图继续推进
+    mapped_command: python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees
+    command_argv:
+      - python
+      - scripts/automation_runner.py
+      - once
+      - --continue-roadmap
+      - --prepare-worktrees
+    description: Continue by roadmap, allowing review closeout and successor activation when governance gates pass.
+    examples:
+      - 按路线图继续推进
+      - 继续按照路线图开发
+      - 按计划推进到下一步
+    action_any:
+      - 继续
+      - 接着
+      - 恢复
+      - 推进
+      - 按计划
+      - 按路线
+    context_any:
+      - 路线图
+      - roadmap
+      - 下一步
+      - 下一任务
+      - 下一个任务
+      - 后续任务
+      - 后面的任务
+      - 按计划
+      - 按路线
+      - 继续推进

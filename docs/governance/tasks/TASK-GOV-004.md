@@ -78,5 +78,5 @@
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-004-governance-control-kernel-split`
-- `updated_at`: `2026-04-05T09:26:51+08:00`
+- `updated_at`: `2026-04-05T10:31:04+08:00`
 <!-- generated:task-meta:end -->

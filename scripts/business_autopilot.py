@@ -3,10 +3,18 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from governance_lib import GovernanceError, iso_now, load_module_map, task_required_tests_for_matrix, validate_task
+from governance_lib import (
+    GovernanceError,
+    iso_now,
+    load_capability_map,
+    load_module_map,
+    task_required_tests_for_matrix,
+    validate_task,
+)
 
 
 BUSINESS_AUTOPILOT_CAPABILITY_ID = "stage1_to_stage6_business_automation"
+DOWNSTREAM_BUSINESS_AUTOPILOT_CAPABILITY_ID = "stage7_to_stage9_business_automation"
 BUSINESS_PARENT_BLUEPRINT_ID = "business_parallel_parent_stage1_to_stage6"
 BUSINESS_BOOTSTRAP_BLUEPRINT_ID = "business_stage_bootstrap_execution"
 BUSINESS_IMPLEMENTATION_BLUEPRINT_ID = "business_stage_implementation_execution"
@@ -104,6 +112,24 @@ def _automatable_stage_ids(scope: str) -> tuple[str, ...]:
     return CORE_STAGE_IDS if scope == "stage1_to_stage6" else BUSINESS_STAGE_IDS
 
 
+def _downstream_capability_enabled(capability_map: dict[str, Any]) -> bool:
+    capability = next(
+        (
+            item
+            for item in capability_map.get("capabilities", [])
+            if item.get("capability_id") == DOWNSTREAM_BUSINESS_AUTOPILOT_CAPABILITY_ID
+        ),
+        None,
+    )
+    return capability is not None and capability.get("status") == "implemented"
+
+
+def _stage_capability_allows(stage_id: str, capability_map: dict[str, Any]) -> bool:
+    if stage_id not in DOWNSTREAM_STAGE_IDS:
+        return True
+    return _downstream_capability_enabled(capability_map)
+
+
 def load_business_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
     scope = frontmatter.get("business_automation_scope")
     parallel_strategy = frontmatter.get("parallel_strategy")
@@ -193,12 +219,14 @@ def _dependency_ready(module: dict[str, Any], modules_by_id: dict[str, dict[str,
     return True
 
 
-def _eligible_modules(root, policy: dict[str, Any], gap_kind: str) -> list[dict[str, Any]]:
+def _eligible_modules(root, policy: dict[str, Any], gap_kind: str, capability_map: dict[str, Any]) -> list[dict[str, Any]]:
     stage_modules = _modules_by_stage(root)
     modules_by_id = {module["module_id"]: module for module in stage_modules.values()}
     stage_establishment = policy["stage_establishment"]
     eligible: list[dict[str, Any]] = []
     for stage_id in policy["automatable_stage_ids"]:
+        if not _stage_capability_allows(stage_id, capability_map):
+            continue
         if stage_establishment.get(stage_id) != gap_kind:
             continue
         module = stage_modules.get(stage_id)
@@ -372,10 +400,11 @@ def build_business_successor_round(root, registry: dict[str, Any], task_policy: 
 
     frontmatter, _ = read_roadmap(root)
     policy = load_business_policy(frontmatter)
+    capability_map = load_capability_map(root)
     parent_blueprint = _find_blueprint(task_policy, BUSINESS_PARENT_BLUEPRINT_ID)
     tasks = registry.setdefault("tasks", [])
     for gap_kind in policy["gap_priority"]:
-        eligible = _eligible_modules(root, policy, gap_kind)
+        eligible = _eligible_modules(root, policy, gap_kind, capability_map)
         if not eligible:
             continue
         parent_task = _build_parent_task(tasks, parent_blueprint, policy)

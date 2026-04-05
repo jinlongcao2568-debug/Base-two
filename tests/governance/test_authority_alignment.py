@@ -16,6 +16,8 @@ def run_alignment(repo: Path) -> subprocess.CompletedProcess[str]:
         cwd=repo,
         text=True,
         capture_output=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 
@@ -63,4 +65,4 @@ def test_authority_alignment_fails_when_capability_map_missing(tmp_path: Path) -
     result = run_alignment(repo)
     assert result.returncode == 1
     assert "missing required file: docs/governance/CAPABILITY_MAP.yaml" in result.stdout
-    assert "展开完整度: 80" in result.stdout
+    assert "完整度: 80" in result.stdout

@@ -111,5 +111,5 @@
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-AUTO-004-minimal-runtime-chain`
-- `updated_at`: `2026-04-05T09:54:31+08:00`
+- `updated_at`: `2026-04-05T10:31:04+08:00`
 <!-- generated:task-meta:end -->

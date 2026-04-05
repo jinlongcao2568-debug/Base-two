@@ -61,20 +61,13 @@ def _mark_current_review_ready(repo: Path) -> None:
     git_commit_all(repo, "prepare review successor")
 
 
-def _enable_business_autopilot(repo: Path) -> None:
+def _enable_business_autopilot(repo: Path, *, include_downstream: bool = False) -> None:
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
-    business_capability = next(
-        item
-        for item in capability_map["capabilities"]
-        if item["capability_id"] == "stage1_to_stage6_business_automation"
-    )
-    business_capability["status"] = "implemented"
-    autopilot = next(
-        item
-        for item in capability_map["capabilities"]
-        if item["capability_id"] == "roadmap_autopilot_continuation"
-    )
-    autopilot["status"] = "implemented"
+    for capability in capability_map["capabilities"]:
+        if capability["capability_id"] in {"stage1_to_stage6_business_automation", "roadmap_autopilot_continuation"}:
+            capability["status"] = "implemented"
+        if include_downstream and capability["capability_id"] == "stage7_to_stage9_business_automation":
+            capability["status"] = "implemented"
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
     roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
     roadmap = roadmap.replace("business_automation_enabled: false", "business_automation_enabled: true", 1)
@@ -353,9 +346,25 @@ def test_continue_roadmap_respects_bootstrap_priority_before_implementation(tmp_
     assert [child["module_id"] for child in children] == ["stage2_ingestion"]
 
 
-def test_continue_roadmap_generates_stage7_successor_when_scope_is_open(tmp_path: Path) -> None:
+def test_continue_roadmap_blocks_stage7_successor_until_downstream_capability_is_implemented(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _enable_business_autopilot(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    for stage_id in ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6"):
+        roadmap = roadmap.replace(f"  {stage_id}: bootstrap_required", f"  {stage_id}: implemented")
+        roadmap = roadmap.replace(f"  {stage_id}: implementation_ready", f"  {stage_id}: implemented")
+    roadmap = roadmap.replace("  stage7: not_established", "  stage7: bootstrap_required", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_current_review_ready(repo)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    assert result.returncode == 1
+    assert "no successor" in result.stdout
+
+
+def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_is_implemented(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _enable_business_autopilot(repo, include_downstream=True)
     roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
     for stage_id in ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6"):
         roadmap = roadmap.replace(f"  {stage_id}: bootstrap_required", f"  {stage_id}: implemented")

@@ -80,6 +80,7 @@ def _governance_capability_entries() -> list[dict[str, Any]]:
                 "docs/governance/CAPABILITY_MAP.yaml",
             ],
             [
+                "scripts/automation_intent.py",
                 "scripts/task_ops.py",
                 "scripts/task_continuation_ops.py",
                 "scripts/automation_runner.py",
@@ -379,6 +380,9 @@ def base_allowed_dirs() -> list[str]:
         "tests/base/",
         "docs/governance/CURRENT_TASK.yaml",
         "docs/governance/DEVELOPMENT_ROADMAP.md",
+        "docs/governance/AUTOMATION_INTENTS.yaml",
+        "docs/governance/PROMPT_MODULE_CATALOG.yaml",
+        "docs/governance/prompt_modules/",
         "docs/governance/TASK_REGISTRY.yaml",
         "docs/governance/WORKTREE_REGISTRY.yaml",
         "docs/governance/MODULE_MAP.yaml",

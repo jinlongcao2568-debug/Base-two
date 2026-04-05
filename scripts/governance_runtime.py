@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 from typing import Any
 
 import yaml
@@ -53,6 +54,17 @@ class DeclaredPath:
 
 def iso_now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def configure_utf8_stdio() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except ValueError:
+            continue
 
 
 def find_repo_root(start: Path | None = None) -> Path:
@@ -140,7 +152,14 @@ def declared_path(value: str) -> DeclaredPath:
 
 
 def git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(["git", *args], cwd=root, text=True, capture_output=True)
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if check and result.returncode != 0:
         stderr = result.stderr.strip() or result.stdout.strip() or "git command failed"
         raise GovernanceError(stderr)
@@ -156,7 +175,14 @@ def branch_exists(root: Path, branch: str) -> bool:
 
 
 def git_status_paths(root: Path) -> list[str]:
-    lines = git(root, "status", "--porcelain", "--untracked-files=all").stdout.splitlines()
+    lines = git(
+        root,
+        "-c",
+        "core.quotepath=false",
+        "status",
+        "--porcelain",
+        "--untracked-files=all",
+    ).stdout.splitlines()
     paths: list[str] = []
     for line in lines:
         if not line:

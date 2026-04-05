@@ -74,7 +74,7 @@
 - `topology`: `single_worker`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
-- `updated_at`: `2026-04-05T07:21:48+08:00`
+- `updated_at`: `2026-04-05T10:31:04+08:00`
 <!-- generated:task-meta:end -->
 
 ## Narrative Assertions
