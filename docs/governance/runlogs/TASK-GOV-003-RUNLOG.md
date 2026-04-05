@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-003`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-task-lifecycle-closure-v1`
 - `branch`: `feat/TASK-GOV-003-governance-task-lifecycle-closure`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 ## Execution Log
 
 - `2026-04-05T07:40:01+08:00`: task package created
@@ -30,18 +30,18 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-003`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-task-lifecycle-closure-v1`
 - `branch`: `feat/TASK-GOV-003-governance-task-lifecycle-closure`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 <!-- generated:runlog-meta:end -->

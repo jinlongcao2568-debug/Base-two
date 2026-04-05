@@ -1,6 +1,6 @@
 ---
-current_phase: governance-task-lifecycle-closure-v1
-current_task_id: TASK-GOV-003
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,8 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-GOV-003`: formalize the idle current-task lifecycle so `review -> done -> idle -> successor` remains green and recoverable.
-
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-001`: closed authority drift, formalized contracts and handoff assets, expanded minimum regression coverage, and hardened the governance control plane.

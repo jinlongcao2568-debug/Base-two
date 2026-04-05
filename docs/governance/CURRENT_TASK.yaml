@@ -1,41 +1,23 @@
-current_task_id: TASK-GOV-003
-title: 任务生命周期闭环补齐
-status: doing
-task_kind: coordination
-execution_mode: shared_coordination
+current_task_id: null
+title: null
+status: idle
+task_kind: null
+execution_mode: null
 parent_task_id: null
-stage: governance-task-lifecycle-closure-v1
-branch: feat/TASK-GOV-003-governance-task-lifecycle-closure
-size_class: standard
-automation_mode: manual
-worker_state: running
+stage: null
+branch: null
+size_class: null
+automation_mode: null
+worker_state: idle
 blocked_reason: null
-last_reported_at: '2026-04-05T07:40:13+08:00'
-topology: single_worker
-allowed_dirs:
-- docs/governance/
-- scripts/
-- tests/governance/
-- tests/automation/
+last_reported_at: '2026-04-05T08:29:27+08:00'
+topology: null
+allowed_dirs: []
 reserved_paths: []
-planned_write_paths:
-- docs/governance/
-- scripts/
-- tests/governance/
-- tests/automation/
-planned_test_paths:
-- tests/governance/
-- tests/automation/
-required_tests:
-- python scripts/check_authority_alignment.py
-- python scripts/check_repo.py
-- python scripts/check_hygiene.py
-- pytest tests/governance -q
-- pytest tests/automation -q
-- pytest tests/contracts -q
-- pytest tests/integration -q
-- pytest -q
-task_file: docs/governance/tasks/TASK-GOV-003.md
-runlog_file: docs/governance/runlogs/TASK-GOV-003-RUNLOG.md
-next_action: Implement the live task package and keep branch/control-plane state aligned.
-updated_at: '2026-04-05T07:40:13+08:00'
+planned_write_paths: []
+planned_test_paths: []
+required_tests: []
+task_file: null
+runlog_file: null
+next_action: wait_for_successor_or_explicit_activation
+updated_at: '2026-04-05T08:29:27+08:00'
