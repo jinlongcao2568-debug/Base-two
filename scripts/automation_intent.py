@@ -29,6 +29,7 @@ from governance_repo_checks import run_repo_checks
 from task_closeout import assess_live_closeout
 from task_coordination_lease import assess_coordination_lease
 from task_continuation_ops import _resolve_roadmap_successor
+from task_continuation_ops import assess_continuation_readiness
 from task_handoff import build_recovery_pack
 from task_publish_ops import PUBLISH_ACTIONS, publish_preflight
 from task_rendering import find_task
@@ -230,38 +231,22 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
 
 
 def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
-    blockers = _dirty_blockers(root)
+    blockers: list[str] = []
     blockers.extend(_run_repo_gate(root))
     blockers.extend(_run_hygiene_gate(root))
 
     current_payload, current_task = _load_live_task(root)
     status = current_payload.get("status")
     closeout = assess_live_closeout(root, current_payload=current_payload, current_task=current_task)
-    if current_task is not None:
-        lease = assess_coordination_lease(root, current_task)
-        if lease["enforced"] and not lease["can_write"]:
-            blockers.append(
-                f"当前任务写租约已被其他窗口持有：{lease['owner_session_id']}；请先执行 release 或 takeover"
-            )
-    if status == "blocked":
-        reason = None if current_task is None else current_task.get("blocked_reason")
-        blockers.append(f"当前任务已阻塞：{reason or 'blocked without recorded reason'}")
-    elif status == "done":
-        blockers.append("CURRENT_TASK.yaml 不应停留在 done；请先修复 live 控制面状态。")
-    elif status == "review":
-        blockers.extend(closeout.get("blockers", []))
-        blockers.extend(closeout.get("diagnostics", []))
+    readiness = assess_continuation_readiness(root, current_payload=current_payload, current_task=current_task)
+    blockers.extend(readiness.get("blockers", []))
 
     successor_summary = None
-    if status not in {"doing", "paused", "blocked", "done"}:
-        try:
-            successor, source = _preview_roadmap_successor(
-                root,
-                None if current_task is None else current_task["task_id"],
-            )
-            successor_summary = f"后继任务将解析为 `{successor['task_id']}`，来源 `{source}`。"
-        except GovernanceError as error:
-            blockers.append(str(error))
+    if readiness.get("next_successor_task_id"):
+        successor_summary = (
+            f"后继任务将解析为 `{readiness['next_successor_task_id']}`，"
+            f"来源 `{readiness['successor_source']}`。"
+        )
 
     if blockers:
         return {
@@ -274,7 +259,7 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
             "closeout_recommendation": closeout,
         }
 
-    if status in {"doing", "paused"} and current_task is not None:
+    if readiness["status"] == "continue-current" and current_task is not None:
         explanation = (
             f"live 当前任务 `{current_task['task_id']}` 仍在 `{current_task['status']}`，"
             "continue-roadmap 将退化为继续当前任务，不会跳到后继。"

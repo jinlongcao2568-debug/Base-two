@@ -16,6 +16,7 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 ## Primary Goals
 
 - Introduce a formal idle current-task state so closeout no longer leaves the control plane red when no successor is immediately active.
@@ -85,7 +86,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-003-governance-task-lifecycle-closure`
-- `updated_at`: `2026-04-05T19:06:16+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

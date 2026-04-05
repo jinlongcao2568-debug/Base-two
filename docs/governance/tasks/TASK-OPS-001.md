@@ -16,6 +16,7 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 ## Primary Goals
 
 - Add a governed `publish_readiness` block to `orchestration-status` so operators can see whether the live task can be committed, pushed, or opened as a draft PR.
@@ -83,7 +84,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-OPS-001-publish-readiness`
-- `updated_at`: `2026-04-05T19:12:35+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

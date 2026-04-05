@@ -7,6 +7,7 @@ import pytest
 from .helpers import (
     CHECK_REPO_SCRIPT,
     TASK_OPS_SCRIPT,
+    close_live_task_to_idle,
     git_commit_all,
     init_governance_repo,
     read_roadmap,
@@ -23,6 +24,37 @@ from .scenario_builders import (
     execution_worktree_entry,
     write_execution_context,
 )
+
+
+def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        task_id,
+        "--title",
+        "next coordination task",
+        "--stage",
+        "next-phase",
+        "--branch",
+        f"feat/{task_id}",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "scripts/",
+        "tests/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "scripts/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
 
 
 def test_check_repo_passes_on_clean_repo(tmp_path: Path) -> None:
@@ -91,6 +123,37 @@ def test_check_repo_passes_when_current_state_is_idle(tmp_path: Path) -> None:
     git_commit_all(repo, "set idle current state")
     result = run_python(CHECK_REPO_SCRIPT, repo)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_check_repo_passes_for_idle_recoverable_predecessor_ready_for_continuation(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap_path = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    frontmatter, body = read_roadmap(roadmap_path)
+    frontmatter["next_recommended_task_id"] = "TASK-NEXT-001"
+    write_roadmap(roadmap_path, frontmatter, body)
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_check_repo_reports_checkpoint_scope_diagnosis_for_idle_recoverable_predecessor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap_path = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    frontmatter, body = read_roadmap(roadmap_path)
+    frontmatter["next_recommended_task_id"] = "TASK-NEXT-001"
+    write_roadmap(roadmap_path, frontmatter, body)
+    close_live_task_to_idle(repo, commit_after_close=False)
+    (repo / "oops.txt").write_text("x", encoding="utf-8")
+
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 1
+    assert "dirty paths outside task checkpoint scope" in result.stdout
+    assert "outside allowed_dirs" not in result.stdout
 
 
 @pytest.mark.parametrize(

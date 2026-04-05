@@ -9,6 +9,7 @@ from pathlib import Path
 from .helpers import (
     AUTOMATION_INTENT_SCRIPT,
     TASK_OPS_SCRIPT,
+    close_live_task_to_idle,
     git_commit_all,
     init_governance_repo,
     read_yaml,
@@ -146,6 +147,38 @@ def test_publish_actions_block_when_idle_without_explicit_task_id(tmp_path: Path
         result = run_python(TASK_OPS_SCRIPT, repo, command)
         assert result.returncode == 1
         assert "no live current task" in (result.stdout + result.stderr)
+
+
+def test_checkpoint_task_results_commits_scoped_changes_for_live_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    (repo / "src/base/module.py").write_text("def base_value():\n    return 3\n", encoding="utf-8")
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "checkpoint-task-results")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "checkpoint TASK-BASE-001" in subprocess.run(
+        ["git", "log", "--oneline", "-1"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+def test_checkpoint_task_results_supports_done_task_id_from_idle_control_plane(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "checkpoint-task-results", "--task-id", "TASK-BASE-001")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "checkpoint TASK-BASE-001" in subprocess.run(
+        ["git", "log", "--oneline", "-1"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
 
 
 def test_commit_task_results_blocks_out_of_scope_dirty_paths(tmp_path: Path) -> None:

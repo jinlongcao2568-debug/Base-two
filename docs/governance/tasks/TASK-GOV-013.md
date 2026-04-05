@@ -16,6 +16,7 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 ## Primary Goals
 
 - Add a document-driven coordination planner that reads roadmap, ledgers, runlogs, handoffs, and policy to rank the next governed coordination candidates.
@@ -83,7 +84,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-013-coordination-planner`
-- `updated_at`: `2026-04-05T19:06:16+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

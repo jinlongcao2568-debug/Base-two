@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import re
 from typing import Any
 
@@ -19,6 +20,7 @@ from governance_lib import (
     ensure_clean_worktree,
     find_repo_root,
     git,
+    git_status_paths,
     is_idle_current_payload,
     iso_now,
     load_capability_map,
@@ -28,11 +30,11 @@ from governance_lib import (
     load_worktree_registry,
     sync_task_artifacts,
     task_map,
+    effective_successor_state,
     validate_task,
     worktree_map,
     write_roadmap,
 )
-from orchestration_runtime import record_session_event, runtime_status_for_task
 from task_closeout import assess_live_closeout
 from task_coordination_lease import (
     assess_coordination_lease,
@@ -49,6 +51,7 @@ from task_rendering import (
     update_task_file,
     upsert_coordination_entry,
 )
+from task_publish_ops import checkpoint_preflight, checkpoint_task_results
 
 
 ADVANCE_MODE_VALUES = {"explicit_or_generated"}
@@ -57,6 +60,18 @@ PRIORITY_VALUES = {"governance_automation", "authority_chain", "business_automat
 
 AUTOPILOT_CAPABILITY_ID = "roadmap_autopilot_continuation"
 AUTOPILOT_BLUEPRINT_ID = "roadmap_autopilot_continuation"
+
+
+def _record_runtime_event(root, **kwargs) -> None:
+    from orchestration_runtime import record_session_event
+
+    record_session_event(root, **kwargs)
+
+
+def _runtime_status_for_task(task: dict[str, Any] | None) -> str:
+    from orchestration_runtime import runtime_status_for_task
+
+    return runtime_status_for_task(task)
 
 
 def _read_roadmap_state(root):
@@ -145,6 +160,241 @@ def _dependency_errors(task: dict[str, Any], tasks_by_id: dict[str, dict[str, An
     return errors
 
 
+def _recoverable_predecessor_task(root, registry: dict[str, Any], current_payload: dict[str, Any]) -> dict[str, Any] | None:
+    if not is_idle_current_payload(current_payload):
+        return None
+    branch = current_branch(root)
+    dirty_paths = git_status_paths(root)
+    if not dirty_paths:
+        return None
+    candidates = [
+        task
+        for task in registry.get("tasks", [])
+        if task.get("task_kind") == "coordination"
+        and task.get("parent_task_id") is None
+        and task.get("status") == "done"
+        and task.get("branch") == branch
+    ]
+    if not candidates:
+        return None
+    candidates.sort(
+        key=lambda task: (
+            task.get("closed_at") or "",
+            task.get("last_reported_at") or "",
+            task["task_id"],
+        ),
+        reverse=True,
+    )
+    return candidates[0]
+
+
+def _checkpoint_resolvable_closeout_blockers(blockers: list[str], dirty_paths: list[str]) -> list[str]:
+    if not dirty_paths:
+        return blockers
+    dirty_suffix = ", ".join(dirty_paths)
+    filtered: list[str] = []
+    for blocker in blockers:
+        if "工作区不干净" in blocker and blocker.endswith(dirty_suffix):
+            continue
+        filtered.append(blocker)
+    return filtered
+
+
+def _base_continuation_readiness(dirty_paths: list[str]) -> dict[str, Any]:
+    return {
+        "status": "blocked",
+        "recoverable_predecessor_task_id": None,
+        "checkpoint_required": bool(dirty_paths),
+        "checkpoint_eligible": False,
+        "next_successor_task_id": None,
+        "successor_source": None,
+        "blockers": [],
+        "recommended_action": "resolve the continuation blockers and rerun continue-roadmap",
+        "checkpoint_task_id": None,
+    }
+
+
+def _continue_current_readiness() -> dict[str, Any]:
+    readiness = _base_continuation_readiness([])
+    readiness["status"] = "continue-current"
+    readiness["recommended_action"] = "continue-current"
+    return readiness
+
+
+def _checkpoint_context(
+    root,
+    *,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+    recoverable_predecessor: dict[str, Any] | None,
+    dirty_paths: list[str],
+) -> tuple[list[str], dict[str, Any] | None, dict[str, Any] | None, str | None]:
+    blockers: list[str] = []
+    checkpoint_task: dict[str, Any] | None = None
+    closeout: dict[str, Any] | None = None
+    recoverable_task_id: str | None = None
+    current_status = current_payload.get("status")
+
+    if current_status == "blocked":
+        reason = None if current_task is None else current_task.get("blocked_reason")
+        blockers.append(f"current task is blocked: {reason or 'blocked without recorded reason'}")
+    elif current_status == "done":
+        blockers.append("CURRENT_TASK.yaml should not remain on a done task; repair the live control-plane state first")
+    elif current_status == "review" and current_task is not None:
+        closeout = assess_live_closeout(
+            root,
+            registry=registry,
+            worktrees=worktrees,
+            current_payload=current_payload,
+            current_task=current_task,
+        )
+        checkpoint_task = current_task
+    elif recoverable_predecessor is not None:
+        checkpoint_task = recoverable_predecessor
+        recoverable_task_id = recoverable_predecessor["task_id"]
+    elif dirty_paths:
+        blockers.append("idle control plane has dirty paths but no recoverable predecessor task")
+
+    return blockers, checkpoint_task, closeout, recoverable_task_id
+
+
+def _apply_checkpoint_readiness(
+    root,
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    checkpoint_task: dict[str, Any] | None,
+    closeout: dict[str, Any] | None,
+    dirty_paths: list[str],
+) -> None:
+    if dirty_paths and checkpoint_task is not None:
+        readiness["checkpoint_task_id"] = checkpoint_task["task_id"]
+        checkpoint = checkpoint_preflight(root, task_id=checkpoint_task["task_id"])
+        readiness["checkpoint_eligible"] = checkpoint["status"] == "ready"
+        if checkpoint["status"] != "ready":
+            blockers.extend(checkpoint.get("blockers", []))
+    else:
+        readiness["checkpoint_required"] = False
+
+    if closeout is not None and closeout["status"] != "ready":
+        closeout_blockers = list(closeout.get("blockers", []))
+        if dirty_paths and readiness["checkpoint_eligible"]:
+            closeout_blockers = _checkpoint_resolvable_closeout_blockers(closeout_blockers, dirty_paths)
+        blockers.extend(closeout_blockers)
+        blockers.extend(closeout.get("diagnostics", []))
+
+
+def _preview_continuation_successor(
+    root,
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    registry: dict[str, Any],
+    capability_map: dict[str, Any],
+    task_policy: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+) -> None:
+    current_task_id = current_task["task_id"] if current_task is not None and not is_idle_current_payload(current_payload) else None
+    try:
+        successor, source = _resolve_roadmap_successor(
+            root,
+            copy.deepcopy(registry),
+            copy.deepcopy(capability_map),
+            copy.deepcopy(task_policy),
+            copy.deepcopy(_read_roadmap_state(root)[0]),
+            current_task_id,
+        )
+        readiness["next_successor_task_id"] = successor["task_id"]
+        readiness["successor_source"] = source
+    except GovernanceError as error:
+        blockers.append(str(error))
+
+
+def _finalize_continuation_readiness(
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    dirty_paths: list[str],
+    checkpoint_task: dict[str, Any] | None,
+) -> dict[str, Any]:
+    readiness["blockers"] = list(dict.fromkeys(blockers))
+    if not readiness["blockers"]:
+        readiness["status"] = "ready"
+        readiness["recommended_action"] = "continue-roadmap"
+        return readiness
+
+    if dirty_paths and checkpoint_task is not None and not readiness["checkpoint_eligible"]:
+        readiness["recommended_action"] = "clean or narrow the dirty worktree to the task checkpoint scope"
+    elif dirty_paths and checkpoint_task is None:
+        readiness["recommended_action"] = "clean the idle worktree or restore the recoverable predecessor state"
+    elif readiness["next_successor_task_id"] is None:
+        readiness["recommended_action"] = "resolve successor ambiguity or dependencies before continuing"
+    return readiness
+
+
+def assess_continuation_readiness(
+    root,
+    *,
+    registry: dict[str, Any] | None = None,
+    worktrees: dict[str, Any] | None = None,
+    capability_map: dict[str, Any] | None = None,
+    task_policy: dict[str, Any] | None = None,
+    current_payload: dict[str, Any] | None = None,
+    current_task: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    registry = registry or load_task_registry(root)
+    worktrees = worktrees or load_worktree_registry(root)
+    capability_map = capability_map or load_capability_map(root)
+    task_policy = task_policy or load_task_policy(root)
+    current_payload = current_payload or load_current_task(root)
+    if current_task is None and not is_idle_current_payload(current_payload):
+        current_task = find_task(registry["tasks"], current_payload["current_task_id"])
+
+    recoverable_predecessor = _recoverable_predecessor_task(root, registry, current_payload)
+    dirty_paths = git_status_paths(root)
+    if current_payload.get("status") in {"doing", "paused"}:
+        return _continue_current_readiness()
+
+    readiness = _base_continuation_readiness(dirty_paths)
+    blockers, checkpoint_task, closeout, recoverable_task_id = _checkpoint_context(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        current_payload=current_payload,
+        current_task=current_task,
+        recoverable_predecessor=recoverable_predecessor,
+        dirty_paths=dirty_paths,
+    )
+    readiness["recoverable_predecessor_task_id"] = recoverable_task_id
+    _apply_checkpoint_readiness(
+        root,
+        readiness=readiness,
+        blockers=blockers,
+        checkpoint_task=checkpoint_task,
+        closeout=closeout,
+        dirty_paths=dirty_paths,
+    )
+    _preview_continuation_successor(
+        root,
+        readiness=readiness,
+        blockers=blockers,
+        registry=registry,
+        capability_map=capability_map,
+        task_policy=task_policy,
+        current_payload=current_payload,
+        current_task=current_task,
+    )
+    return _finalize_continuation_readiness(
+        readiness=readiness,
+        blockers=blockers,
+        dirty_paths=dirty_paths,
+        checkpoint_task=checkpoint_task,
+    )
+
+
 def _validate_successor_candidate(
     task: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]], current_task_id: str | None
 ) -> None:
@@ -157,6 +407,8 @@ def _validate_successor_candidate(
     if task["status"] == "blocked":
         reason = task.get("blocked_reason") or "blocked without recorded reason"
         raise GovernanceError(f"successor is blocked: {reason}")
+    if effective_successor_state(task) != "immediate":
+        raise GovernanceError(f"successor must be immediate, got {effective_successor_state(task)!r}")
     boundary_error = _task_boundary_error(task)
     if boundary_error:
         raise GovernanceError(boundary_error)
@@ -178,6 +430,7 @@ def _ensure_unique_successor_landscape(
         and task["task_id"] not in excluded_ids
         and task.get("parent_task_id") is None
         and task["status"] not in {"done", "blocked"}
+        and effective_successor_state(task) == "immediate"
     ]
     if conflicting:
         joined = ", ".join(conflicting)
@@ -456,7 +709,7 @@ def _record_continue_current_event(
     blocked_reason: str | None = None,
     safe_write: bool,
 ) -> None:
-    record_session_event(
+    _record_runtime_event(
         root,
         session_id=current_session_id(root),
         thread_id=coordination_thread_id(root),
@@ -558,7 +811,7 @@ def _reactivate_current_task(
         root,
         task_id=task["task_id"],
         writer_state="writable",
-        runtime_status=runtime_status_for_task(task),
+        runtime_status=_runtime_status_for_task(task),
         safe_write=True,
     )
     print(f"[OK] continue-current reactivated {task['task_id']} branch={branch_action}")
@@ -598,7 +851,7 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
             root,
             task_id=task["task_id"],
             writer_state="writable",
-            runtime_status=runtime_status_for_task(task),
+            runtime_status=_runtime_status_for_task(task),
             safe_write=True,
         )
         print(f"[OK] continue-current {task['task_id']} branch={branch_action}")
@@ -613,9 +866,23 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
 
     if current_task_payload["status"] in {"doing", "paused"}:
         return cmd_continue_current(args)
-    if current_task_payload["status"] == "blocked":
-        reason = current_task.get("blocked_reason") or "blocked without recorded reason"
-        raise GovernanceError(f"current task is blocked: {reason}")
+    readiness = assess_continuation_readiness(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        capability_map=capability_map,
+        task_policy=task_policy,
+        current_payload=current_task_payload,
+        current_task=current_task,
+    )
+    if readiness["status"] != "ready":
+        raise GovernanceError("; ".join(readiness["blockers"]) or "continue-roadmap blocked")
+
+    if readiness["checkpoint_required"]:
+        checkpoint_task_id = readiness.get("checkpoint_task_id")
+        if checkpoint_task_id is None:
+            raise GovernanceError("continuation checkpoint task is missing")
+        checkpoint_task_results(root, task_id=checkpoint_task_id)
 
     frontmatter, body = _read_roadmap_state(root)
     if current_task is not None:
@@ -639,7 +906,7 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         current_task,
         successor,
     )
-    record_session_event(
+    _record_runtime_event(
         root,
         session_id=current_session_id(root),
         thread_id=coordination_thread_id(root),
@@ -648,7 +915,7 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         writer_state="writable",
         current_task_id=successor["task_id"],
         continue_intent="roadmap",
-        runtime_status=runtime_status_for_task(successor),
+        runtime_status=_runtime_status_for_task(successor),
         safe_write=True,
     )
     print(f"[OK] continue-roadmap advanced to {successor['task_id']} source={source} branch={branch_action}")

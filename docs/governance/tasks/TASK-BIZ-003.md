@@ -16,6 +16,7 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `backlog`
 ## Primary Goals
 
 - Deliver the minimum runnable downstream implementation for `stage7_sales`, `stage8_contact`, and `stage9_delivery`.
@@ -108,7 +109,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `backlog`
 - `reserved_paths`: `src/stage6_facts/, db/migrations/`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
-- `updated_at`: `2026-04-05T19:06:16+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

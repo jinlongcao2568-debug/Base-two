@@ -164,6 +164,22 @@ def test_preflight_roadmap_reports_ready_closeout_recommendation(tmp_path: Path)
     assert payload["closeout_recommendation"]["task_id"] == "TASK-BASE-001"
 
 
+def test_preflight_continue_roadmap_accepts_recoverable_predecessor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    code, payload = _preflight(repo, "按路线图继续推进")
+
+    assert code == 0
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "continue-roadmap"
+    assert "TASK-NEXT-001" in payload["explanation"]
+
+
 def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")

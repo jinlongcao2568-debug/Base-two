@@ -7,6 +7,7 @@ from governance_rules import (
     declared_paths_overlap,
     dynamic_lane_ceiling,
     dynamic_parallelism_policy,
+    effective_successor_state,
     distinct_scope_roots,
     ensure_task_and_runlog_exist,
     execution_worker_owner_choices,

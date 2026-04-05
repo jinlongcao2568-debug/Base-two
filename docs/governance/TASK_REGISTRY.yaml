@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-05T19:47:23+08:00'
+updated_at: '2026-04-05T19:48:25+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -944,6 +944,7 @@ tasks:
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: backlog
   stage: business-stage7-9-smoke-v1
   branch: feat/TASK-BIZ-003-stage7-9-smoke
   size_class: heavy
@@ -1007,6 +1008,8 @@ tasks:
   lane_index: null
   parallelism_plan_id: null
   review_bundle_status: not_applicable
+  depends_on_task_ids:
+  - TASK-BIZ-002
   created_at: '2026-04-05T18:54:21+08:00'
   activated_at: null
   closed_at: null
@@ -1110,6 +1113,7 @@ tasks:
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: backlog
   stage: business-stage7-9-contracts-v1
   branch: feat/TASK-BIZ-001-stage7-9-contracts
   size_class: heavy
@@ -1163,6 +1167,8 @@ tasks:
   lane_index: null
   parallelism_plan_id: null
   review_bundle_status: not_applicable
+  depends_on_task_ids:
+  - TASK-GRAD-001
   created_at: '2026-04-05T18:54:21+08:00'
   activated_at: null
   closed_at: null
@@ -1172,6 +1178,7 @@ tasks:
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: backlog
   stage: governance-soak-chaos-validation-v1
   branch: feat/TASK-SOAK-001-continuous-autonomy-validation
   size_class: heavy
@@ -1210,6 +1217,8 @@ tasks:
   lane_index: null
   parallelism_plan_id: null
   review_bundle_status: not_applicable
+  depends_on_task_ids:
+  - TASK-GOV-016
   created_at: '2026-04-05T19:00:02+08:00'
   activated_at: null
   closed_at: null
@@ -1219,6 +1228,7 @@ tasks:
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: backlog
   stage: governance-heavy-autonomy-graduation-v1
   branch: feat/TASK-GRAD-001-autonomy-graduation
   size_class: standard
@@ -1257,6 +1267,8 @@ tasks:
   lane_index: null
   parallelism_plan_id: null
   review_bundle_status: not_applicable
+  depends_on_task_ids:
+  - TASK-SOAK-001
   created_at: '2026-04-05T19:00:13+08:00'
   activated_at: null
   closed_at: null
@@ -1266,6 +1278,7 @@ tasks:
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: backlog
   stage: governance-stage7-9-autopilot-v1
   branch: feat/TASK-BIZ-002-stage7-9-autopilot
   size_class: standard
@@ -1304,22 +1317,25 @@ tasks:
   lane_index: null
   parallelism_plan_id: null
   review_bundle_status: not_applicable
+  depends_on_task_ids:
+  - TASK-BIZ-001
   created_at: '2026-04-05T19:02:31+08:00'
   activated_at: null
   closed_at: null
 - task_id: TASK-GOV-015
   title: 连续续跑稳定化
-  status: queued
+  status: doing
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: immediate
   stage: governance-continuity-stability-v1
   branch: feat/TASK-GOV-015-continuity-stability
   size_class: heavy
   automation_mode: manual
-  worker_state: idle
+  worker_state: running
   blocked_reason: null
-  last_reported_at: '2026-04-05T19:47:14+08:00'
+  last_reported_at: '2026-04-05T19:48:25+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -1352,7 +1368,7 @@ tasks:
   parallelism_plan_id: null
   review_bundle_status: not_applicable
   created_at: '2026-04-05T19:47:14+08:00'
-  activated_at: null
+  activated_at: '2026-04-05T19:48:25+08:00'
   closed_at: null
 - task_id: TASK-GOV-016
   title: 本地多 Lane 执行调度
@@ -1360,6 +1376,7 @@ tasks:
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
+  successor_state: backlog
   stage: governance-local-multi-agent-dispatch-v1
   branch: feat/TASK-GOV-016-local-multi-agent-dispatch
   size_class: heavy
@@ -1398,6 +1415,8 @@ tasks:
   lane_index: null
   parallelism_plan_id: null
   review_bundle_status: not_applicable
+  depends_on_task_ids:
+  - TASK-GOV-015
   created_at: '2026-04-05T19:47:23+08:00'
   activated_at: null
   closed_at: null

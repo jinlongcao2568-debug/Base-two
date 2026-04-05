@@ -10,6 +10,7 @@ from governance_controls import (
     dynamic_lane_ceiling,
     dynamic_parallelism_policy,
     distinct_scope_roots,
+    effective_successor_state,
     ensure_task_and_runlog_exist,
     execution_worker_owner_choices,
     infer_default_automation_mode,

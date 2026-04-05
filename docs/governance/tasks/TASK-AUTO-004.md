@@ -16,6 +16,7 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 ## Primary Goals
 
 - implement the first deterministic local runtime chain across `stage1 -> stage2 -> stage3 -> stage4 -> stage5 -> stage6 -> domain_public_chain`
@@ -117,7 +118,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-AUTO-004-minimal-runtime-chain`
-- `updated_at`: `2026-04-05T19:06:16+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

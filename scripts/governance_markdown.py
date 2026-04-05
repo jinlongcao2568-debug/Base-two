@@ -125,6 +125,8 @@ def render_task_metadata_block(task: dict[str, Any]) -> str:
         f"- `branch`: `{task['branch']}`",
         f"- `updated_at`: `{iso_now()}`",
     ]
+    if task.get("task_kind") == "coordination" and task.get("parent_task_id") is None:
+        lines.insert(13, f"- `successor_state`: `{task.get('successor_state') or 'immediate'}`")
     return "\n".join(lines)
 
 
@@ -145,6 +147,8 @@ def render_task_baseline_section(task: dict[str, Any]) -> str:
         f"- `parallelism_plan_id`: `{_markdown_scalar(task.get('parallelism_plan_id'))}`",
         f"- `review_bundle_status`: `{_markdown_scalar(task.get('review_bundle_status', 'not_applicable'))}`",
     ]
+    if task.get("task_kind") == "coordination" and task.get("parent_task_id") is None:
+        lines.append(f"- `successor_state`: `{task.get('successor_state') or 'immediate'}`")
     return "\n".join(lines)
 
 

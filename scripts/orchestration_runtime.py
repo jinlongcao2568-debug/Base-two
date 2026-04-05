@@ -26,6 +26,12 @@ SUPPORTED_WORKER_KINDS = {"local"}
 MAX_SESSION_HISTORY = 8
 
 
+def _assess_continuation_readiness(root: Path) -> dict[str, Any]:
+    from task_continuation_ops import assess_continuation_readiness
+
+    return assess_continuation_readiness(root)
+
+
 def task_source_registry_defaults() -> dict[str, Any]:
     return {
         "version": "1.0",
@@ -463,6 +469,7 @@ def build_orchestration_status(root: Path) -> dict[str, Any]:
         "workers": runtime["workers"],
         "task_sources": runtime["task_sources"],
         "publish_readiness": build_publish_readiness(root),
+        "continuation_readiness": _assess_continuation_readiness(root),
         "current_task": current_payload,
         "candidate_summary": _candidate_summary(root),
         "runner_pressure": _runner_pressure(root),

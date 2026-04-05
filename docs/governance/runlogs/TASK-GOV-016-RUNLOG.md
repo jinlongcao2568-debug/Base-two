@@ -27,7 +27,6 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
-
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 

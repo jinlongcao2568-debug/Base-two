@@ -16,6 +16,7 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `backlog`
 ## Primary Goals
 
 - Define the formal downstream contracts for `stage7_sales_context`, `stage8_contact_context`, and `stage9_customer_delivery`.
@@ -98,7 +99,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `backlog`
 - `reserved_paths`: `src/, db/migrations/`
 - `branch`: `feat/TASK-BIZ-001-stage7-9-contracts`
-- `updated_at`: `2026-04-05T19:06:16+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

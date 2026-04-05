@@ -81,6 +81,7 @@ def cmd_new(args: argparse.Namespace) -> int:
         "lane_index": None,
         "parallelism_plan_id": None,
         "review_bundle_status": "not_applicable",
+        "successor_state": args.successor_state,
         "created_at": iso_now(),
         "activated_at": None,
         "closed_at": None,

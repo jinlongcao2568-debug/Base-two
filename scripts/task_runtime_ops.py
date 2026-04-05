@@ -5,6 +5,7 @@ import argparse
 from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError, configure_utf8_stdio
 from task_publish_ops import (
     PUBLISH_ACTIONS,
+    cmd_checkpoint_task_results,
     cmd_commit_task_results,
     cmd_create_task_pr,
     cmd_publish_preflight,
@@ -91,6 +92,7 @@ def add_task_lifecycle_commands(subparsers) -> None:
     new_parser.add_argument("--automation-mode", choices=["manual", "assisted", "autonomous"])
     new_parser.add_argument("--worker-state", default="idle", choices=["idle", "running", "blocked", "review_pending", "completed"])
     new_parser.add_argument("--topology", choices=["single_task", "single_worker", "parallel_parent"])
+    new_parser.add_argument("--successor-state", choices=["immediate", "backlog"])
     new_parser.add_argument("--allowed-dirs", nargs="*", default=[])
     new_parser.add_argument("--reserved-paths", nargs="*", default=[])
     new_parser.add_argument("--planned-write-paths", nargs="*", default=[])
@@ -148,6 +150,11 @@ def add_publish_commands(subparsers) -> None:
     publish_preflight_parser.add_argument("--action", default="publish-task-results", choices=PUBLISH_ACTIONS)
     publish_preflight_parser.add_argument("--task-id")
     publish_preflight_parser.set_defaults(func=cmd_publish_preflight)
+
+    checkpoint_parser = subparsers.add_parser("checkpoint-task-results")
+    checkpoint_parser.add_argument("--task-id")
+    checkpoint_parser.add_argument("--message")
+    checkpoint_parser.set_defaults(func=cmd_checkpoint_task_results)
 
     commit_parser = subparsers.add_parser("commit-task-results")
     commit_parser.add_argument("--task-id")

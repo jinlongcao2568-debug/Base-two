@@ -16,13 +16,18 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `backlog`
 ## Primary Goals
 
-- to-be-filled
+- Turn prepared execution worktrees into dispatched local lane agents with bounded prompts and runtime tracking.
+- Extend `automation_runner` from orchestration-only behavior into local multi-lane dispatch, monitoring, and closeout handling.
+- Keep the v1 scope limited to one machine, one physical worker registry entry, and up to four lanes.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not add remote workers or external task sources in v1.
+- Do not change Git publish policy or make publish implicit.
+- Do not broaden execution beyond the governed local multi-worktree topology.
 
 ## Allowed Dirs
 
@@ -65,7 +70,6 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
-
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -80,7 +84,8 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-016-local-multi-agent-dispatch`
-- `updated_at`: `2026-04-05T19:47:23+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

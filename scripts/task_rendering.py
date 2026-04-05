@@ -40,6 +40,9 @@ def render_scalar(value) -> str:
 
 
 def render_task_markdown(task: dict) -> str:
+    successor_line = ""
+    if task.get("task_kind") == "coordination" and task.get("parent_task_id") is None:
+        successor_line = f"- `successor_state`: `{task.get('successor_state') or 'immediate'}`\n"
     return f"""# {task['task_id']} {task['title']}
 
 ## Task Baseline
@@ -58,6 +61,7 @@ def render_task_markdown(task: dict) -> str:
 - `lane_index`: `{render_scalar(task.get('lane_index'))}`
 - `parallelism_plan_id`: `{render_scalar(task.get('parallelism_plan_id'))}`
 - `review_bundle_status`: `{render_scalar(task.get('review_bundle_status', 'not_applicable'))}`
+{successor_line}
 
 ## Primary Goals
 

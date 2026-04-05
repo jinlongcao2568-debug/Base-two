@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from .helpers import (
@@ -16,10 +17,13 @@ from .helpers import (
 )
 
 
-def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
-    created = run_python(
-        TASK_OPS_SCRIPT,
-        repo,
+def _create_successor(
+    repo: Path,
+    task_id: str = "TASK-NEXT-001",
+    *,
+    successor_state: str | None = None,
+) -> None:
+    args = [
         "new",
         task_id,
         "--title",
@@ -43,7 +47,10 @@ def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
         "tests/governance/",
         "--required-tests",
         "python scripts/check_repo.py",
-    )
+    ]
+    if successor_state is not None:
+        args.extend(["--successor-state", successor_state])
+    created = run_python(TASK_OPS_SCRIPT, repo, *args)
     assert created.returncode == 0, created.stdout + created.stderr
 
 
@@ -262,6 +269,63 @@ def test_continue_roadmap_activates_explicit_successor_from_idle(tmp_path: Path)
     assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
 
 
+def test_continue_roadmap_auto_checkpoints_live_review_task_with_in_scope_changes(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_current_review_ready(repo)
+    (repo / "src/base/module.py").write_text("def base_value():\n    return 7\n", encoding="utf-8")
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
+    tasks = {task["task_id"]: task for task in registry["tasks"]}
+    last_commit = subprocess.run(
+        ["git", "log", "--oneline", "-1"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert tasks["TASK-BASE-001"]["status"] == "done"
+    assert "checkpoint TASK-BASE-001" in last_commit
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
+def test_continue_roadmap_auto_checkpoints_recoverable_predecessor_from_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
+    tasks = {task["task_id"]: task for task in registry["tasks"]}
+    last_commit = subprocess.run(
+        ["git", "log", "--oneline", "-1"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert tasks["TASK-BASE-001"]["status"] == "done"
+    assert "checkpoint TASK-BASE-001" in last_commit
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
 def test_continue_roadmap_rejects_dirty_review_task(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)
@@ -418,6 +482,26 @@ def test_continue_roadmap_rejects_ambiguous_successor_landscape(tmp_path: Path) 
     result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
     assert result.returncode == 1
     assert "not unique" in result.stdout
+
+
+def test_continue_roadmap_ignores_backlog_successor_in_uniqueness_check(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    _create_successor(repo, "TASK-ALT-001", successor_state="backlog")
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_current_review_ready(repo)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    tasks = {task["task_id"]: task for task in registry["tasks"]}
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert tasks["TASK-ALT-001"]["status"] == "queued"
+    assert tasks["TASK-ALT-001"]["successor_state"] == "backlog"
 
 
 def test_continue_roadmap_rejects_boundary_unclear_successor(tmp_path: Path) -> None:

@@ -157,11 +157,26 @@ def collect_active_execution_errors(
     return errors
 
 
+SUCCESSOR_STATE_VALUES = {"immediate", "backlog"}
+
+
+def effective_successor_state(task: dict[str, Any]) -> str | None:
+    value = task.get("successor_state")
+    if task.get("task_kind") == "coordination" and task.get("parent_task_id") is None:
+        return value or "immediate"
+    return value
+
+
 def validate_task(task: dict[str, Any]) -> None:
     task.setdefault("lane_count", 1)
     task.setdefault("lane_index", None)
     task.setdefault("parallelism_plan_id", None)
     task.setdefault("review_bundle_status", "not_applicable")
+    if task.get("task_kind") == "coordination" and task.get("parent_task_id") is None:
+        if task.get("successor_state") is None:
+            task["successor_state"] = "immediate"
+    else:
+        task.setdefault("successor_state", None)
     required_fields = {
         "task_id",
         "title",
@@ -205,6 +220,12 @@ def validate_task(task: dict[str, Any]) -> None:
     for valid, message in validators:
         if not valid:
             raise GovernanceError(message)
+    successor_state = task.get("successor_state")
+    if task.get("task_kind") == "coordination" and task.get("parent_task_id") is None:
+        if successor_state not in SUCCESSOR_STATE_VALUES:
+            raise GovernanceError(f"invalid successor_state: {successor_state!r}")
+    elif successor_state not in {None, *SUCCESSOR_STATE_VALUES}:
+        raise GovernanceError(f"invalid successor_state: {successor_state!r}")
     if task["size_class"] == "micro" and len(task.get("planned_write_paths", [])) > 8:
         raise GovernanceError("micro task exceeds planned_write_paths hard limit of 8")
     if not isinstance(task["lane_count"], int) or task["lane_count"] < 1:

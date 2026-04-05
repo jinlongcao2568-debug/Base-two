@@ -5,24 +5,29 @@
 - `task_id`: `TASK-GOV-015`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-continuity-stability-v1`
 - `branch`: `feat/TASK-GOV-015-continuity-stability`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 ## Primary Goals
 
-- to-be-filled
+- Add `successor_state` governance so only one formal top-level successor remains `immediate` and all later phases can stay queued as `backlog`.
+- Add `checkpoint-task-results` and wire it into `continue-roadmap` for live review tasks and idle recoverable predecessors.
+- Add `continuation_readiness` to orchestration status and make idle repo checks continuity-aware.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not implement local multi-lane execution dispatch in this task.
+- Do not make `push`, `PR`, or full publish flows implicit.
+- Do not expand into `src/`, `docs/contracts/`, `db/migrations/`, or `tests/integration/`.
 
 ## Allowed Dirs
 
@@ -59,28 +64,28 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-015-continuity-stability`
-- `updated_at`: `2026-04-05T19:47:14+08:00`
+- `updated_at`: `2026-04-05T20:28:55+08:00`
 <!-- generated:task-meta:end -->

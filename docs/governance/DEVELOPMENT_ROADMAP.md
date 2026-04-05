@@ -1,7 +1,7 @@
 ---
-current_phase: idle
-current_task_id: null
-next_recommended_task_id: TASK-BIZ-001
+current_phase: governance-continuity-stability-v1
+current_task_id: TASK-GOV-015
+next_recommended_task_id: TASK-GOV-016
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
 branch_switch_policy: create_or_switch_if_clean
@@ -35,34 +35,39 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-015`: continuity-stability-v1 is the live coordination task for `governance-continuity-stability-v1`.
+
 ## Recently Closed
 
 - `TASK-GOV-013`: completed doc-driven coordination planning and explicit candidate promotion.
 - `TASK-MRG-001`: promoted the governed Git publish controls into the main repository baseline.
+- `TASK-OPS-001`: closed the publish-readiness integration and queued the downstream task package set.
 
 ## Current Phase Goal
 
-- Add a governed `publish_readiness` block to `orchestration-status` so operators can see whether the live task is ready for `commit`, `push`, and `draft PR`.
-- Reuse the existing `publish-preflight` checks instead of inventing a second Git publish gate.
-- Queue the downstream 9.5+ phases as formal task packages so the control plane has a single next candidate after `TASK-OPS-001` closes.
+- Add continuity-aware successor resolution so only one formal `immediate` top-level successor can auto-activate.
+- Add local `checkpoint-task-results` support so dirty task-scoped work can be checkpointed before branch switching.
+- Expose `continuation_readiness` in the control plane and make idle repo checks recoverable-predecessor aware.
+- Reclassify downstream formal tasks so the queued ledger stays visible without breaking successor uniqueness.
 
 ## Explicitly Out Of Scope
 
 - Do not make Git publish actions implicit in continuation, runner, or closeout flows.
-- Do not implement `stage7-stage9` business automation in the current phase.
-- Do not change `src/`, `docs/contracts/`, `db/migrations/`, or `tests/integration/` in `TASK-OPS-001`.
+- Do not implement the local multi-lane execution dispatcher in the current phase.
+- Do not change `src/`, `docs/contracts/`, `db/migrations/`, or `tests/integration/` in `TASK-GOV-015`.
 
 ## Exit Criteria For Current Phase
 
-- `orchestration-status` contains a stable `publish_readiness` block.
-- `publish_readiness` matches the live `publish-preflight` result for blocked and ready cases.
-- The Phase 3 to Phase 5 tasks exist as queued task packages with scoped task files, runlogs, and handoffs.
+- `continue-roadmap` can auto-checkpoint live review tasks and recoverable predecessors before successor activation.
+- `orchestration-status` contains a stable `continuation_readiness` block.
+- `check_repo.py` reports continuity-specific idle diagnostics instead of generic `allowed_dirs` failures.
+- The successor ledger has exactly one formal `immediate` top-level successor and the downstream queue is modeled as `backlog`.
 
 ## Next Candidate
 
-- `TASK-BIZ-001`: downstream contracts and test skeletons for `stage7-stage9`.
-- `TASK-BIZ-002`: governed successor generation for downstream business automation.
-- `TASK-BIZ-003`: minimum downstream runtime chain and smoke coverage.
-- `TASK-SOAK-001`: continuous soak / chaos / fallback validation.
-- `TASK-GRAD-001`: heavy default policy graduation to the 9.5+ operating mode.
+- `TASK-GOV-016`: local multi-lane execution dispatch v1. This is the only formal `immediate` successor after `TASK-GOV-015`.
+- `TASK-SOAK-001`: backlog soak / chaos / fallback validation after multi-lane dispatch lands.
+- `TASK-GRAD-001`: backlog heavy-task graduation after soak validation passes.
+- `TASK-BIZ-001`: backlog downstream contracts and test skeletons for `stage7-stage9`.
+- `TASK-BIZ-002`: backlog governed successor generation for downstream business automation.
+- `TASK-BIZ-003`: backlog minimum downstream runtime chain and smoke coverage.

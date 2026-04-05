@@ -163,7 +163,9 @@ def _direct_governance_paths(root: Path, current_payload: dict[str, Any], task: 
         actual_path(str(WORKTREE_REGISTRY_FILE)),
         actual_path(str(ROADMAP_FILE)),
     ]
-    if current_payload.get("current_task_id") == task["task_id"]:
+    if current_payload.get("current_task_id") == task["task_id"] or (
+        is_idle_current_payload(current_payload) and task.get("status") == "done"
+    ):
         paths.append(actual_path(str(CURRENT_TASK_FILE)))
     if is_top_level_coordination_task(task):
         task_handoff = handoff_path(root, task["task_id"])
@@ -218,6 +220,34 @@ def _ledger_blockers(root: Path, current_payload: dict[str, Any], task: dict[str
 
 def _allowed_statuses(policy: dict[str, Any]) -> set[str]:
     return set(policy.get("allowed_publish_statuses") or ["review", "done"])
+
+
+def checkpoint_preflight(root: Path, *, task_id: str | None = None) -> dict[str, Any]:
+    current_payload, task = _resolve_publish_task(root, task_id)
+    staged_candidate_paths, out_of_scope_paths = _classify_dirty_paths(root, current_payload, task)
+    blockers: list[str] = []
+    if task["status"] == "blocked":
+        reason = task.get("blocked_reason") or "blocked without recorded reason"
+        blockers.append(f"task `{task['task_id']}` is blocked: {reason}")
+    if current_branch(root) != task["branch"]:
+        blockers.append(f"current branch does not match task branch: {current_branch(root)!r} != {task['branch']!r}")
+    if not staged_candidate_paths:
+        blockers.append("no task-scoped changes are available to checkpoint")
+    if out_of_scope_paths:
+        blockers.append(f"dirty paths outside task checkpoint scope: {', '.join(out_of_scope_paths)}")
+    return {
+        "status": "blocked" if blockers else "ready",
+        "task_id": task["task_id"],
+        "branch": task["branch"],
+        "staged_candidate_paths": staged_candidate_paths,
+        "out_of_scope_paths": out_of_scope_paths,
+        "blockers": blockers,
+        "explanation": (
+            f"`checkpoint-task-results` is blocked for task `{task['task_id']}`."
+            if blockers
+            else f"`checkpoint-task-results` is ready for task `{task['task_id']}` on branch `{task['branch']}`."
+        ),
+    }
 
 
 def _preflight_explanation(action: str, task: dict[str, Any], blocked: bool) -> str:
@@ -361,6 +391,10 @@ def _default_commit_message(task: dict[str, Any]) -> str:
     return f"chore(governance): publish {task['task_id']}"
 
 
+def _default_checkpoint_message(task: dict[str, Any]) -> str:
+    return f"chore(governance): checkpoint {task['task_id']}"
+
+
 def _stage_paths(root: Path, paths: list[str]) -> None:
     if not paths:
         raise GovernanceError("no paths available to stage")
@@ -408,6 +442,19 @@ def _commit_task_results(
     if runlog_path not in stage_paths:
         stage_paths.append(runlog_path)
     _stage_paths(root, stage_paths)
+    git(root, "commit", "-m", commit_message)
+    return git(root, "rev-parse", "HEAD").stdout.strip()
+
+
+def _checkpoint_task_results(
+    root: Path,
+    task: dict[str, Any],
+    preflight_result: dict[str, Any],
+    *,
+    message: str | None,
+) -> str:
+    commit_message = message or _default_checkpoint_message(task)
+    _stage_paths(root, list(preflight_result["staged_candidate_paths"]))
     git(root, "commit", "-m", commit_message)
     return git(root, "rev-parse", "HEAD").stdout.strip()
 
@@ -463,6 +510,22 @@ def cmd_publish_preflight(args: argparse.Namespace) -> int:
     root = find_repo_root()
     result = publish_preflight(root, action=args.action, task_id=args.task_id)
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def checkpoint_task_results(root: Path, *, task_id: str | None = None, message: str | None = None) -> tuple[dict[str, Any], str]:
+    preflight_result = checkpoint_preflight(root, task_id=task_id)
+    if preflight_result["status"] != "ready":
+        raise GovernanceError("; ".join(preflight_result.get("blockers") or ["checkpoint preflight blocked"]))
+    _, task = _resolve_publish_task(root, task_id)
+    commit_hash = _checkpoint_task_results(root, task, preflight_result, message=message)
+    return task, commit_hash
+
+
+def cmd_checkpoint_task_results(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    task, commit_hash = checkpoint_task_results(root, task_id=args.task_id, message=args.message)
+    print(f"[OK] checkpointed {task['task_id']} hash={commit_hash}")
     return 0
 
 

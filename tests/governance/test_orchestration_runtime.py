@@ -3,7 +3,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python, write_yaml
+from .helpers import (
+    TASK_OPS_SCRIPT,
+    close_live_task_to_idle,
+    init_governance_repo,
+    read_yaml,
+    run_python,
+    write_yaml,
+)
 
 
 SESSION_A = {"CODEX_THREAD_ID": "session-A"}
@@ -13,6 +20,37 @@ def _status_json(repo: Path) -> dict:
     result = run_python(TASK_OPS_SCRIPT, repo, "orchestration-status", "--format", "json")
     assert result.returncode == 0, result.stdout + result.stderr
     return json.loads(result.stdout)
+
+
+def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        task_id,
+        "--title",
+        "next coordination task",
+        "--stage",
+        "next-phase",
+        "--branch",
+        f"feat/{task_id}",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "scripts/",
+        "tests/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "scripts/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
 
 
 def test_orchestration_status_reports_required_sections(tmp_path: Path) -> None:
@@ -27,6 +65,7 @@ def test_orchestration_status_reports_required_sections(tmp_path: Path) -> None:
         "workers",
         "task_sources",
         "publish_readiness",
+        "continuation_readiness",
         "current_task",
         "candidate_summary",
         "runner_pressure",
@@ -38,6 +77,9 @@ def test_orchestration_status_reports_required_sections(tmp_path: Path) -> None:
     assert payload["publish_readiness"]["status"] == "blocked"
     assert payload["publish_readiness"]["task_id"] == "TASK-BASE-001"
     assert payload["publish_readiness"]["recommended_action"].startswith("move the live task to review or done")
+    assert payload["continuation_readiness"]["status"] == "continue-current"
+    assert payload["continuation_readiness"]["checkpoint_required"] is False
+    assert payload["continuation_readiness"]["recommended_action"] == "continue-current"
 
 
 def test_continue_current_records_session_runtime_telemetry(tmp_path: Path) -> None:
@@ -106,3 +148,22 @@ def test_orchestration_status_publish_readiness_is_idle_without_live_task(tmp_pa
     assert payload["publish_readiness"]["task_id"] is None
     assert payload["publish_readiness"]["task_publishable"] is False
     assert "no live current task" in payload["publish_readiness"]["blockers"][0]
+
+
+def test_orchestration_status_reports_recoverable_predecessor_readiness(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    payload = _status_json(repo)
+    readiness = payload["continuation_readiness"]
+
+    assert readiness["status"] == "ready"
+    assert readiness["recoverable_predecessor_task_id"] == "TASK-BASE-001"
+    assert readiness["checkpoint_required"] is True
+    assert readiness["checkpoint_eligible"] is True
+    assert readiness["next_successor_task_id"] == "TASK-NEXT-001"
+    assert readiness["recommended_action"] == "continue-roadmap"

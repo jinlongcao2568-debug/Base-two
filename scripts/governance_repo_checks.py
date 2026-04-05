@@ -34,6 +34,7 @@ from governance_lib import (
     TASK_MARKER_START,
 )
 from task_handoff import is_top_level_coordination_task
+from task_continuation_ops import assess_continuation_readiness
 
 
 ROADMAP_ADVANCE_MODES = {"explicit_or_generated"}
@@ -329,6 +330,22 @@ def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[
             _validate_task_file_alignment(root, active_task)
             _validate_runlog_alignment(root, active_task)
     modified_paths = git_status_paths(root)
+    if idle_current and modified_paths:
+        readiness = assess_continuation_readiness(
+            root,
+            registry=registry,
+            worktrees=worktrees,
+            task_policy=task_policy,
+            current_payload=active_task,
+            current_task=None,
+        )
+        if readiness["status"] != "ready":
+            blockers = readiness.get("blockers") or ["idle control plane is not continuation-ready"]
+            raise GovernanceError(blockers[0])
+        active_errors = collect_active_execution_errors(tasks_by_id, worktrees, task_policy)
+        if active_errors:
+            raise GovernanceError(active_errors[0])
+        return
     _validate_modified_paths(
         active_task,
         modified_paths,
