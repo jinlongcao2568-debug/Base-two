@@ -77,6 +77,134 @@ authority_critical_chains:
       - pytest tests/stage4 -q
       - pytest tests/stage6 -q
       - pytest tests/integration -q
+single_machine_practical_matrix:
+  single_machine_lifecycle:
+    description: Single-machine lifecycle from active coordination through review-ready closeout or idle reset.
+    trigger_conditions:
+      - continue-current
+      - continue-roadmap
+      - promote-candidate --activate
+      - worker-report
+      - worker-finish
+      - close
+    required_tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+    failure_signals:
+      - CURRENT_TASK lifecycle drift
+      - review-ready task cannot close cleanly
+      - active task resumes on the wrong branch or writer state
+  single_machine_recovery:
+    description: Formal handoff, fallback recovery, release, takeover, and stale lease reclaim on one machine.
+    trigger_conditions:
+      - handoff
+      - release
+      - takeover
+      - continue-current recovery
+    required_tests:
+      - pytest tests/governance -q
+    failure_signals:
+      - recovery pack missing required fields
+      - stale lease cannot be reclaimed safely
+      - new session gains write access without release or takeover
+  single_machine_write_safety:
+    description: Single-writer protection for live coordination tasks and continuation guardrails.
+    trigger_conditions:
+      - active other session
+      - dirty worktree
+      - branch mismatch
+      - ledger drift
+      - incomplete boundary candidate
+    required_tests:
+      - pytest tests/governance -q
+    failure_signals:
+      - continue-current writes while another session owns the lease
+      - continue-roadmap activates through dirty or drifting control-plane state
+      - planner candidate promotion mutates CURRENT_TASK without explicit activation
+  single_machine_runner_fallback:
+    description: Runner fallback behavior under cleanup pressure, lane conflicts, review-bundle failure, and budget saturation.
+    trigger_conditions:
+      - automation_runner once --continue-roadmap --prepare-worktrees
+      - cleanup pressure
+      - review bundle failure
+      - lane conflict
+    required_tests:
+      - pytest tests/automation -q
+    failure_signals:
+      - runner prepares worktrees beyond effective budget
+      - lane conflict does not hard-stop the cycle
+      - child review bundle failure is invisible to metrics or parent state
+  single_machine_orchestrator_runtime:
+    description: Runtime tick, reconcile, session telemetry, and registry-backed runtime state must stay aligned.
+    trigger_conditions:
+      - continue-current
+      - continue-roadmap
+      - handoff
+      - release
+      - takeover
+      - plan-coordination
+      - promote-candidate
+      - automation_runner
+    required_tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+    failure_signals:
+      - runtime file lacks stable blocks
+      - session telemetry misses current command or writer state
+      - runtime status does not reflect blocked or review-ready control-plane state
+  single_machine_observability:
+    description: orchestration-status must provide a stable operator-facing snapshot of runtime, lease, sessions, sources, workers, and runner pressure.
+    trigger_conditions:
+      - task_ops orchestration-status --format yaml
+      - task_ops orchestration-status --format json
+    required_tests:
+      - pytest tests/governance -q
+    failure_signals:
+      - status output omits required top-level sections
+      - disabled sources or unsupported workers are not visible
+      - candidate summary or runner pressure is inconsistent with current ledgers
+future_scale_interface_matrix:
+  task_source_adapter_contract:
+    description: Task-source adapters must expose enabled, implemented, status, and unsupported_in_v1 explicitly.
+    trigger_conditions:
+      - task source registry load
+      - orchestration-status task_sources output
+    required_tests:
+      - pytest tests/governance -q
+    failure_signals:
+      - external source appears active without explicit enablement
+      - unsupported adapter state is hidden from operators
+  worker_registry_contract:
+    description: Worker registry must keep the local worker explicit and future remote workers auditable.
+    trigger_conditions:
+      - worker registry load
+      - orchestration-status workers output
+    required_tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+    failure_signals:
+      - local worker disappears from status output
+      - worker identity or kind becomes implicit
+  remote_worker_guardrails:
+    description: Non-local workers remain reserved interfaces only and must never receive work in v1.
+    trigger_conditions:
+      - runner pressure evaluation
+      - orchestration-status workers output
+    required_tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
+    failure_signals:
+      - remote worker is silently treated as schedulable
+      - unsupported worker does not surface as unsupported_in_v1
+  disabled_external_source_visibility:
+    description: Disabled external issue sources must remain visible in the runtime status surface.
+    trigger_conditions:
+      - orchestration-status task_sources output
+    required_tests:
+      - pytest tests/governance -q
+    failure_signals:
+      - disabled source disappears from the registry view
+      - external source appears implemented without explicit support
 modules:
   governance_control_plane:
     micro:

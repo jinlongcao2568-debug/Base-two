@@ -1,0 +1,40 @@
+version: '1.0'
+updated_at: '2026-04-05T17:05:00+08:00'
+authority_source: docs/governance/ORCHESTRATOR_RUNTIME_MODEL.md
+sources:
+  - source_id: doc_local
+    kind: doc_local
+    enabled: true
+    implemented: true
+    status: active
+    adapter: doc_local_v1
+    poll_mode: on_demand
+    unsupported_in_v1: false
+    notes: Reads roadmap, ledgers, runlogs, handoffs, and policy files from the repository.
+  - source_id: linear
+    kind: linear
+    enabled: false
+    implemented: false
+    status: disabled
+    adapter: planned
+    poll_mode: not_configured
+    unsupported_in_v1: true
+    notes: Reserved for future external issue intake.
+  - source_id: github_issues
+    kind: github_issues
+    enabled: false
+    implemented: false
+    status: disabled
+    adapter: planned
+    poll_mode: not_configured
+    unsupported_in_v1: true
+    notes: Reserved for future external issue intake.
+  - source_id: jira
+    kind: jira
+    enabled: false
+    implemented: false
+    status: disabled
+    adapter: planned
+    poll_mode: not_configured
+    unsupported_in_v1: true
+    notes: Reserved for future external issue intake.

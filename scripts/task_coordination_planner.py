@@ -22,6 +22,8 @@ from governance_lib import (
     task_parallelism_plan,
     validate_task,
 )
+from orchestration_runtime import record_session_event, runtime_status_for_task
+from task_coordination_lease import coordination_thread_id, current_session_id
 from task_handoff import ensure_handoff_file
 from task_rendering import (
     find_task,
@@ -265,6 +267,19 @@ def cmd_plan_coordination(args: argparse.Namespace) -> int:
     root = find_repo_root()
     candidates = build_coordination_candidates(root)
     _write_candidates(root, candidates)
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="plan-coordination",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=load_current_task(root).get("current_task_id"),
+        continue_intent=None,
+        runtime_status="planning",
+        safe_write=True,
+        reconcile=True,
+    )
     if not candidates:
         print("[OK] no coordination candidates generated")
         return 0
@@ -355,6 +370,19 @@ def cmd_promote_candidate(args: argparse.Namespace) -> int:
         sync_task_artifacts(root, registry, [existing["task_id"]])
         if args.activate:
             _activate_promoted_task(root, registry, existing)
+        record_session_event(
+            root,
+            session_id=current_session_id(root),
+            thread_id=coordination_thread_id(root),
+            current_command="promote-candidate",
+            mode="manual",
+            writer_state="writable",
+            current_task_id=existing["task_id"] if args.activate else load_current_task(root).get("current_task_id"),
+            continue_intent=None,
+            runtime_status=runtime_status_for_task(existing) if args.activate else "planning",
+            safe_write=True,
+            reconcile=True,
+        )
         print(
             f"[OK] promoted existing candidate {args.candidate_id} task_id={existing['task_id']} "
             f"activate={str(args.activate).lower()}"
@@ -374,6 +402,19 @@ def cmd_promote_candidate(args: argparse.Namespace) -> int:
     sync_task_artifacts(root, registry, [task["task_id"]])
     if args.activate:
         _activate_promoted_task(root, registry, task)
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="promote-candidate",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"] if args.activate else load_current_task(root).get("current_task_id"),
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task) if args.activate else "planning",
+        safe_write=True,
+        reconcile=True,
+    )
     print(
         f"[OK] promoted candidate {args.candidate_id} task_id={task['task_id']} "
         f"activate={str(args.activate).lower()}"

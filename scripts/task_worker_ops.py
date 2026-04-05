@@ -16,7 +16,8 @@ from governance_lib import (
     sync_task_artifacts,
     worktree_map,
 )
-from task_coordination_lease import claim_coordination_lease
+from orchestration_runtime import record_session_event, runtime_status_for_task
+from task_coordination_lease import claim_coordination_lease, coordination_thread_id, current_session_id
 from task_handoff import write_handoff
 from task_rendering import (
     enforce_execution_split_guards,
@@ -110,6 +111,18 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     update_current_task_if_active(root, task, "Worker started and the task is actively running.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{iso_now()}`: worker-start owner=`{args.worker_owner or 'unknown'}`"])
     sync_task_artifacts(root, registry, [task["task_id"]])
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="worker-start",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] worker started {task['task_id']}")
     return 0
 
@@ -148,6 +161,18 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
         append_resume_notes=True,
     )
     sync_task_artifacts(root, registry, [task["task_id"]])
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="worker-report",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] worker reported {task['task_id']}")
     return 0
 
@@ -179,6 +204,19 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
         append_resume_notes=True,
     )
     sync_task_artifacts(root, registry, [task["task_id"]])
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="worker-blocked",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status="blocked",
+        blocked_reason=args.reason,
+        safe_write=True,
+    )
     print(f"[OK] worker blocked {task['task_id']}")
     return 0
 
@@ -220,6 +258,18 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         append_resume_notes=True,
     )
     sync_task_artifacts(root, registry, [task["task_id"]])
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="worker-finish",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] worker finished {task['task_id']}")
     return 0
 

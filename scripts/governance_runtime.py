@@ -15,6 +15,8 @@ import yaml
 CURRENT_TASK_FILE = Path("docs/governance/CURRENT_TASK.yaml")
 TASK_REGISTRY_FILE = Path("docs/governance/TASK_REGISTRY.yaml")
 WORKTREE_REGISTRY_FILE = Path("docs/governance/WORKTREE_REGISTRY.yaml")
+TASK_SOURCE_REGISTRY_FILE = Path("docs/governance/TASK_SOURCE_REGISTRY.yaml")
+WORKER_REGISTRY_FILE = Path("docs/governance/WORKER_REGISTRY.yaml")
 ROADMAP_FILE = Path("docs/governance/DEVELOPMENT_ROADMAP.md")
 MODULE_MAP_FILE = Path("docs/governance/MODULE_MAP.yaml")
 TEST_MATRIX_FILE = Path("docs/governance/TEST_MATRIX.yaml")
@@ -107,6 +109,14 @@ def load_task_registry(root: Path) -> dict[str, Any]:
 
 def load_worktree_registry(root: Path) -> dict[str, Any]:
     return load_yaml(root / WORKTREE_REGISTRY_FILE)
+
+
+def load_task_source_registry(root: Path) -> dict[str, Any]:
+    return load_yaml(root / TASK_SOURCE_REGISTRY_FILE)
+
+
+def load_worker_registry(root: Path) -> dict[str, Any]:
+    return load_yaml(root / WORKER_REGISTRY_FILE)
 
 
 def load_module_map(root: Path) -> dict[str, Any]:

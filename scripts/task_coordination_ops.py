@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 
 from governance_lib import GovernanceError, append_runlog_bullets, dump_yaml, find_repo_root, iso_now, load_task_registry
+from orchestration_runtime import record_session_event, runtime_status_for_task
 from task_coordination_lease import (
     assess_coordination_lease,
     claim_coordination_lease,
     current_session_id,
+    coordination_thread_id,
     release_coordination_lease,
     takeover_coordination_lease,
 )
@@ -65,6 +67,18 @@ def cmd_handoff(args: argparse.Namespace) -> int:
     )
     update_current_task_if_active(root, task, "Formal handoff recorded; write lease remains with the current session.")
     _touch_task_artifacts(root, registry, task)
+    record_session_event(
+        root,
+        session_id=session_id,
+        thread_id=coordination_thread_id(root),
+        current_command="handoff",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] handoff {task['task_id']} session={session_id} lease={lease['claim_result']}")
     return 0
 
@@ -95,6 +109,18 @@ def cmd_release(args: argparse.Namespace) -> int:
     )
     update_current_task_if_active(root, task, "Write lease released; another session may take over the coordination task.")
     _touch_task_artifacts(root, registry, task)
+    record_session_event(
+        root,
+        session_id=session_id,
+        thread_id=coordination_thread_id(root),
+        current_command="release",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] release {task['task_id']} session={session_id} result={lease.get('release_result', 'released')}")
     return 0
 
@@ -135,6 +161,18 @@ def cmd_takeover(args: argparse.Namespace) -> int:
     )
     update_current_task_if_active(root, task, "Coordination write lease transferred to the new session owner.")
     _touch_task_artifacts(root, registry, task)
+    record_session_event(
+        root,
+        session_id=session_id,
+        thread_id=coordination_thread_id(root),
+        current_command="takeover",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(
         f"[OK] takeover {task['task_id']} session={session_id} previous_owner={previous_owner or 'none'} "
         f"result={lease.get('takeover_result', 'took_over_existing_lease')}"

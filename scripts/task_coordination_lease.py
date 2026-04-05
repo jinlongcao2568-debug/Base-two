@@ -4,50 +4,21 @@ import hashlib
 import os
 import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any
 
-from governance_lib import GovernanceError, dump_yaml, iso_now
-from governance_runtime import load_yaml
+from governance_lib import GovernanceError, iso_now, load_current_task
+from orchestration_runtime import (
+    COORDINATION_RUNTIME_FILE,
+    current_thread_id,
+    load_orchestration_runtime,
+    refresh_lease_summary,
+    sync_runtime_support_surfaces,
+    write_orchestration_runtime,
+)
 from task_handoff import is_top_level_coordination_task, load_handoff_policy
 
-
-COORDINATION_RUNTIME_FILE = Path(".codex/local/COORDINATION_RUNTIME.yaml")
-SESSION_CACHE_DIR = Path(".codex/local/session_cache")
 DEFAULT_LEASE_MODE = "strict_lease"
 DEFAULT_STALE_AFTER_MINUTES = 30
-
-
-def _runtime_defaults() -> dict[str, Any]:
-    return {
-        "version": "1.0",
-        "updated_at": None,
-        "session_cache": {},
-        "leases": {},
-    }
-
-
-def _ensure_local_runtime_dir(root: Path) -> None:
-    (root / COORDINATION_RUNTIME_FILE).parent.mkdir(parents=True, exist_ok=True)
-    (root / SESSION_CACHE_DIR).mkdir(parents=True, exist_ok=True)
-
-
-def _load_runtime(root: Path) -> dict[str, Any]:
-    path = root / COORDINATION_RUNTIME_FILE
-    if not path.exists():
-        return _runtime_defaults()
-    payload = load_yaml(path) or {}
-    runtime = _runtime_defaults()
-    runtime.update(payload)
-    runtime["session_cache"] = dict(runtime.get("session_cache") or {})
-    runtime["leases"] = dict(runtime.get("leases") or {})
-    return runtime
-
-
-def _write_runtime(root: Path, runtime: dict[str, Any]) -> None:
-    _ensure_local_runtime_dir(root)
-    runtime["updated_at"] = iso_now()
-    dump_yaml(root / COORDINATION_RUNTIME_FILE, runtime)
 
 
 def _session_fingerprint(root: Path) -> str:
@@ -60,7 +31,7 @@ def current_session_id(root: Path) -> str:
     if thread_id:
         return thread_id
 
-    runtime = _load_runtime(root)
+    runtime = load_orchestration_runtime(root)
     fingerprint = _session_fingerprint(root)
     cached = runtime["session_cache"].get(fingerprint)
     if cached:
@@ -68,8 +39,12 @@ def current_session_id(root: Path) -> str:
 
     session_id = f"local-{uuid.uuid4().hex[:12]}"
     runtime["session_cache"][fingerprint] = session_id
-    _write_runtime(root, runtime)
+    write_orchestration_runtime(root, runtime)
     return session_id
+
+
+def coordination_thread_id(root: Path) -> str:
+    return current_thread_id(current_session_id(root))
 
 
 def lease_policy(root: Path) -> dict[str, Any]:
@@ -99,12 +74,20 @@ def _lease_is_stale(lease: dict[str, Any] | None, stale_after_minutes: int) -> b
     return datetime.now(last_seen.tzinfo) - last_seen > timedelta(minutes=stale_after_minutes)
 
 
+def _write_runtime(root: Path, runtime: dict[str, Any], current_task_id: str | None) -> None:
+    refresh_lease_summary(runtime, current_task_id)
+    sync_runtime_support_surfaces(root, runtime)
+    write_orchestration_runtime(root, runtime)
+
+
 def assess_coordination_lease(root: Path, task: dict[str, Any]) -> dict[str, Any]:
     session_id = current_session_id(root)
+    thread_id = coordination_thread_id(root)
     if not is_top_level_coordination_task(task):
         return {
             "enforced": False,
             "session_id": session_id,
+            "thread_id": thread_id,
             "can_write": True,
             "lease_status": "not_applicable",
             "owner_session_id": None,
@@ -114,9 +97,9 @@ def assess_coordination_lease(root: Path, task: dict[str, Any]) -> dict[str, Any
             "runtime_file": str(COORDINATION_RUNTIME_FILE).replace("\\", "/"),
         }
 
-    runtime = _load_runtime(root)
+    runtime = load_orchestration_runtime(root)
     policy = lease_policy(root)
-    lease = runtime["leases"].get(task["task_id"])
+    lease = runtime["lease"]["tasks"].get(task["task_id"])
     owner_session_id = None if lease is None else lease.get("owner_session_id")
     is_owner = owner_session_id == session_id and lease is not None and lease.get("status") == "active"
     is_stale = _lease_is_stale(lease, policy["stale_after_minutes"])
@@ -136,6 +119,7 @@ def assess_coordination_lease(root: Path, task: dict[str, Any]) -> dict[str, Any
     return {
         "enforced": True,
         "session_id": session_id,
+        "thread_id": thread_id,
         "lease_status": lease_status,
         "can_write": can_write,
         "owner_session_id": owner_session_id,
@@ -172,7 +156,7 @@ def _write_or_refresh_lease(
     previous_lease: dict[str, Any] | None,
     owner_session_id: str,
 ) -> None:
-    runtime = _load_runtime(root)
+    runtime = load_orchestration_runtime(root)
     acquired_at = (
         previous_lease.get("acquired_at")
         if previous_lease
@@ -180,12 +164,13 @@ def _write_or_refresh_lease(
         and previous_lease.get("owner_session_id") == owner_session_id
         else iso_now()
     )
-    runtime["leases"][task["task_id"]] = _lease_entry(
+    runtime["lease"]["tasks"][task["task_id"]] = _lease_entry(
         task,
         owner_session_id=owner_session_id,
         acquired_at=acquired_at,
     )
-    _write_runtime(root, runtime)
+    current_payload = load_current_task(root)
+    _write_runtime(root, runtime, current_payload.get("current_task_id"))
 
 
 def claim_coordination_lease(root: Path, task: dict[str, Any], *, reason: str) -> dict[str, Any]:
@@ -193,8 +178,8 @@ def claim_coordination_lease(root: Path, task: dict[str, Any], *, reason: str) -
     if not assessment["enforced"]:
         return assessment
 
-    runtime = _load_runtime(root)
-    previous_lease = runtime["leases"].get(task["task_id"])
+    runtime = load_orchestration_runtime(root)
+    previous_lease = runtime["lease"]["tasks"].get(task["task_id"])
     if assessment["lease_status"] == "owned_by_other_session":
         raise GovernanceError(
             f"{reason} blocked by active coordination lease: owner_session_id={assessment['owner_session_id']}; "
@@ -221,8 +206,8 @@ def release_coordination_lease(root: Path, task: dict[str, Any], *, reason: str)
     assessment = assess_coordination_lease(root, task)
     if not assessment["enforced"]:
         return assessment
-    runtime = _load_runtime(root)
-    lease = runtime["leases"].get(task["task_id"])
+    runtime = load_orchestration_runtime(root)
+    lease = runtime["lease"]["tasks"].get(task["task_id"])
     if lease is None or lease.get("status") != "active":
         assessment["release_result"] = "no_active_lease"
         return assessment
@@ -234,8 +219,9 @@ def release_coordination_lease(root: Path, task: dict[str, Any], *, reason: str)
     lease["status"] = "released"
     lease["released_at"] = iso_now()
     lease["last_seen_at"] = iso_now()
-    runtime["leases"][task["task_id"]] = lease
-    _write_runtime(root, runtime)
+    runtime["lease"]["tasks"][task["task_id"]] = lease
+    current_payload = load_current_task(root)
+    _write_runtime(root, runtime, current_payload.get("current_task_id"))
     released = assess_coordination_lease(root, task)
     released["release_result"] = "released"
     released["previous_owner_session_id"] = assessment["owner_session_id"]
@@ -247,8 +233,6 @@ def takeover_coordination_lease(root: Path, task: dict[str, Any], *, reason: str
     if not assessment["enforced"]:
         return assessment
 
-    runtime = _load_runtime(root)
-    previous_lease = runtime["leases"].get(task["task_id"])
     _write_or_refresh_lease(
         root,
         task,

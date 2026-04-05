@@ -32,8 +32,14 @@ from governance_lib import (
     worktree_map,
     write_roadmap,
 )
+from orchestration_runtime import record_session_event, runtime_status_for_task
 from task_closeout import assess_live_closeout
-from task_coordination_lease import assess_coordination_lease, claim_coordination_lease
+from task_coordination_lease import (
+    assess_coordination_lease,
+    claim_coordination_lease,
+    coordination_thread_id,
+    current_session_id,
+)
 from task_handoff import build_recovery_pack, render_recovery_lines
 from task_rendering import (
     find_task,
@@ -441,6 +447,124 @@ def _activate_successor(
     return branch_action
 
 
+def _record_continue_current_event(
+    root,
+    *,
+    task_id: str | None,
+    writer_state: str,
+    runtime_status: str,
+    blocked_reason: str | None = None,
+    safe_write: bool,
+) -> None:
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="continue-current",
+        mode="manual",
+        writer_state=writer_state,
+        current_task_id=task_id,
+        continue_intent="current",
+        runtime_status=runtime_status,
+        blocked_reason=blocked_reason,
+        safe_write=safe_write,
+    )
+
+
+def _readonly_continue_current(root, task: dict[str, Any], lease: dict[str, Any]) -> int:
+    print(
+        f"[READONLY] continue-current recovery only: active coordination lease is owned by "
+        f"`{lease['owner_session_id']}`; use handoff, release, or takeover before writing."
+    )
+    _record_continue_current_event(
+        root,
+        task_id=task["task_id"],
+        writer_state="readonly",
+        runtime_status="readonly",
+        blocked_reason=f"lease owned by {lease['owner_session_id']}",
+        safe_write=False,
+    )
+    return 0
+
+
+def _close_review_ready_current_task(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    task: dict[str, Any],
+    branch_action: str,
+) -> int:
+    assessment = assess_live_closeout(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        current_payload=current_payload,
+        current_task=task,
+    )
+    if assessment["status"] != "ready":
+        details = [*assessment.get("blockers", []), *assessment.get("diagnostics", [])]
+        if not details:
+            details = [assessment.get("summary", "current review task cannot auto-close")]
+        raise GovernanceError("; ".join(details))
+    frontmatter, body = _read_roadmap_state(root)
+    _mark_task_done(task, worktrees)
+    registry["updated_at"] = iso_now()
+    worktrees["updated_at"] = iso_now()
+    persist_idle_state(
+        root,
+        registry,
+        worktrees,
+        frontmatter,
+        body,
+        [task["task_id"]],
+        "continue-current closed the review-ready task and returned the control plane to idle.",
+    )
+    _record_continue_current_event(
+        root,
+        task_id=None,
+        writer_state="writable",
+        runtime_status="idle",
+        safe_write=True,
+    )
+    print(f"[OK] continue-current closed {task['task_id']} to idle branch={branch_action}")
+    return 0
+
+
+def _reactivate_current_task(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    task: dict[str, Any],
+    branch_action: str,
+) -> int:
+    frontmatter, body = _read_roadmap_state(root)
+    capability_map = load_capability_map(root)
+    touched_task_ids = pause_other_doing_tasks(registry["tasks"], task["task_id"])
+    _activate_task(task)
+    upsert_coordination_entry(worktrees, task, root)
+    _persist_activation(
+        root,
+        registry,
+        worktrees,
+        frontmatter,
+        body,
+        capability_map,
+        task,
+        touched_task_ids,
+        "Continue the live current task and keep the branch/control-plane state aligned.",
+    )
+    _record_continue_current_event(
+        root,
+        task_id=task["task_id"],
+        writer_state="writable",
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
+    print(f"[OK] continue-current reactivated {task['task_id']} branch={branch_action}")
+    return 0
+
+
 def cmd_continue_current(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
@@ -462,65 +586,25 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
 
     lease = assess_coordination_lease(root, task)
     if lease["enforced"] and not lease["can_write"]:
-        print(
-            f"[READONLY] continue-current recovery only: active coordination lease is owned by "
-            f"`{lease['owner_session_id']}`; use handoff, release, or takeover before writing."
-        )
-        return 0
+        return _readonly_continue_current(root, task, lease)
     if lease["enforced"]:
         claim_coordination_lease(root, task, reason="continue-current")
 
     branch_action = _switch_or_create_branch(root, task["branch"])
     if task["status"] == "review":
-        assessment = assess_live_closeout(
-            root,
-            registry=registry,
-            worktrees=worktrees,
-            current_payload=current_payload,
-            current_task=task,
-        )
-        if assessment["status"] != "ready":
-            details = [*assessment.get("blockers", []), *assessment.get("diagnostics", [])]
-            if not details:
-                details = [assessment.get("summary", "current review task cannot auto-close")]
-            raise GovernanceError("; ".join(details))
-        frontmatter, body = _read_roadmap_state(root)
-        _mark_task_done(task, worktrees)
-        registry["updated_at"] = iso_now()
-        worktrees["updated_at"] = iso_now()
-        persist_idle_state(
-            root,
-            registry,
-            worktrees,
-            frontmatter,
-            body,
-            [task["task_id"]],
-            "continue-current closed the review-ready task and returned the control plane to idle.",
-        )
-        print(f"[OK] continue-current closed {task['task_id']} to idle branch={branch_action}")
-        return 0
+        return _close_review_ready_current_task(root, registry, worktrees, current_payload, task, branch_action)
     if task["status"] == "doing":
+        _record_continue_current_event(
+            root,
+            task_id=task["task_id"],
+            writer_state="writable",
+            runtime_status=runtime_status_for_task(task),
+            safe_write=True,
+        )
         print(f"[OK] continue-current {task['task_id']} branch={branch_action}")
         return 0
 
-    frontmatter, body = _read_roadmap_state(root)
-    capability_map = load_capability_map(root)
-    touched_task_ids = pause_other_doing_tasks(registry["tasks"], task["task_id"])
-    _activate_task(task)
-    upsert_coordination_entry(worktrees, task, root)
-    _persist_activation(
-        root,
-        registry,
-        worktrees,
-        frontmatter,
-        body,
-        capability_map,
-        task,
-        touched_task_ids,
-        "Continue the live current task and keep the branch/control-plane state aligned.",
-    )
-    print(f"[OK] continue-current reactivated {task['task_id']} branch={branch_action}")
-    return 0
+    return _reactivate_current_task(root, registry, worktrees, task, branch_action)
 
 
 def cmd_continue_roadmap(args: argparse.Namespace) -> int:
@@ -554,6 +638,18 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         body,
         current_task,
         successor,
+    )
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="continue-roadmap",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=successor["task_id"],
+        continue_intent="roadmap",
+        runtime_status=runtime_status_for_task(successor),
+        safe_write=True,
     )
     print(f"[OK] continue-roadmap advanced to {successor['task_id']} source={source} branch={branch_action}")
     return 0

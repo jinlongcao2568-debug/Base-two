@@ -7,6 +7,58 @@
   - `continue-current`
   - `continue-roadmap`
   - dependency-aware business successor generation that follows the ordered stages in `docs/governance/MODULE_MAP.yaml`
+  - single-machine runtime telemetry and observability through `orchestration-status`
+  - registry-backed task-source and worker visibility for future external scaling
+
+## Orchestrator Runtime Foundation
+
+- The single-machine runtime source is `.codex/local/COORDINATION_RUNTIME.yaml`.
+- The runtime file is derived state only. It must never replace:
+  - `CURRENT_TASK.yaml`
+  - `TASK_REGISTRY.yaml`
+  - `WORKTREE_REGISTRY.yaml`
+- The runtime must keep 5 stable blocks:
+  - `runtime`
+  - `sessions`
+  - `lease`
+  - `workers`
+  - `task_sources`
+- Runtime entries are updated by:
+  - `continue-current`
+  - `continue-roadmap`
+  - `handoff`
+  - `release`
+  - `takeover`
+  - `plan-coordination`
+  - `promote-candidate`
+  - `automation_runner`
+
+## Session Telemetry
+
+- Session telemetry records only repository-observable facts.
+- Fixed fields are:
+  - `session_id`
+  - `thread_id`
+  - `mode`
+  - `writer_state`
+  - `current_task_id`
+  - `current_command`
+  - `continue_intent`
+  - `started_at`
+  - `last_event_at`
+  - `last_safe_write_at`
+  - `runtime_status`
+  - `blocked_reason`
+- Token or cost telemetry must stay absent until there is a real runtime adapter that can observe it.
+
+## Task Sources And Workers
+
+- `docs/governance/TASK_SOURCE_REGISTRY.yaml` is the task-source registry.
+- `doc_local` is the only enabled source in v1.
+- `linear`, `github_issues`, and `jira` are reserved interfaces only and must remain visible as disabled or unsupported.
+- `docs/governance/WORKER_REGISTRY.yaml` is the worker registry.
+- `worker-local-01` is the only enabled worker in v1.
+- Non-local workers are interface reservations only and must never be silently scheduled in v1.
 
 ## Intent Router
 
@@ -93,6 +145,7 @@
   8. run orphan cleanup and publish the runner metrics block.
 - The runner still honors `manual`, `assisted`, and `autonomous` gating for parallel worktree preparation and child closeout.
 - Runtime topology is now `1 coordinator + 1..4 child lanes`; the planner ceiling stays at `4` even though the external product language remains "dynamic parallelism".
+- The runner must also refresh runtime tick and reconcile state so operators can inspect a single-machine runtime snapshot after each cycle.
 
 ## Health Budget
 
@@ -125,6 +178,19 @@
   - `orphan_cleanup_failures`
 - `lane_conflict_count` counts machine-detected child scope conflicts only.
 - `fallback_count` counts actual budget downgrades, not hard validation errors.
+
+## Observability Surface
+
+- `python scripts/task_ops.py orchestration-status --format yaml|json` is the operator-facing runtime snapshot.
+- The status output must always include:
+  - `runtime`
+  - `lease`
+  - `sessions`
+  - `workers`
+  - `task_sources`
+  - `current_task`
+  - `candidate_summary`
+  - `runner_pressure`
 
 ## Stop Conditions
 

@@ -20,6 +20,7 @@ try:
         task_policy_payload,
         test_matrix_payload,
     )
+    from .runtime_fixture_payloads import task_source_registry_payload, worker_registry_payload
 except ImportError:
     _FIXTURE_PATH = Path(__file__).with_name("fixture_payloads.py")
     _FIXTURE_SPEC = importlib.util.spec_from_file_location("gov_fixture_payloads", _FIXTURE_PATH)
@@ -34,6 +35,13 @@ except ImportError:
     roadmap_text = _FIXTURE_MODULE.roadmap_text
     task_policy_payload = _FIXTURE_MODULE.task_policy_payload
     test_matrix_payload = _FIXTURE_MODULE.test_matrix_payload
+    _RUNTIME_FIXTURE_PATH = Path(__file__).with_name("runtime_fixture_payloads.py")
+    _RUNTIME_FIXTURE_SPEC = importlib.util.spec_from_file_location("gov_runtime_fixture_payloads", _RUNTIME_FIXTURE_PATH)
+    _RUNTIME_FIXTURE_MODULE = importlib.util.module_from_spec(_RUNTIME_FIXTURE_SPEC)
+    assert _RUNTIME_FIXTURE_SPEC is not None and _RUNTIME_FIXTURE_SPEC.loader is not None
+    _RUNTIME_FIXTURE_SPEC.loader.exec_module(_RUNTIME_FIXTURE_MODULE)
+    task_source_registry_payload = _RUNTIME_FIXTURE_MODULE.task_source_registry_payload
+    worker_registry_payload = _RUNTIME_FIXTURE_MODULE.worker_registry_payload
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -549,6 +557,8 @@ def write_governance_files(repo: Path) -> None:
     write_yaml(repo / "docs/governance/TEST_MATRIX.yaml", test_matrix_payload())
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map_payload())
     write_yaml(repo / "docs/governance/TASK_POLICY.yaml", task_policy_payload())
+    write_yaml(repo / "docs/governance/TASK_SOURCE_REGISTRY.yaml", task_source_registry_payload())
+    write_yaml(repo / "docs/governance/WORKER_REGISTRY.yaml", worker_registry_payload())
     write_yaml(
         repo / "docs/governance/CURRENT_TASK.yaml",
         {

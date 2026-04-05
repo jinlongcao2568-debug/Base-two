@@ -471,9 +471,51 @@ def test_matrix_payload() -> dict[str, Any]:
             "stage9_delivery": _matrix_entry("pytest tests/stage9 -q", "pytest tests/stage9 -q", "pytest tests/integration -q", "pytest -q"),
             "governance_control_plane": _matrix_entry("pytest tests/base -q", "pytest tests/base -q", "pytest tests/base -q"),
         },
+        "single_machine_practical_matrix": {
+            "single_machine_lifecycle": {
+                "description": "Single-machine lifecycle from active coordination to review or idle.",
+                "required_tests": ["pytest tests/governance -q", "pytest tests/automation -q"],
+            },
+            "single_machine_recovery": {
+                "description": "Formal handoff, fallback recovery, release, and takeover on one machine.",
+                "required_tests": ["pytest tests/governance -q"],
+            },
+            "single_machine_write_safety": {
+                "description": "Lease-protected write safety and continuation guardrails.",
+                "required_tests": ["pytest tests/governance -q"],
+            },
+            "single_machine_runner_fallback": {
+                "description": "Cleanup pressure, lane conflict, and review-bundle fallback on one machine.",
+                "required_tests": ["pytest tests/automation -q"],
+            },
+            "single_machine_orchestrator_runtime": {
+                "description": "Runtime tick, reconcile, telemetry, and registry-backed runtime state.",
+                "required_tests": ["pytest tests/governance -q", "pytest tests/automation -q"],
+            },
+            "single_machine_observability": {
+                "description": "Stable orchestration-status output for operator-facing runtime inspection.",
+                "required_tests": ["pytest tests/governance -q"],
+            },
+        },
+        "future_scale_interface_matrix": {
+            "task_source_adapter_contract": {
+                "description": "Task-source adapters must expose enabled/implemented/unsupported state explicitly.",
+                "required_tests": ["pytest tests/governance -q"],
+            },
+            "worker_registry_contract": {
+                "description": "Worker registry must keep local worker execution explicit and auditable.",
+                "required_tests": ["pytest tests/governance -q", "pytest tests/automation -q"],
+            },
+            "remote_worker_guardrails": {
+                "description": "Unsupported remote workers must never be silently scheduled in v1.",
+                "required_tests": ["pytest tests/governance -q", "pytest tests/automation -q"],
+            },
+            "disabled_external_source_visibility": {
+                "description": "Disabled external sources must remain visible in orchestration status output.",
+                "required_tests": ["pytest tests/governance -q"],
+            },
+        },
     }
-
-
 def base_allowed_dirs() -> list[str]:
     return [
         "src/base/",
@@ -486,6 +528,9 @@ def base_allowed_dirs() -> list[str]:
         "docs/governance/runtime_prompts/",
         "docs/governance/TASK_REGISTRY.yaml",
         "docs/governance/WORKTREE_REGISTRY.yaml",
+        "docs/governance/TASK_SOURCE_REGISTRY.yaml",
+        "docs/governance/WORKER_REGISTRY.yaml",
+        "docs/governance/ORCHESTRATOR_RUNTIME_MODEL.md",
         "docs/governance/MODULE_MAP.yaml",
         "docs/governance/TEST_MATRIX.yaml",
         "docs/governance/CODE_HYGIENE_POLICY.md",

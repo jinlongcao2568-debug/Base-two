@@ -25,7 +25,13 @@ from governance_lib import (
     validate_task,
     worktree_map,
 )
-from task_coordination_lease import claim_coordination_lease, release_coordination_lease
+from orchestration_runtime import record_session_event, runtime_status_for_task
+from task_coordination_lease import (
+    claim_coordination_lease,
+    coordination_thread_id,
+    current_session_id,
+    release_coordination_lease,
+)
 from task_handoff import ensure_handoff_file, write_handoff
 from task_rendering import (
     find_task,
@@ -133,6 +139,18 @@ def cmd_activate(args: argparse.Namespace) -> int:
         resume_notes=["Task activated in the main coordination worktree."],
         append_resume_notes=True,
     )
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="activate",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] activated {task['task_id']}")
     return 0
 
@@ -167,6 +185,18 @@ def cmd_pause(args: argparse.Namespace) -> int:
         append_resume_notes=True,
     )
     sync_task_artifacts(root, registry, [task["task_id"]])
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="pause",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] paused {task['task_id']}")
     return 0
 
@@ -222,6 +252,18 @@ def cmd_close(args: argparse.Namespace) -> int:
     )
     release_coordination_lease(root, task, reason="close")
     sync_task_artifacts(root, registry, touched_task_ids)
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="close",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=None if is_live_top_level_current else task["task_id"],
+        continue_intent=None,
+        runtime_status="idle" if is_live_top_level_current else runtime_status_for_task(task),
+        safe_write=True,
+    )
     print(f"[OK] closed {task['task_id']}")
     return 0
 

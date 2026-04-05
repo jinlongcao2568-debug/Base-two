@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-014`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-orchestrator-runtime-foundation-v1`
 - `branch`: `feat/TASK-GOV-014-orchestrator-runtime-foundation`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -18,11 +18,15 @@
 - `review_bundle_status`: `not_applicable`
 ## Primary Goals
 
-- to-be-filled
+- Strengthen AX9 into a single-machine orchestrator runtime foundation without changing business-stage code.
+- Add runtime state, session telemetry, worker and task-source registries, and an operator-facing orchestration status surface.
+- Expand the practical single-machine test matrix and add runtime and observability coverage in governance and automation tests.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not integrate real Linear, GitHub Issues, or Jira task intake in this round.
+- Do not implement real SSH or multi-machine worker execution in this round.
+- Do not add PR review, human review, merge automation, contract changes, migrations, or Stage6 fact-model changes.
 
 ## Allowed Dirs
 
@@ -59,22 +63,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -82,5 +85,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-014-orchestrator-runtime-foundation`
-- `updated_at`: `2026-04-05T16:55:02+08:00`
+- `updated_at`: `2026-04-05T17:25:05+08:00`
 <!-- generated:task-meta:end -->

@@ -31,7 +31,7 @@ def test_continue_current_allows_only_owner_to_write(tmp_path: Path) -> None:
     assert second.returncode == 0, second.stdout + second.stderr
     assert "[READONLY]" in second.stdout
     runtime = _runtime_payload(repo)
-    assert runtime["leases"]["TASK-BASE-001"]["owner_session_id"] == "session-A"
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-A"
 
 
 def test_release_allows_second_session_to_continue_writing(tmp_path: Path) -> None:
@@ -45,7 +45,7 @@ def test_release_allows_second_session_to_continue_writing(tmp_path: Path) -> No
     assert resumed.returncode == 0, resumed.stdout + resumed.stderr
     assert "[READONLY]" not in resumed.stdout
     runtime = _runtime_payload(repo)
-    assert runtime["leases"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
 
 
 def test_takeover_requires_explicit_command_when_other_session_is_active(tmp_path: Path) -> None:
@@ -67,7 +67,7 @@ def test_takeover_requires_explicit_command_when_other_session_is_active(tmp_pat
     assert "active coordination lease" in blocked.stdout
     assert takeover.returncode == 0, takeover.stdout + takeover.stderr
     runtime = _runtime_payload(repo)
-    assert runtime["leases"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
     runlog = (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").read_text(encoding="utf-8")
     assert "takeover session=`session-B` previous_owner=`session-A`" in runlog
 
@@ -78,7 +78,7 @@ def test_stale_lease_can_be_reclaimed_by_continue_current(tmp_path: Path) -> Non
     run_python(TASK_OPS_SCRIPT, repo, "continue-current", env=SESSION_A)
     runtime_path = repo / ".codex/local/COORDINATION_RUNTIME.yaml"
     runtime = read_yaml(runtime_path)
-    runtime["leases"]["TASK-BASE-001"]["last_seen_at"] = "2026-04-05T00:00:00+08:00"
+    runtime["lease"]["tasks"]["TASK-BASE-001"]["last_seen_at"] = "2026-04-05T00:00:00+08:00"
     write_yaml(runtime_path, runtime)
 
     reclaimed = run_python(TASK_OPS_SCRIPT, repo, "continue-current", env=SESSION_B)
@@ -86,7 +86,7 @@ def test_stale_lease_can_be_reclaimed_by_continue_current(tmp_path: Path) -> Non
     assert reclaimed.returncode == 0, reclaimed.stdout + reclaimed.stderr
     assert "[READONLY]" not in reclaimed.stdout
     runtime = _runtime_payload(repo)
-    assert runtime["leases"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
 
 
 def test_handoff_and_release_leave_auditable_records(tmp_path: Path) -> None:

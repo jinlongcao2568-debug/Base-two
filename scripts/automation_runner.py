@@ -20,6 +20,8 @@ from governance_lib import (
     task_map,
     worktree_map,
 )
+from orchestration_runtime import record_session_event, runtime_status_for_task
+from task_coordination_lease import coordination_thread_id, current_session_id
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -60,6 +62,30 @@ def _emit_step_output(result: subprocess.CompletedProcess[str]) -> None:
         print(result.stdout.strip())
     if result.stderr.strip():
         print(result.stderr.strip())
+
+
+def _record_runner_state(
+    root: Path,
+    current_task: dict[str, object],
+    *,
+    runtime_status: str,
+    blocked_reason: str | None = None,
+    safe_write: bool = False,
+) -> None:
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="automation-runner",
+        mode="automation_runner",
+        writer_state="writable",
+        current_task_id=current_task.get("current_task_id"),
+        continue_intent="roadmap",
+        runtime_status=runtime_status,
+        blocked_reason=blocked_reason,
+        safe_write=safe_write,
+        reconcile=True,
+    )
 
 
 def _lane_sort_key(task: dict[str, object]) -> tuple[int, int, str]:
@@ -324,20 +350,42 @@ def _finalize_cycle(
             metrics["fallback_count"] = current_fallbacks + 1
     metrics["orphan_cleanup_failures"] = cleanup_failures
     _print_metrics(metrics)
+    final_code = exit_code
     if cleanup.returncode != 0 and exit_code == 0:
-        return cleanup.returncode
-    return exit_code
+        final_code = cleanup.returncode
+    latest_current = load_current_task(root)
+    _record_runner_state(
+        root,
+        latest_current,
+        runtime_status="blocked" if final_code != 0 else runtime_status_for_task(latest_current),
+        blocked_reason="runner cycle failed" if final_code != 0 else None,
+        safe_write=True,
+    )
+    return final_code
 
 
 def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, continue_roadmap: bool) -> int:
     current_task = load_current_task(root)
     metrics = _base_metrics(current_task)
+    _record_runner_state(root, current_task, runtime_status=runtime_status_for_task(current_task))
     exit_code = _run_repo_gates(root)
     if exit_code != 0:
+        _record_runner_state(
+            root,
+            load_current_task(root),
+            runtime_status="blocked",
+            blocked_reason="repo gates failed",
+        )
         return exit_code
 
     exit_code, current_task, metrics = _maybe_continue_roadmap(root, current_task, metrics, continue_roadmap)
     if exit_code != 0:
+        _record_runner_state(
+            root,
+            load_current_task(root),
+            runtime_status="blocked",
+            blocked_reason="continue-roadmap failed",
+        )
         return exit_code
 
     gate = runner_action_gate(current_task)
@@ -347,6 +395,12 @@ def coordinator_cycle(root: Path, worktree_root: Path, prepare_worktrees: bool, 
         try:
             effective_lane_budget, cleanup_applied = _parallel_cycle_context(root, current_task, metrics)
         except GovernanceError:
+            _record_runner_state(
+                root,
+                load_current_task(root),
+                runtime_status="blocked",
+                blocked_reason="parallel runner hard-stop",
+            )
             return 1
     _maybe_prepare_worktrees(
         root,

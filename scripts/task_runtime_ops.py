@@ -17,6 +17,7 @@ from task_lifecycle_ops import (
     cmd_split_check,
     cmd_sync,
 )
+from task_orchestration_ops import cmd_orchestration_status
 from task_worker_ops import (
     cmd_auto_close_children,
     cmd_worker_blocked,
@@ -25,6 +26,47 @@ from task_worker_ops import (
     cmd_worker_start,
 )
 from task_worktree_ops import cmd_cleanup_orphans, cmd_worktree_create, cmd_worktree_release
+
+
+def add_coordination_commands(subparsers) -> None:
+    planner_parser = subparsers.add_parser("plan-coordination")
+    planner_parser.set_defaults(func=cmd_plan_coordination)
+
+    promote_parser = subparsers.add_parser("promote-candidate")
+    promote_parser.add_argument("candidate_id")
+    promote_parser.add_argument("--activate", action="store_true")
+    promote_parser.set_defaults(func=cmd_promote_candidate)
+
+    handoff_parser = subparsers.add_parser("handoff")
+    handoff_parser.add_argument("task_id")
+    handoff_parser.add_argument("--completed-item", action="append", default=[])
+    handoff_parser.add_argument("--remaining-item", action="append", default=[])
+    handoff_parser.add_argument("--next-step")
+    handoff_parser.add_argument("--next-test", action="append", default=[])
+    handoff_parser.add_argument("--risk", action="append", default=[])
+    handoff_parser.add_argument("--candidate-write-path", action="append", default=[])
+    handoff_parser.add_argument("--candidate-test-path", action="append", default=[])
+    handoff_parser.add_argument("--resume-note", action="append", default=[])
+    handoff_parser.set_defaults(func=cmd_handoff)
+
+    release_parser = subparsers.add_parser("release")
+    release_parser.add_argument("task_id")
+    release_parser.add_argument("--next-test", action="append", default=[])
+    release_parser.set_defaults(func=cmd_release)
+
+    takeover_parser = subparsers.add_parser("takeover")
+    takeover_parser.add_argument("task_id")
+    takeover_parser.add_argument("--next-step")
+    takeover_parser.add_argument("--next-test", action="append", default=[])
+    takeover_parser.add_argument("--risk", action="append", default=[])
+    takeover_parser.add_argument("--candidate-write-path", action="append", default=[])
+    takeover_parser.add_argument("--candidate-test-path", action="append", default=[])
+    takeover_parser.add_argument("--resume-note", action="append", default=[])
+    takeover_parser.set_defaults(func=cmd_takeover)
+
+    status_parser = subparsers.add_parser("orchestration-status")
+    status_parser.add_argument("--format", choices=["yaml", "json"], default="yaml")
+    status_parser.set_defaults(func=cmd_orchestration_status)
 
 
 def add_task_lifecycle_commands(subparsers) -> None:
@@ -86,40 +128,7 @@ def add_task_lifecycle_commands(subparsers) -> None:
     continue_roadmap_parser = subparsers.add_parser("continue-roadmap")
     continue_roadmap_parser.set_defaults(func=cmd_continue_roadmap)
 
-    planner_parser = subparsers.add_parser("plan-coordination")
-    planner_parser.set_defaults(func=cmd_plan_coordination)
-
-    promote_parser = subparsers.add_parser("promote-candidate")
-    promote_parser.add_argument("candidate_id")
-    promote_parser.add_argument("--activate", action="store_true")
-    promote_parser.set_defaults(func=cmd_promote_candidate)
-
-    handoff_parser = subparsers.add_parser("handoff")
-    handoff_parser.add_argument("task_id")
-    handoff_parser.add_argument("--completed-item", action="append", default=[])
-    handoff_parser.add_argument("--remaining-item", action="append", default=[])
-    handoff_parser.add_argument("--next-step")
-    handoff_parser.add_argument("--next-test", action="append", default=[])
-    handoff_parser.add_argument("--risk", action="append", default=[])
-    handoff_parser.add_argument("--candidate-write-path", action="append", default=[])
-    handoff_parser.add_argument("--candidate-test-path", action="append", default=[])
-    handoff_parser.add_argument("--resume-note", action="append", default=[])
-    handoff_parser.set_defaults(func=cmd_handoff)
-
-    release_parser = subparsers.add_parser("release")
-    release_parser.add_argument("task_id")
-    release_parser.add_argument("--next-test", action="append", default=[])
-    release_parser.set_defaults(func=cmd_release)
-
-    takeover_parser = subparsers.add_parser("takeover")
-    takeover_parser.add_argument("task_id")
-    takeover_parser.add_argument("--next-step")
-    takeover_parser.add_argument("--next-test", action="append", default=[])
-    takeover_parser.add_argument("--risk", action="append", default=[])
-    takeover_parser.add_argument("--candidate-write-path", action="append", default=[])
-    takeover_parser.add_argument("--candidate-test-path", action="append", default=[])
-    takeover_parser.add_argument("--resume-note", action="append", default=[])
-    takeover_parser.set_defaults(func=cmd_takeover)
+    add_coordination_commands(subparsers)
 
 
 def add_worktree_commands(subparsers) -> None:

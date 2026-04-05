@@ -59,6 +59,37 @@ Conflict rule:
   - executes `continue-roadmap`
   - prepares child worktrees and review-bundle closeout when the live task is a `parallel_parent`
 
+## Runtime Status
+
+- `python scripts/task_ops.py orchestration-status --format yaml`
+- `python scripts/task_ops.py orchestration-status --format json`
+- The status surface is the operator view for:
+  - runtime summary
+  - lease ownership
+  - session telemetry
+  - worker registry visibility
+  - task-source registry visibility
+  - candidate summary
+  - runner pressure
+- The status surface is derived state. It must not replace:
+  - `CURRENT_TASK.yaml`
+  - `TASK_REGISTRY.yaml`
+  - `WORKTREE_REGISTRY.yaml`
+  - task runlogs
+  - handoff files
+
+## Single-Machine Runtime Matrix
+
+- `tests/governance` and `tests/automation` are now the primary single-machine runtime validation surface.
+- The practical runtime matrix in `TEST_MATRIX.yaml` is not optional closeout context. It defines the minimum coverage for:
+  - lifecycle
+  - recovery
+  - write safety
+  - runner fallback
+  - orchestrator runtime
+  - observability
+- Future multi-machine or external-issue interfaces may be reserved in docs and status output, but they are not part of the current required execution path unless a task explicitly enables them.
+
 ## Business Autopilot Limits
 
 - Automatic business successor generation follows the stage order declared in `docs/governance/MODULE_MAP.yaml` and the live roadmap policy.
