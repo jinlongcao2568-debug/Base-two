@@ -50,7 +50,7 @@
   - obey `MODULE_MAP.yaml` dependency order;
   - respect the live roadmap scope and stage establishment policy;
   - keep `stage7-stage9` closed unless `stage7_to_stage9_business_automation` is implemented in `CAPABILITY_MAP.yaml`;
-  - select at most 2 child execution lanes;
+  - select at most 4 child execution lanes when the dynamic planner metadata supports them;
   - declare authority inputs, contract inputs, module scope, and review policy on each child task.
 
 ## Branch Switching Rules
@@ -86,10 +86,45 @@
   1. run `check_repo.py`;
   2. run `check_hygiene.py`;
   3. execute `continue-roadmap` when requested, including from the formal idle state;
-  4. prepare worktrees for the live `parallel_parent` task when allowed by automation mode;
-  5. run `auto-close-children` for review-ready child lanes when allowed by automation mode;
-  6. run the existing orphan cleanup logic.
+  4. validate the live `parallel_parent` lanes for hard conflicts before any worktree action;
+  5. compute the effective lane budget from planner ceiling, cleanup pressure, and current runtime health;
+  6. prepare worktrees for the live `parallel_parent` task in ascending `lane_index` order when allowed by automation mode;
+  7. run `auto-close-children` for review-ready child lanes when allowed by automation mode;
+  8. run orphan cleanup and publish the runner metrics block.
 - The runner still honors `manual`, `assisted`, and `autonomous` gating for parallel worktree preparation and child closeout.
+- Runtime topology is now `1 coordinator + 1..4 child lanes`; the planner ceiling stays at `4` even though the external product language remains "dynamic parallelism".
+
+## Health Budget
+
+- The effective lane budget starts at `min(parent.lane_count, dynamic_lane_ceiling_v1)`.
+- Existing execution worktrees with `cleanup_state in {blocked, blocked_manual}` reduce the budget by one, but never below `1`.
+- Child review-bundle failure in the current cycle reduces the budget by one for the next cycle, but never below `1`.
+- If the number of active execution worktrees already meets the effective lane budget, the runner must not prepare more worktrees in that cycle.
+
+## Fallback And Hard Errors
+
+- Hard errors:
+  - child write-scope overlap
+  - child test-scope overlap
+  - reserved-path overlap
+  - parallel registry drift
+- Fallback signals:
+  - orphan cleanup anomalies
+  - active execution budget saturation
+  - child review-bundle failures
+- Hard errors return nonzero immediately.
+- Fallback signals do not change the command surface; they are reported in the runner metrics and may leave the parent or child task blocked.
+
+## Metrics Block
+
+- Every runner cycle must emit:
+  - `lane_count`
+  - `lane_conflict_count`
+  - `child_closeout_success_rate`
+  - `fallback_count`
+  - `orphan_cleanup_failures`
+- `lane_conflict_count` counts machine-detected child scope conflicts only.
+- `fallback_count` counts actual budget downgrades, not hard validation errors.
 
 ## Stop Conditions
 

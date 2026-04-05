@@ -86,6 +86,20 @@ capabilities:
       - scripts/render_runtime_prompts.py
     tests:
       - pytest tests/governance -q
+  - capability_id: high_throughput_runner_v1
+    status: implemented
+    source_of_truth:
+      - docs/governance/DEVELOPMENT_ROADMAP.md
+      - docs/governance/AUTOMATION_OPERATING_MODEL.md
+      - docs/governance/TASK_POLICY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+    scripts:
+      - scripts/automation_runner.py
+      - scripts/task_worktree_ops.py
+      - scripts/task_worker_ops.py
+    tests:
+      - pytest tests/governance -q
+      - pytest tests/automation -q
   - capability_id: stage1_to_stage6_business_automation
     status: implemented
     source_of_truth:

@@ -153,6 +153,22 @@ def _governance_prompt_capabilities() -> list[dict[str, Any]]:
             ["scripts/render_runtime_prompts.py"],
             ["pytest tests/governance -q"],
         ),
+        _capability(
+            "high_throughput_runner_v1",
+            "not_implemented",
+            [
+                "docs/governance/DEVELOPMENT_ROADMAP.md",
+                "docs/governance/AUTOMATION_OPERATING_MODEL.md",
+                "docs/governance/TASK_POLICY.yaml",
+                "docs/governance/WORKTREE_REGISTRY.yaml",
+            ],
+            [
+                "scripts/automation_runner.py",
+                "scripts/task_worktree_ops.py",
+                "scripts/task_worker_ops.py",
+            ],
+            ["pytest tests/governance -q", "pytest tests/automation -q"],
+        ),
     ]
 
 
