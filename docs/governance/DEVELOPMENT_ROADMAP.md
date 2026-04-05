@@ -1,6 +1,6 @@
 ---
-current_phase: governance-continuity-stability-v1
-current_task_id: TASK-GOV-015
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: TASK-GOV-016
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,8 +35,7 @@ automation_foundation: in_progress
 
 ## Current Task
 
-- `TASK-GOV-015`: continuity-stability-v1 is the live coordination task for `governance-continuity-stability-v1`.
-
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-013`: completed doc-driven coordination planning and explicit candidate promotion.
