@@ -1,6 +1,6 @@
 task_id: TASK-GOV-013
-summary_status: review
-last_handoff_at: '2026-04-05T16:09:47+08:00'
+summary_status: done
+last_handoff_at: '2026-04-05T16:10:32+08:00'
 completed_items:
 - Added governed coordination planner policy, planner commands, and candidate output
   contract.
@@ -8,17 +8,13 @@ completed_items:
   mutation.
 - Covered planner ranking, serial-vs-parallel classification, promotion, and activation
   in governance tests.
-remaining_items:
-- Validate the review-ready evidence and close the task if eligible.
-next_step: Review the recorded evidence and close TASK-GOV-013 if the live ledgers
-  remain aligned.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
 - python scripts/check_authority_alignment.py
-current_risks:
-- Candidate generation remains intentionally operator-promoted; planner does not auto-activate
-  live work.
+current_risks: []
 candidate_write_paths:
 - docs/governance/
 - scripts/
@@ -33,3 +29,4 @@ resume_notes:
   tracked ledgers.
 - 'Worker finish summary: Implemented the document-driven coordination planner, candidate
   promotion flow, and planner-aware governance policy updates.'
+- Task closed.

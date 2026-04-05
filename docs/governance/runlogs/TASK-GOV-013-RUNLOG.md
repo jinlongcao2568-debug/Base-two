@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-013`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-doc-driven-coordination-planner-v1`
 - `branch`: `feat/TASK-GOV-013-coordination-planner`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -28,20 +28,20 @@
 - `python scripts/task_ops.py plan-coordination`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-013`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-doc-driven-coordination-planner-v1`
 - `branch`: `feat/TASK-GOV-013-coordination-planner`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
