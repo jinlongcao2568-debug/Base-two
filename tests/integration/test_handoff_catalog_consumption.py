@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import yaml
 
-
-ROOT = Path(__file__).resolve().parents[2]
+from src.shared.contracts.minimal_chain_pipeline import run_minimal_runtime_chain
 
 
 def load_json(path: Path) -> dict:
@@ -19,10 +23,14 @@ def load_yaml(path: Path) -> dict:
 
 def test_handoff_catalog_consumes_real_chain_payloads() -> None:
     catalog = load_yaml(ROOT / "docs/contracts/handoff_catalog.yaml")
-    project_base = load_json(ROOT / "tests/fixtures/normalized/project_base.normalized.json")
-    rule_hit = load_json(ROOT / "tests/fixtures/rules/rule_hit.normalized.json")
-    project_fact = load_json(ROOT / "tests/fixtures/facts/project_fact.normalized.json")
-    report_record = load_json(ROOT / "docs/contracts/examples/report_record.example.json")
+    bundle = run_minimal_runtime_chain(
+        scenario_id="case_review_ready",
+        requested_at="2026-04-05T10:00:00+08:00",
+    )
+    project_base = bundle["stage3"]["project_base"]
+    rule_hit = bundle["stage4"]["rule_hits"][0]
+    project_fact = bundle["stage6"]["project_fact"]
+    report_record = bundle["stage5"]["report_record"]
 
     payloads = {
         "stage3-to-stage4-project_base": project_base,

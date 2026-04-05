@@ -1,0 +1,21 @@
+version: '1.0'
+updated_at: '2026-04-05T10:00:00+08:00'
+playbooks:
+  minimal_runtime_chain_v1:
+    playbook_id: minimal_runtime_chain_v1
+    task_id: TASK-AUTO-004
+    input_modes:
+      - scenario_id
+      - raw_fixture_path
+    allowed_output_root: explicit_output_dir
+    artifacts:
+      - stage1.ingestion_job
+      - stage2.raw_ingestion_artifact
+      - stage3.project_base
+      - stage4.rule_hits
+      - stage4.evidences
+      - stage4.review_requests
+      - stage5.report_record
+      - stage6.project_fact
+      - consumers.public_chain_view
+    required_command: python scripts/run_minimal_runtime_chain.py --scenario-id <case_id> --output-dir <dir>

@@ -1,0 +1,21 @@
+version: '1.0'
+updated_at: '2026-04-05T10:00:00+08:00'
+policies:
+  minimal_runtime_chain_v1:
+    policy_id: minimal_runtime_chain_v1
+    playbook_id: minimal_runtime_chain_v1
+    schema_checks:
+      stage3.project_base: docs/contracts/schemas/stage3_project_base.schema.json
+      stage4.rule_hits: docs/contracts/schemas/stage4_rule_hit.schema.json
+      stage4.evidences: docs/contracts/schemas/stage4_evidence.schema.json
+      stage4.review_requests: docs/contracts/schemas/stage4_review_request.schema.json
+      stage5.report_record: docs/contracts/schemas/stage5_report_record.schema.json
+      stage6.project_fact: docs/contracts/schemas/stage6_project_fact.schema.json
+    fixture_checks:
+      stage3.project_base: tests/fixtures/normalized/{scenario_id}.project_base.json
+      stage4.rule_hits: tests/fixtures/rules/{scenario_id}.rule_hit.json
+      stage4.evidences: tests/fixtures/rules/{scenario_id}.evidence.json
+      stage4.review_requests: tests/fixtures/rules/{scenario_id}.review_request.json
+      stage5.report_record: tests/fixtures/reports/{scenario_id}.report_record.json
+      stage6.project_fact: tests/fixtures/facts/{scenario_id}.project_fact.json
+    consumer_field_whitelist: docs/contracts/customer_delivery_field_whitelist.yaml

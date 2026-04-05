@@ -5,20 +5,24 @@
 - `task_id`: `TASK-AUTO-004`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `automation-minimal-runtime-chain-v1`
 - `branch`: `feat/TASK-AUTO-004-minimal-runtime-chain`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 ## Primary Goals
 
-- to-be-filled
+- implement the first deterministic local runtime chain across `stage1 -> stage2 -> stage3 -> stage4 -> stage5 -> stage6 -> domain_public_chain`
+- replace fixture-only consumption tests with `src/` runtime calls that still validate against the existing formal schemas and case fixtures
+- add one explicit local execution entrypoint plus task-scoped execution playbook and acceptance policy for this chain only
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- no external API or webhook registration; `docs/governance/INTERFACE_CATALOG.yaml` remains zero-state
+- no release control plane, deploy orchestration, or runtime feedback loop in this task
+- no `stage7/stage8/stage9` implementation work beyond preserving downstream compatibility with `stage6` facts
 
 ## Allowed Dirs
 
@@ -86,27 +90,26 @@
 
 ## Reserved Paths
 
-- to-be-filled
+- none
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `review`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-AUTO-004-minimal-runtime-chain`
-- `updated_at`: `2026-04-05T09:29:01+08:00`
+- `updated_at`: `2026-04-05T09:48:47+08:00`
 <!-- generated:task-meta:end -->

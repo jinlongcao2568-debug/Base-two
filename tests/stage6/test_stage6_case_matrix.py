@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pytest
 from jsonschema import Draft202012Validator
 
-
-ROOT = Path(__file__).resolve().parents[2]
+from src.shared.contracts.minimal_chain_pipeline import run_minimal_runtime_chain
 CASES = (
     "case_review_ready",
     "case_open_issued",
@@ -28,11 +32,13 @@ def validate(schema_name: str, payload: dict) -> None:
 
 @pytest.mark.parametrize("case_id", CASES)
 def test_stage6_case_matrix_matches_refs_and_status(case_id: str) -> None:
-    project_base = load_json(ROOT / f"tests/fixtures/normalized/{case_id}.project_base.json")
-    rule_hit = load_json(ROOT / f"tests/fixtures/rules/{case_id}.rule_hit.json")
-    report_record = load_json(ROOT / f"tests/fixtures/reports/{case_id}.report_record.json")
-    project_fact = load_json(ROOT / f"tests/fixtures/facts/{case_id}.project_fact.json")
+    bundle = run_minimal_runtime_chain(scenario_id=case_id, requested_at="2026-04-05T10:00:00+08:00")
+    project_base = bundle["stage3"]["project_base"]
+    rule_hit = bundle["stage4"]["rule_hits"][0]
+    report_record = bundle["stage5"]["report_record"]
+    project_fact = bundle["stage6"]["project_fact"]
     golden = load_json(ROOT / f"tests/fixtures/golden/{case_id}.stage_chain.json")
+    expected = load_json(ROOT / f"tests/fixtures/facts/{case_id}.project_fact.json")
 
     validate("stage5_report_record.schema.json", report_record)
     validate("stage6_project_fact.schema.json", project_fact)
@@ -45,3 +51,4 @@ def test_stage6_case_matrix_matches_refs_and_status(case_id: str) -> None:
     assert project_fact["review_status"] == golden["expected_review_status"]
     assert project_fact["report_status"] == golden["expected_report_status"]
     assert project_base["project_id"] == rule_hit["project_id"] == report_record["project_id"] == project_fact["project_id"]
+    assert project_fact == expected

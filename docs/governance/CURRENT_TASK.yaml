@@ -1,23 +1,75 @@
-current_task_id: null
-title: null
-status: idle
-task_kind: null
-execution_mode: null
+current_task_id: TASK-AUTO-004
+title: 最小真实业务链与自动开发基线
+status: review
+task_kind: coordination
+execution_mode: shared_coordination
 parent_task_id: null
-stage: null
-branch: null
-size_class: null
-automation_mode: null
-worker_state: idle
+stage: automation-minimal-runtime-chain-v1
+branch: feat/TASK-AUTO-004-minimal-runtime-chain
+size_class: heavy
+automation_mode: manual
+worker_state: review_pending
 blocked_reason: null
-last_reported_at: '2026-04-05T09:26:51+08:00'
-topology: null
-allowed_dirs: []
+last_reported_at: '2026-04-05T09:48:47+08:00'
+topology: single_worker
+allowed_dirs:
+- src/stage1_orchestration/
+- src/stage2_ingestion/
+- src/stage3_parsing/
+- src/stage4_validation/
+- src/stage5_reporting/
+- src/stage6_facts/
+- src/domain/engineering/public_chain/
+- src/shared/contracts/
+- tests/stage1/
+- tests/stage2/
+- tests/stage3/
+- tests/stage4/
+- tests/stage5/
+- tests/stage6/
+- tests/contracts/
+- tests/integration/
+- docs/governance/
+- scripts/
 reserved_paths: []
-planned_write_paths: []
-planned_test_paths: []
-required_tests: []
-task_file: null
-runlog_file: null
-next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-05T09:26:51+08:00'
+planned_write_paths:
+- src/stage1_orchestration/
+- src/stage2_ingestion/
+- src/stage3_parsing/
+- src/stage4_validation/
+- src/stage5_reporting/
+- src/stage6_facts/
+- src/domain/engineering/public_chain/
+- src/shared/contracts/
+- tests/stage1/
+- tests/stage2/
+- tests/stage3/
+- tests/stage4/
+- tests/stage5/
+- tests/stage6/
+- tests/contracts/
+- tests/integration/
+- docs/governance/
+- scripts/
+planned_test_paths:
+- tests/stage1/
+- tests/stage2/
+- tests/stage3/
+- tests/stage4/
+- tests/stage5/
+- tests/stage6/
+- tests/contracts/
+- tests/integration/
+required_tests:
+- python scripts/check_authority_alignment.py
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py
+- pytest tests/governance -q
+- pytest tests/automation -q
+- pytest tests/contracts -q
+- pytest tests/integration -q
+- pytest -q
+task_file: docs/governance/tasks/TASK-AUTO-004.md
+runlog_file: docs/governance/runlogs/TASK-AUTO-004-RUNLOG.md
+next_action: worker 宸插畬鎴愬€欓€変氦浠橈紱绛夊緟鑷姩鏀跺彛鎴栬瘎瀹°€?
+updated_at: '2026-04-05T09:48:47+08:00'
