@@ -1,24 +1,21 @@
 task_id: TASK-GOV-011
-summary_status: review
-last_handoff_at: '2026-04-05T15:24:08+08:00'
+summary_status: done
+last_handoff_at: '2026-04-05T15:27:36+08:00'
 completed_items:
 - Added a governed handoff policy and tracked handoff artifacts for top-level coordination
   tasks.
 - Persisted recovery fields through worker-report, worker-blocked, and worker-finish.
 - Made continue-current and automation intent preflight restore the recovery pack
   before acting.
-remaining_items:
-- Close the review-ready task after preserving the validated test evidence.
-next_step: Commit the validated Batch 1 changes and close TASK-GOV-011 without activating
-  a successor.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
 - python scripts/check_authority_alignment.py
 - pytest tests/governance -q
 - pytest tests/automation -q
-current_risks:
-- No blocking implementation risk remains; only informational hygiene warnings persist.
+current_risks: []
 candidate_write_paths:
 - docs/governance/
 - scripts/
@@ -32,3 +29,4 @@ resume_notes:
 - Batch 1 is review-ready; the next operator should verify the clean review state,
   then close the task.
 - 'Worker finish summary: formal handoff recovery is implemented and validated'
+- Task closed.
