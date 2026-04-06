@@ -3,14 +3,14 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-026`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-026-lease-closeout-closure`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 ## Execution Log
 
 - `2026-04-06T19:46:52+08:00`: task package created
@@ -26,28 +26,39 @@
 - `2026-04-06T19:57:30+08:00`: detailed execution plan recorded summary=`Implement the lease/closeout closure lane within the scoped governance scripts and regressions.`
 - `2026-04-06T19:58:50+08:00`: test-first gate recorded commands=`pytest tests/governance/test_coordination_lease.py -q, pytest tests/governance/test_task_continuation.py -q`
 - `2026-04-06T19:58:50+08:00`: worker-start owner=`worker-01`
+- `2026-04-06T20:25:25+08:00`: worker-finish `Updated continuation lane-cap coverage for the expanded local lane ceiling.`
 ## Test Log
 
 - `not run`: first-wave lane package drafted only; implementation has not started.
-
+- `pytest tests/governance/test_coordination_lease.py -q`
+- `pytest tests/governance/test_task_continuation.py -q`
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-026`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-026-lease-closeout-closure`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 <!-- generated:runlog-meta:end -->
+
+## Review Bundle
+
+- `2026-04-06T20:24:29+08:00`: spec_review `passed` `Lease/closeout lane stays within the scoped files and keeps non-closeout-ready blocking semantics intact.`
+- `2026-04-06T20:24:29+08:00`: quality_review `passed` `Scoped continuation regressions pass with the updated twenty-lane coverage and no new repo gate failures.`
+
+## Candidate Paths
+
+- `tests/governance/test_task_continuation.py`

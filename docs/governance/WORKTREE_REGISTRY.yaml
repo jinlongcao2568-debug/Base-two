@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T20:00:40+08:00'
+updated_at: '2026-04-06T20:27:22+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -654,12 +654,13 @@ entries:
   last_cleanup_error: null
   worker_owner: worker-02
   lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
-  executor_status: running
+  executor_status: completed
   started_at: '2026-04-06T20:00:40+08:00'
-  last_heartbeat_at: '2026-04-06T20:00:40+08:00'
-  last_result: worker-start
+  last_heartbeat_at: '2026-04-06T20:27:22+08:00'
+  last_result: Expanded local parallel lane ceiling to twenty and aligned the governing
+    policy/runtime/tests.
   workflow_state:
-    phase: plan_ready
+    phase: finish_ready
     prepared_at: '2026-04-06T19:55:11+08:00'
     parent_branch: feat/TASK-GOV-025-local-multi-agent-platformization
     baseline_checks:
@@ -757,24 +758,31 @@ entries:
       recorded_at: '2026-04-06T19:57:31+08:00'
     implementation:
       kind: code
-      test_first_status: pending
-      recorded_at: '2026-04-06T19:57:31+08:00'
-      commands: []
+      test_first_status: ready
+      recorded_at: '2026-04-06T19:58:50+08:00'
+      commands:
+      - pytest tests/governance/test_parallel_closeout_pipeline.py -q
+      - pytest tests/governance/test_authority_alignment.py -q
+      - pytest tests/governance/test_task_ops.py -q
+      note: Use the child closeout, authority, and task-ops regressions as the first
+        loop for mirror and handoff changes.
     review:
       sequence:
       - spec_review
       - quality_review
       spec_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: Child-closeout lane now also owns the approved twenty-lane policy/runtime
+          expansion and stays inside its updated write set.
+        recorded_at: '2026-04-06T20:25:25+08:00'
       quality_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: Mirror/authority/task-ops regressions pass with the twenty-lane ceiling
+          and child mirror write admission changes.
+        recorded_at: '2026-04-06T20:25:46+08:00'
     finish:
-      status: pending
-      recorded_at: null
+      status: ready
+      recorded_at: '2026-04-06T20:27:22+08:00'
       merged_into_parent_at: null
 - task_id: TASK-GOV-026
   work_mode: execution
@@ -787,12 +795,13 @@ entries:
   last_cleanup_error: null
   worker_owner: worker-01
   lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
-  executor_status: running
+  executor_status: completed
   started_at: '2026-04-06T19:58:50+08:00'
-  last_heartbeat_at: '2026-04-06T19:58:50+08:00'
-  last_result: worker-start
+  last_heartbeat_at: '2026-04-06T20:25:25+08:00'
+  last_result: Updated continuation lane-cap coverage for the expanded local lane
+    ceiling.
   workflow_state:
-    phase: plan_ready
+    phase: finish_ready
     prepared_at: '2026-04-06T19:56:57+08:00'
     parent_branch: feat/TASK-GOV-025-local-multi-agent-platformization
     baseline_checks:
@@ -909,22 +918,28 @@ entries:
       recorded_at: '2026-04-06T19:57:30+08:00'
     implementation:
       kind: code
-      test_first_status: pending
-      recorded_at: '2026-04-06T19:57:30+08:00'
-      commands: []
+      test_first_status: ready
+      recorded_at: '2026-04-06T19:58:50+08:00'
+      commands:
+      - pytest tests/governance/test_coordination_lease.py -q
+      - pytest tests/governance/test_task_continuation.py -q
+      note: Use the scoped governance regressions as the first loop before broader
+        repo checks.
     review:
       sequence:
       - spec_review
       - quality_review
       spec_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: Lease/closeout lane stays within the scoped files and keeps non-closeout-ready
+          blocking semantics intact.
+        recorded_at: '2026-04-06T20:24:29+08:00'
       quality_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: Scoped continuation regressions pass with the updated twenty-lane
+          coverage and no new repo gate failures.
+        recorded_at: '2026-04-06T20:24:29+08:00'
     finish:
-      status: pending
-      recorded_at: null
+      status: ready
+      recorded_at: '2026-04-06T20:25:25+08:00'
       merged_into_parent_at: null

@@ -5,17 +5,17 @@
 - `task_id`: `TASK-GOV-027`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-027-child-closeout-mirror`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `2`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 ## Primary Goals
 
 - Make governed child execution self-healing when mirrored governance files or missing worktree paths would otherwise leave false blocked states.
@@ -86,27 +86,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `review`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `2`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-027-child-closeout-mirror`
-- `updated_at`: `2026-04-06T20:00:41+08:00`
+- `updated_at`: `2026-04-06T20:27:23+08:00`
 <!-- generated:task-meta:end -->

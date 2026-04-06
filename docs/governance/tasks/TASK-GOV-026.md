@@ -5,17 +5,17 @@
 - `task_id`: `TASK-GOV-026`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `doing`
+- `status`: `review`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-026-lease-closeout-closure`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 ## Primary Goals
 
 - Remove manual takeover knowledge from closeout-ready paths.
@@ -66,27 +66,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `review`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `review_pending`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-026-lease-closeout-closure`
-- `updated_at`: `2026-04-06T19:58:50+08:00`
+- `updated_at`: `2026-04-06T20:25:25+08:00`
 <!-- generated:task-meta:end -->
