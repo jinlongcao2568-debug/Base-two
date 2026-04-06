@@ -632,8 +632,12 @@ def test_continue_roadmap_blocks_stage7_successor_until_downstream_capability_is
     _mark_current_review_ready(repo)
 
     result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
-    assert result.returncode == 1
-    assert "no successor" in result.stdout
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-BASE-001"
+    assert current_task["status"] == "review"
+    assert "no successor is available" in result.stdout
 
 
 def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_is_implemented(tmp_path: Path) -> None:

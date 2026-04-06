@@ -864,7 +864,14 @@ def _preview_continuation_successor(
         readiness["next_successor_task_id"] = successor["task_id"]
         readiness["successor_source"] = source
     except GovernanceError as error:
-        blockers.append(str(error))
+        message = str(error)
+        if message == "no successor is available for continue-roadmap":
+            readiness["status"] = "no_successor"
+            readiness["recommended_action"] = "stay idle until a valid successor is available"
+            return
+        if "successor landscape is not unique" in message:
+            readiness["status"] = "ambiguous"
+        blockers.append(message)
 
 
 def _finalize_continuation_readiness(
@@ -875,6 +882,13 @@ def _finalize_continuation_readiness(
     checkpoint_task: dict[str, Any] | None,
 ) -> dict[str, Any]:
     readiness["blockers"] = list(dict.fromkeys(blockers))
+    if readiness.get("status") == "no_successor" and not readiness["blockers"]:
+        readiness["next_successor_task_id"] = None
+        readiness["successor_source"] = None
+        return readiness
+    if readiness.get("status") == "ambiguous" and readiness["blockers"]:
+        readiness["recommended_action"] = "resolve successor ambiguity or dependencies before continuing"
+        return readiness
     if not readiness["blockers"]:
         readiness["status"] = "ready"
         readiness["recommended_action"] = "continue-roadmap"
@@ -1032,6 +1046,21 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         current_payload=current_task_payload,
         current_task=current_task,
     )
+    if readiness["status"] == "no_successor":
+        _record_runtime_event(
+            root,
+            session_id=current_session_id(root),
+            thread_id=coordination_thread_id(root),
+            current_command="continue-roadmap",
+            mode="manual",
+            writer_state="writable",
+            current_task_id=None,
+            continue_intent="roadmap",
+            runtime_status="idle",
+            safe_write=True,
+        )
+        print("[OK] continue-roadmap no successor is available; repository remains idle")
+        return 0
     if readiness["status"] != "ready":
         raise GovernanceError("; ".join(readiness["blockers"]) or "continue-roadmap blocked")
 
