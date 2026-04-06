@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T17:11:05+08:00'
+updated_at: '2026-04-06T17:20:59+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -1808,3 +1808,76 @@ tasks:
   created_at: '2026-04-06T15:29:51+08:00'
   activated_at: '2026-04-06T16:07:44+08:00'
   closed_at: '2026-04-06T17:01:30+08:00'
+- task_id: TASK-GOV-024
+  title: 治理收口升级：closeout lease 自动闭环与运行契约统一
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-closeout-lease-runtime-contracts-v1
+  branch: feat/TASK-GOV-024-closeout-lease-runtime-contracts
+  size_class: heavy
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-06T17:20:59+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - README.md
+  - pyproject.toml
+  - requirements-dev.txt
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/
+  - scripts/task_coordination_lease.py
+  - scripts/task_continuation_ops.py
+  - scripts/task_worker_ops.py
+  - scripts/task_worktree_ops.py
+  - scripts/child_execution_flow.py
+  - scripts/governance_repo_checks.py
+  - scripts/task_handoff.py
+  - README.md
+  - pyproject.toml
+  - requirements-dev.txt
+  - tests/governance/test_coordination_lease.py
+  - tests/governance/test_parallel_closeout_pipeline.py
+  - tests/governance/test_task_continuation.py
+  - tests/governance/test_authority_alignment.py
+  - tests/governance/test_task_ops.py
+  - tests/automation/test_automation_runner.py
+  planned_test_paths:
+  - tests/governance/test_coordination_lease.py
+  - tests/governance/test_parallel_closeout_pipeline.py
+  - tests/governance/test_task_continuation.py
+  - tests/governance/test_authority_alignment.py
+  - tests/governance/test_task_ops.py
+  - tests/automation/test_automation_runner.py
+  - tests/automation/test_high_throughput_runner.py
+  required_tests:
+  - python scripts/check_hygiene.py
+  - python scripts/task_ops.py split-check TASK-GOV-024
+  - python scripts/check_repo.py
+  - python scripts/check_authority_alignment.py
+  - pytest tests/governance/test_coordination_lease.py tests/governance/test_parallel_closeout_pipeline.py
+    tests/governance/test_task_continuation.py tests/governance/test_authority_alignment.py
+    tests/governance/test_task_ops.py -q
+  - pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py
+    -q
+  task_file: docs/governance/tasks/TASK-GOV-024.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-024-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: immediate
+  created_at: '2026-04-06T17:20:59+08:00'
+  activated_at: null
+  closed_at: null

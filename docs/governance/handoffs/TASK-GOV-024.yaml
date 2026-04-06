@@ -1,0 +1,49 @@
+task_id: TASK-GOV-024
+summary_status: queued
+last_handoff_at: null
+completed_items: []
+remaining_items:
+- Implement the scoped governance control-plane changes and formalize the runtime/subprocess contract.
+next_step: Activate the task and begin scoped implementation inside the allowed directories.
+next_tests:
+- python scripts/check_hygiene.py
+- python scripts/task_ops.py split-check TASK-GOV-024
+- python scripts/check_repo.py
+- python scripts/check_authority_alignment.py
+- pytest tests/governance/test_coordination_lease.py tests/governance/test_parallel_closeout_pipeline.py
+  tests/governance/test_task_continuation.py tests/governance/test_authority_alignment.py
+  tests/governance/test_task_ops.py -q
+- pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py
+  -q
+current_risks:
+- closeout and lease behavior still require manual recovery knowledge in some paths.
+- governed child closeout still depends on fragile worktree/ledger assumptions.
+- Python runtime and subprocess execution contract are still implicit.
+candidate_write_paths:
+- docs/governance/
+- scripts/task_coordination_lease.py
+- scripts/task_continuation_ops.py
+- scripts/task_worker_ops.py
+- scripts/task_worktree_ops.py
+- scripts/child_execution_flow.py
+- scripts/governance_repo_checks.py
+- scripts/task_handoff.py
+- README.md
+- pyproject.toml
+- requirements-dev.txt
+- tests/governance/test_coordination_lease.py
+- tests/governance/test_parallel_closeout_pipeline.py
+- tests/governance/test_task_continuation.py
+- tests/governance/test_authority_alignment.py
+- tests/governance/test_task_ops.py
+- tests/automation/test_automation_runner.py
+candidate_test_paths:
+- tests/governance/test_coordination_lease.py
+- tests/governance/test_parallel_closeout_pipeline.py
+- tests/governance/test_task_continuation.py
+- tests/governance/test_authority_alignment.py
+- tests/governance/test_task_ops.py
+- tests/automation/test_automation_runner.py
+- tests/automation/test_high_throughput_runner.py
+resume_notes:
+- Formal handoff has not been recorded yet.
