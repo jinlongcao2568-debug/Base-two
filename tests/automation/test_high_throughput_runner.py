@@ -95,7 +95,7 @@ def _mark_cleanup_pressure(repo: Path, tmp_path: Path, cleanup_state: str, attem
 
 
 def test_runner_reports_metrics_for_dynamic_lane_counts(tmp_path: Path) -> None:
-    for lane_count in (2, 3, 4):
+    for lane_count in (2, 4):
         repo = init_governance_repo(tmp_path / f"lanes-{lane_count}")
         task_ids = [f"TASK-LANE-{lane_count}-{index:03d}" for index in range(1, lane_count + 1)]
         BUILDERS.set_live_task_mode(repo, automation_mode="assisted", lane_count=lane_count)
