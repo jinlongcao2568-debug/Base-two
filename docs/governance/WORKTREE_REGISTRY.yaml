@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T20:27:22+08:00'
+updated_at: '2026-04-06T20:31:12+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -656,7 +656,7 @@ entries:
   lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
   executor_status: completed
   started_at: '2026-04-06T20:00:40+08:00'
-  last_heartbeat_at: '2026-04-06T20:27:22+08:00'
+  last_heartbeat_at: '2026-04-06T20:31:12+08:00'
   last_result: Expanded local parallel lane ceiling to twenty and aligned the governing
     policy/runtime/tests.
   workflow_state:
@@ -782,15 +782,15 @@ entries:
         recorded_at: '2026-04-06T20:25:46+08:00'
     finish:
       status: ready
-      recorded_at: '2026-04-06T20:27:22+08:00'
+      recorded_at: '2026-04-06T20:31:12+08:00'
       merged_into_parent_at: null
 - task_id: TASK-GOV-026
   work_mode: execution
   parent_task_id: TASK-GOV-025
   branch: feat/TASK-GOV-026-lease-closeout-closure
   path: D:/Base One/Base-two/AX9.worktrees/TASK-GOV-026
-  status: active
-  cleanup_state: pending
+  status: closed
+  cleanup_state: done
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: worker-01
@@ -801,7 +801,7 @@ entries:
   last_result: Updated continuation lane-cap coverage for the expanded local lane
     ceiling.
   workflow_state:
-    phase: finish_ready
+    phase: child_finished
     prepared_at: '2026-04-06T19:56:57+08:00'
     parent_branch: feat/TASK-GOV-025-local-multi-agent-platformization
     baseline_checks:
@@ -940,6 +940,6 @@ entries:
           coverage and no new repo gate failures.
         recorded_at: '2026-04-06T20:24:29+08:00'
     finish:
-      status: ready
-      recorded_at: '2026-04-06T20:25:25+08:00'
-      merged_into_parent_at: null
+      status: completed
+      recorded_at: '2026-04-06T20:29:39+08:00'
+      merged_into_parent_at: '2026-04-06T20:29:39+08:00'

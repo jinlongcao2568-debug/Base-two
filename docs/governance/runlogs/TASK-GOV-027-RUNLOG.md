@@ -23,9 +23,15 @@
 - `2026-04-06T19:58:50+08:00`: test-first gate recorded commands=`pytest tests/governance/test_parallel_closeout_pipeline.py -q, pytest tests/governance/test_authority_alignment.py -q, pytest tests/governance/test_task_ops.py -q`
 - `2026-04-06T20:00:40+08:00`: worker-start owner=`worker-02`
 - `2026-04-06T20:27:22+08:00`: worker-finish `Expanded local parallel lane ceiling to twenty and aligned the governing policy/runtime/tests.`
+- `2026-04-06T20:31:12+08:00`: worker-finish `Expanded local parallel lane ceiling to twenty and aligned the governing policy/runtime/tests.`
 ## Test Log
 
 - `not run`: first-wave lane package drafted only; implementation has not started.
+- `pytest tests/governance/test_check_repo.py -q`
+- `pytest tests/governance/test_parallel_closeout_pipeline.py -q`
+- `pytest tests/governance/test_authority_alignment.py -q`
+- `pytest tests/governance/test_task_ops.py -q`
+- `python scripts/check_hygiene.py`
 - `pytest tests/governance/test_check_repo.py -q`
 - `pytest tests/governance/test_parallel_closeout_pipeline.py -q`
 - `pytest tests/governance/test_authority_alignment.py -q`
@@ -60,9 +66,19 @@
 
 - `2026-04-06T20:25:25+08:00`: spec_review `passed` `Child-closeout lane now also owns the approved twenty-lane policy/runtime expansion and stays inside its updated write set.`
 - `2026-04-06T20:25:46+08:00`: quality_review `passed` `Mirror/authority/task-ops regressions pass with the twenty-lane ceiling and child mirror write admission changes.`
-
+- `2026-04-06T20:29:39+08:00`: pending
+- `2026-04-06T20:29:40+08:00`: passed `python scripts/check_hygiene.py`
+- `2026-04-06T20:29:40+08:00`: blocked `review_bundle_failed: `python scripts/check_repo.py` :: [ERROR] active execution worktree missing execution context: TASK-GOV-026`
 ## Candidate Paths
 
+- `docs/governance/TASK_POLICY.yaml`
+- `docs/governance/AUTOMATION_OPERATING_MODEL.md`
+- `scripts/governance_rules.py`
+- `scripts/governance_runtime.py`
+- `tests/governance/fixture_payloads.py`
+- `tests/governance/policy_fixture_payloads.py`
+- `tests/governance/test_check_repo.py`
+- `tests/governance/test_task_ops.py`
 - `docs/governance/TASK_POLICY.yaml`
 - `docs/governance/AUTOMATION_OPERATING_MODEL.md`
 - `scripts/governance_rules.py`

@@ -108,5 +108,5 @@
 - `review_bundle_status`: `pending`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-027-child-closeout-mirror`
-- `updated_at`: `2026-04-06T20:27:23+08:00`
+- `updated_at`: `2026-04-06T20:31:13+08:00`
 <!-- generated:task-meta:end -->
