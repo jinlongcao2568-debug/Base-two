@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-019`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-closeout-artifact-alignment-v1`
 - `branch`: `feat/TASK-GOV-019-closeout-artifact-alignment`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -68,21 +68,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -91,5 +91,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-019-closeout-artifact-alignment`
-- `updated_at`: `2026-04-06T14:12:09+08:00`
+- `updated_at`: `2026-04-06T14:51:53+08:00`
 <!-- generated:task-meta:end -->

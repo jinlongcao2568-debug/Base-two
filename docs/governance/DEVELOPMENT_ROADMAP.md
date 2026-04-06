@@ -1,6 +1,6 @@
 ---
-current_phase: governance-closeout-artifact-alignment-v1
-current_task_id: TASK-GOV-019
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,8 +35,7 @@ automation_foundation: stale_successor_inputs_under_correction
 
 ## Current Task
 
-- `TASK-GOV-019`: `治理收口与后继清理` is the live coordination task for `governance-closeout-artifact-alignment-v1`.
-
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.
