@@ -98,5 +98,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, scripts/, tests/governance/, tests/automation/`
 - `branch`: `feat/TASK-GOV-025-local-multi-agent-platformization`
-- `updated_at`: `2026-04-06T20:29:41+08:00`
+- `updated_at`: `2026-04-06T20:34:02+08:00`
 <!-- generated:task-meta:end -->

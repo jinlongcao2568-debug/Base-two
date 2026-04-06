@@ -3,14 +3,14 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-027`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-027-child-closeout-mirror`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `3`
 - `lane_index`: `2`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `pending`
+- `review_bundle_status`: `passed`
 ## Execution Log
 
 - `2026-04-06T19:46:52+08:00`: task package created
@@ -36,26 +36,30 @@
 - `pytest tests/governance/test_parallel_closeout_pipeline.py -q`
 - `pytest tests/governance/test_authority_alignment.py -q`
 - `pytest tests/governance/test_task_ops.py -q`
+- `python scripts/check_hygiene.py`
+- `python scripts/check_repo.py`
+- `python scripts/check_authority_alignment.py`
+- `pytest tests/governance/test_check_repo.py tests/governance/test_parallel_closeout_pipeline.py tests/governance/test_authority_alignment.py tests/governance/test_task_ops.py -q`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-027`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-027-child-closeout-mirror`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `3`
 - `lane_index`: `2`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `pending`
+- `review_bundle_status`: `passed`
 <!-- generated:runlog-meta:end -->
 
 ## Risk and Blockers
@@ -69,6 +73,11 @@
 - `2026-04-06T20:29:39+08:00`: pending
 - `2026-04-06T20:29:40+08:00`: passed `python scripts/check_hygiene.py`
 - `2026-04-06T20:29:40+08:00`: blocked `review_bundle_failed: `python scripts/check_repo.py` :: [ERROR] active execution worktree missing execution context: TASK-GOV-026`
+- `2026-04-06T20:32:08+08:00`: pending
+- `2026-04-06T20:32:08+08:00`: passed `python scripts/check_hygiene.py`
+- `2026-04-06T20:32:09+08:00`: passed `python scripts/check_repo.py`
+- `2026-04-06T20:32:10+08:00`: passed `python scripts/check_authority_alignment.py`
+- `2026-04-06T20:34:01+08:00`: passed `pytest tests/governance/test_check_repo.py tests/governance/test_parallel_closeout_pipeline.py tests/governance/test_authority_alignment.py tests/governance/test_task_ops.py -q`
 ## Candidate Paths
 
 - `docs/governance/TASK_POLICY.yaml`
@@ -87,3 +96,7 @@
 - `tests/governance/policy_fixture_payloads.py`
 - `tests/governance/test_check_repo.py`
 - `tests/governance/test_task_ops.py`
+
+## Closeout Conclusion
+
+- `2026-04-06T20:34:02+08:00`: auto-close-children passed

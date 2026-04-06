@@ -5,17 +5,17 @@
 - `task_id`: `TASK-GOV-028`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-028-runner-local-platformization`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `3`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 ## Primary Goals
 
 - Align local runner behavior with the stabilized lease and child-closeout semantics from the first-wave lanes.
@@ -60,28 +60,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `review`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `3`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
-- `review_bundle_status`: `not_applicable`
-- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, scripts/task_coordination_lease.py, scripts/task_continuation_ops.py, scripts/task_lifecycle_ops.py, scripts/task_worker_ops.py, scripts/task_worktree_ops.py, scripts/child_execution_flow.py, scripts/governance_repo_checks.py, scripts/task_handoff.py, tests/governance/`
+- `review_bundle_status`: `pending`
+- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-028-runner-local-platformization`
-- `updated_at`: `2026-04-06T19:46:52+08:00`
+- `updated_at`: `2026-04-06T20:40:19+08:00`
 <!-- generated:task-meta:end -->
