@@ -1,6 +1,6 @@
 task_id: TASK-GOV-024
-summary_status: review
-last_handoff_at: '2026-04-06T17:48:58+08:00'
+summary_status: done
+last_handoff_at: '2026-04-06T17:49:41+08:00'
 completed_items:
 - Added automatic closeout lease takeover/reclaim handling across close, continue-current,
   continue-roadmap, auto-close-children, and worker-finish flows.
@@ -8,9 +8,8 @@ completed_items:
   merged.
 - Unified governance subprocess execution onto the current interpreter and added a
   formal pyproject runtime contract.
-remaining_items:
-- Close the review-ready task after checkpointing the validated implementation.
-next_step: Commit the validated implementation and close TASK-GOV-024 back to idle.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/check_hygiene.py
 - python scripts/task_ops.py split-check TASK-GOV-024
@@ -54,3 +53,4 @@ resume_notes:
 - Implementation validated; task is review-ready for closeout.
 - 'Worker finish summary: Implemented closeout lease auto-closure, child closeout
   reconciliation, governance mirror stabilization, and Python runtime contract unification.'
+- Task closed.

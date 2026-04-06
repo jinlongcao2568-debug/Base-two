@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-024`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-closeout-lease-runtime-contracts-v1`
 - `branch`: `feat/TASK-GOV-024-closeout-lease-runtime-contracts`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -131,21 +131,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `review`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -154,5 +154,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-024-closeout-lease-runtime-contracts`
-- `updated_at`: `2026-04-06T17:48:58+08:00`
+- `updated_at`: `2026-04-06T17:49:42+08:00`
 <!-- generated:task-meta:end -->
