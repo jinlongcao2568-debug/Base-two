@@ -139,6 +139,15 @@ def test_check_repo_passes_for_idle_recoverable_predecessor_ready_for_continuati
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_check_repo_passes_for_idle_recoverable_predecessor_with_no_successor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_check_repo_reports_checkpoint_scope_diagnosis_for_idle_recoverable_predecessor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)

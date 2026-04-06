@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-022`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `blocked`
+- `status`: `doing`
 - `stage`: `governance-authority-alignment-sync-v1`
 - `branch`: `feat/TASK-GOV-022-authority-alignment-sync`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `blocked`
+- `worker_state`: `running`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `2`
@@ -85,21 +85,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `blocked`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
-- `blocking_state`: `blocked`
+- `blocking_state`: `clear`
 - `completed_scope`: `active_progress`
-- `remaining_scope`: `blocked_work_remaining`
-- `next_gate`: `blocking_resolution`
+- `remaining_scope`: `active_work_remaining`
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `blocked`
+- `status`: `doing`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `blocked`
+- `worker_state`: `running`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `2`
@@ -107,5 +107,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-022-authority-alignment-sync`
-- `updated_at`: `2026-04-06T15:48:01+08:00`
+- `updated_at`: `2026-04-06T16:07:37+08:00`
 <!-- generated:task-meta:end -->

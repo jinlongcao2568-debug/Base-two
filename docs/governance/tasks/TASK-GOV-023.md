@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-023`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `paused`
+- `status`: `doing`
 - `stage`: `governance-slow-test-layering-v1`
 - `branch`: `feat/TASK-GOV-023-slow-test-layering`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `3`
@@ -87,21 +87,21 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `paused`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
-- `blocking_state`: `blocked`
+- `blocking_state`: `clear`
 - `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `resume_required`
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `paused`
+- `status`: `doing`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `3`
@@ -109,5 +109,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-023-slow-test-layering`
-- `updated_at`: `2026-04-06T15:50:36+08:00`
+- `updated_at`: `2026-04-06T16:07:44+08:00`
 <!-- generated:task-meta:end -->
