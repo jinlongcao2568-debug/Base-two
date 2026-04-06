@@ -31,7 +31,7 @@ def roadmap_text() -> str:
         "business_automation_enabled: false\n"
         "business_automation_scope: stage1_to_stage9\n"
         "parallel_strategy: dependency_aware_disjoint_writes\n"
-        "max_parallel_workers: 4\n"
+        "max_parallel_workers: 20\n"
         "spec_source_policy: baseline_contracts_task_package\n"
         "business_gap_priority:\n"
         "  - bootstrap_required\n"

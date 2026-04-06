@@ -129,7 +129,7 @@ def _task_policy_size_classes() -> dict[str, dict[str, Any]]:
             "default_automation_mode": "manual",
             "split_allowed": True,
             "parallelism_mode": "dynamic",
-            "dynamic_lane_ceiling_v1": 4,
+            "dynamic_lane_ceiling_v1": 20,
             "min_disjoint_write_roots": 2,
             "required_tests_complete": True,
             "reserved_path_conflict_policy": "block_parallelism",
