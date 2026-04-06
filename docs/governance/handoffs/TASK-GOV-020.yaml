@@ -1,26 +1,40 @@
 task_id: TASK-GOV-020
 summary_status: queued
-last_handoff_at: null
-completed_items: []
+last_handoff_at: '2026-04-06T15:29:51+08:00'
+completed_items:
+- Converted TASK-GOV-020 from a single-worker draft into a parallel parent package.
+- Drafted child lanes TASK-GOV-021, TASK-GOV-022, and TASK-GOV-023 with disjoint write and test scopes.
 remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+- Explicitly activate TASK-GOV-020 in the main worktree when ready to execute.
+- Prepare child execution worktrees for TASK-GOV-021, TASK-GOV-022, and TASK-GOV-023.
+- Run the aggregate verification bundle after all child lanes complete.
+next_step: Activate the parent task explicitly, then prepare each child execution lane under the governed split workflow.
 next_tests:
-- python scripts/check_repo.py
 - python scripts/check_hygiene.py
+- python scripts/task_ops.py split-check TASK-GOV-020
+- python scripts/check_repo.py
 - python scripts/check_authority_alignment.py
-- pytest tests/governance/test_authority_alignment.py -q
-- pytest tests/governance/test_task_continuation.py -q
-- pytest tests/governance -q
-- pytest tests/automation -q
-current_risks: []
+- pytest tests/governance/test_check_repo.py tests/governance/test_task_continuation.py tests/governance/test_authority_alignment.py -q
+- pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py -q
+current_risks:
+- Repository remains in legal idle state; no lane can begin until explicit activation.
+- Environment-contract and subprocess portability fixes remain outside this repair bundle.
 candidate_write_paths:
 - docs/governance/
-- scripts/
-- tests/governance/
+- scripts/task_continuation_ops.py
+- scripts/governance_repo_checks.py
+- scripts/check_authority_alignment.py
+- tests/governance/test_check_repo.py
+- tests/governance/test_task_continuation.py
+- tests/governance/test_authority_alignment.py
+- tests/governance/helpers.py
 - tests/automation/
 candidate_test_paths:
-- tests/governance/
-- tests/automation/
+- tests/governance/test_check_repo.py
+- tests/governance/test_task_continuation.py
+- tests/governance/test_authority_alignment.py
+- tests/automation/test_automation_runner.py
+- tests/automation/test_high_throughput_runner.py
 resume_notes:
-- Formal handoff has not been recorded yet.
+- Parent package drafted only; CURRENT_TASK remains idle and no execution worktree exists yet.
+- Child lanes are intentionally split so implementation can proceed with multiple agents after explicit activation.

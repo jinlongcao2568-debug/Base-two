@@ -1,4 +1,4 @@
-# TASK-GOV-020 治理状态机闭环与 idle 语义修复
+# TASK-GOV-020 治理并行修复父任务：状态机、权威对齐与慢测试分层
 
 ## Task Baseline
 
@@ -6,42 +6,46 @@
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `status`: `queued`
-- `stage`: `governance-state-machine-idle-semantics-v1`
-- `branch`: `feat/TASK-GOV-020-state-machine-idle-semantics`
+- `stage`: `governance-parallel-repair-bundle-v1`
+- `branch`: `feat/TASK-GOV-020-governance-repair-parent`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
 - `worker_state`: `idle`
-- `topology`: `single_worker`
-- `lane_count`: `1`
+- `topology`: `parallel_parent`
+- `lane_count`: `3`
 - `lane_index`: `null`
-- `parallelism_plan_id`: `null`
+- `parallelism_plan_id`: `plan-TASK-GOV-020-3`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `immediate`
 ## Primary Goals
 
-- Close the governance state-machine gap so the control plane can distinguish `idle + no_successor` from genuine continuation failure.
-- Make `check_repo.py`, `check_authority_alignment.py`, and continuation readiness share the same semantics for `ready`, `no_successor`, `ambiguous`, and `blocked`.
-- Remove the current authority-alignment drift where live idle state fails governance checks and the corresponding regression tests.
-- Keep the repair inside governance control-plane code and regression coverage without expanding into product-stage implementation.
+- Coordinate three disjoint child lanes under one governed repair bundle: continuation semantics, authority-alignment regression sync, and slow-test layering.
+- Keep the repair auditable by making the parent responsible only for orchestration, split integrity, and final aggregate validation.
+- Preserve the repository in explicit idle state during drafting; no implementation or activation happens in this task-package step.
 
 ## Explicitly Not Doing
 
-- Do not redesign roadmap generation, planner ranking, or successor creation strategy beyond the minimum state-semantics repair.
-- Do not bundle Python environment contract cleanup, subprocess portability cleanup, or slow-test optimization into this task.
+- Do not activate `TASK-GOV-020` or any child task automatically.
+- Do not implement governance script or test changes in this drafting step.
+- Do not bundle Python environment contract cleanup or subprocess portability cleanup into this repair bundle.
 - Do not modify `src/`, `docs/contracts/`, `db/migrations/`, or `tests/integration/`.
-- Do not activate the new task automatically or switch the repository out of the current idle state as part of drafting this package.
 
 ## Task Intake
 
-- `primary_objective`: close the governance state-machine loop around idle / continuation semantics.
-- `not_doing`: environment-contract hardening, slow-test splitting, and subprocess portability remain follow-up work.
-- `stage_scope`: governance control plane only; no business-stage logic changes.
+- `primary_objective`: split the governance repair into one parent task and three execution lanes with disjoint write scopes.
+- `not_doing`: activation, implementation, environment-contract hardening, and subprocess portability remain outside this drafting step.
+- `stage_scope`: governance coordination and task-package topology only; no business-stage logic changes.
 - `impact_modules`:
-  - `scripts/task_continuation_ops.py`
-  - `scripts/governance_repo_checks.py`
-  - `scripts/check_authority_alignment.py`
-  - `tests/governance/`
-  - `tests/automation/`
+  - `docs/governance/tasks/TASK-GOV-020.md`
+  - `docs/governance/runlogs/TASK-GOV-020-RUNLOG.md`
+  - `docs/governance/handoffs/TASK-GOV-020.yaml`
+  - `docs/governance/TASK_REGISTRY.yaml`
+  - `docs/governance/tasks/TASK-GOV-021.md`
+  - `docs/governance/tasks/TASK-GOV-022.md`
+  - `docs/governance/tasks/TASK-GOV-023.md`
+  - `docs/governance/runlogs/TASK-GOV-021-RUNLOG.md`
+  - `docs/governance/runlogs/TASK-GOV-022-RUNLOG.md`
+  - `docs/governance/runlogs/TASK-GOV-023-RUNLOG.md`
 - `interface_change`: no
 - `schema_migration`: no
 - `exception_required`: no
@@ -52,46 +56,41 @@
 
 ## Acceptance Targets
 
-- `idle` with no valid successor is treated as a legal steady state by governance checks.
-- `continue-roadmap` readiness exposes distinguishable outcomes for `ready`, `no_successor`, `ambiguous`, and `blocked` paths.
-- `python scripts/check_repo.py` and `python scripts/check_authority_alignment.py` can both pass on the legal idle control-plane state.
-- `tests/governance/test_authority_alignment.py` asserts the real failure surface rather than stale stdout expectations.
-- No current-task activation occurs while drafting or closing this repair task.
+- `TASK-GOV-020` is a `parallel_parent` package with `lane_count: 3` and a shared `parallelism_plan_id`.
+- `TASK-GOV-021/022/023` exist as execution child packages with disjoint planned write and test scopes.
+- Parent handoff, task file, and runlog describe the child topology and aggregate verification gates.
+- No change is made to `CURRENT_TASK.yaml`; the repo remains idle until explicit activation.
 
 ## Rollback Plan
 
-- Revert the governance scripts and regression changes introduced by this task.
-- Restore the prior continuation-readiness interpretation if the new state semantics destabilize closeout or continuation flow.
-- Re-run governance checks and targeted regression tests to confirm the repository returns to the pre-change behavior.
+- Remove child task packages `TASK-GOV-021/022/023`.
+- Restore `TASK-GOV-020` to the prior single-worker draft package if the split topology is rejected.
+- Re-run lightweight governance validation to confirm the registry and task artifacts return to the pre-split state.
 
 ## Allowed Dirs
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Test Paths
 
-- `tests/governance/`
-- `tests/automation/`
+- `tests/governance/test_check_repo.py`
+- `tests/governance/test_task_continuation.py`
+- `tests/governance/test_authority_alignment.py`
+- `tests/automation/test_automation_runner.py`
+- `tests/automation/test_high_throughput_runner.py`
 
 ## Required Tests
 
-- `python scripts/check_repo.py`
 - `python scripts/check_hygiene.py`
+- `python scripts/task_ops.py split-check TASK-GOV-020`
+- `python scripts/check_repo.py`
 - `python scripts/check_authority_alignment.py`
-- `pytest tests/governance/test_authority_alignment.py -q`
-- `pytest tests/governance/test_task_continuation.py -q`
-- `pytest tests/governance -q`
-- `pytest tests/automation -q`
+- `pytest tests/governance/test_check_repo.py tests/governance/test_task_continuation.py tests/governance/test_authority_alignment.py -q`
+- `pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py -q`
 
 ## Reserved Paths
 
@@ -99,6 +98,9 @@
 - `docs/contracts/`
 - `db/migrations/`
 - `tests/integration/`
+- `scripts/`
+- `tests/governance/`
+- `tests/automation/`
 ## Narrative Assertions
 
 - `narrative_status`: `queued`
@@ -117,13 +119,13 @@
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
 - `worker_state`: `idle`
-- `topology`: `single_worker`
-- `lane_count`: `1`
+- `topology`: `parallel_parent`
+- `lane_count`: `3`
 - `lane_index`: `null`
-- `parallelism_plan_id`: `null`
+- `parallelism_plan_id`: `plan-TASK-GOV-020-3`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `immediate`
-- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
-- `branch`: `feat/TASK-GOV-020-state-machine-idle-semantics`
-- `updated_at`: `2026-04-06T15:15:46+08:00`
+- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, scripts/, tests/governance/, tests/automation/`
+- `branch`: `feat/TASK-GOV-020-governance-repair-parent`
+- `updated_at`: `2026-04-06T15:29:51+08:00`
 <!-- generated:task-meta:end -->
