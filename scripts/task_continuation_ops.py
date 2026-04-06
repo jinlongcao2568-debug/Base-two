@@ -197,6 +197,8 @@ def _validate_successor_candidate(
         raise GovernanceError("successor cannot equal the current task")
     if task.get("parent_task_id") is not None:
         raise GovernanceError("successor must be a top-level coordination task")
+    if task.get("absorbed_by"):
+        raise GovernanceError(f"successor is absorbed by {task['absorbed_by']}")
     if task["status"] == "done":
         raise GovernanceError("successor is already done")
     if task["status"] == "blocked":
@@ -224,6 +226,7 @@ def _ensure_unique_successor_landscape(
         if task.get("task_kind") == "coordination"
         and task["task_id"] not in excluded_ids
         and task.get("parent_task_id") is None
+        and not task.get("absorbed_by")
         and task["status"] not in {"done", "blocked"}
         and effective_successor_state(task) == "immediate"
     ]
@@ -618,6 +621,7 @@ def _formal_immediate_candidates(
         if task.get("task_kind") == "coordination"
         and task.get("parent_task_id") is None
         and task["task_id"] != current_task_id
+        and not task.get("absorbed_by")
         and task["status"] != "done"
         and effective_successor_state(task) == "immediate"
     ]
@@ -657,6 +661,7 @@ def _resolve_explicit_successor(
             "already done" in message
             or "not unique" in message
             or "dependency not satisfied" in message
+            or "absorbed by" in message
         ):
             return None, explicit_id
         raise

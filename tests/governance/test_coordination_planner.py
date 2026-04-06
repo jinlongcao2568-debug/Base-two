@@ -49,6 +49,15 @@ def _write_generated_candidate(repo: Path, candidate_id: str, task_id: str, *, b
     )
 
 
+def _mark_task_absorbed(repo: Path, task_id: str, *, absorbed_by: str = "TASK-GOV-018") -> None:
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == task_id)
+    task["absorbed_by"] = absorbed_by
+    task["absorbed_phase"] = "phase-test"
+    task["absorbed_reason"] = "absorbed regression fixture"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+
 def test_plan_coordination_ranks_roadmap_preferred_candidate_first(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
@@ -259,3 +268,144 @@ def test_plan_coordination_skips_incomplete_boundary_candidates(tmp_path: Path) 
 
     assert planned.returncode == 0, planned.stdout + planned.stderr
     assert "candidate-task-incomplete-001" not in index["candidate_ids"]
+
+
+def test_plan_coordination_skips_absorbed_candidates_even_when_roadmap_points_to_them(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    git_commit_all(repo, "set idle state")
+
+    absorbed = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-ABSORBED-001",
+        "--title",
+        "absorbed candidate",
+        "--stage",
+        "coord-stage",
+        "--branch",
+        "feat/TASK-ABSORBED-001",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    keep = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-KEEP-001",
+        "--title",
+        "keep candidate",
+        "--stage",
+        "coord-stage",
+        "--branch",
+        "feat/TASK-KEEP-001",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert absorbed.returncode == 0, absorbed.stdout + absorbed.stderr
+    assert keep.returncode == 0, keep.stdout + keep.stderr
+
+    _mark_task_absorbed(repo, "TASK-ABSORBED-001")
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-ABSORBED-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+
+    planned = run_python(TASK_OPS_SCRIPT, repo, "plan-coordination")
+    index = read_yaml(repo / ".codex/local/coordination_candidates/index.yaml")
+
+    assert planned.returncode == 0, planned.stdout + planned.stderr
+    assert "candidate-task-keep-001" in index["candidate_ids"]
+    assert "candidate-task-absorbed-001" not in index["candidate_ids"]
+    assert not (repo / ".codex/local/coordination_candidates/candidate-task-absorbed-001.yaml").exists()
+
+
+def test_plan_coordination_excludes_absorbed_backlog_candidates(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    git_commit_all(repo, "set idle state")
+
+    live_created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-LIVE-001",
+        "--title",
+        "live candidate",
+        "--stage",
+        "coord-stage",
+        "--branch",
+        "feat/TASK-LIVE-001",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    absorbed_created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-ABSORBED-001",
+        "--title",
+        "absorbed candidate",
+        "--stage",
+        "coord-stage",
+        "--branch",
+        "feat/TASK-ABSORBED-001",
+        "--task-kind",
+        "coordination",
+        "--execution-mode",
+        "shared_coordination",
+        "--allowed-dirs",
+        "docs/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
+    assert live_created.returncode == 0, live_created.stdout + live_created.stderr
+    assert absorbed_created.returncode == 0, absorbed_created.stdout + absorbed_created.stderr
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    absorbed = next(task for task in registry["tasks"] if task["task_id"] == "TASK-ABSORBED-001")
+    absorbed["absorbed_by"] = "TASK-GOV-018"
+    absorbed["successor_state"] = "backlog"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+    planned = run_python(TASK_OPS_SCRIPT, repo, "plan-coordination")
+    index = read_yaml(repo / ".codex/local/coordination_candidates/index.yaml")
+
+    assert planned.returncode == 0, planned.stdout + planned.stderr
+    assert "candidate-task-live-001" in index["candidate_ids"]
+    assert "candidate-task-absorbed-001" not in index["candidate_ids"]
+    assert not (repo / ".codex/local/coordination_candidates/candidate-task-absorbed-001.yaml").exists()

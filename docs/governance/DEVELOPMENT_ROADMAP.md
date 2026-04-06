@@ -1,7 +1,7 @@
 ---
-current_phase: idle
-current_task_id: null
-next_recommended_task_id: TASK-GOV-018
+current_phase: governance-closeout-artifact-alignment-v1
+current_task_id: TASK-GOV-019
+next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
 branch_switch_policy: create_or_switch_if_clean
@@ -19,84 +19,80 @@ business_gap_priority:
 - implementation_ready
 - integration_expansion
 stage_establishment:
-  stage1: bootstrap_required
-  stage2: bootstrap_required
-  stage3: implementation_ready
-  stage4: implementation_ready
-  stage5: bootstrap_required
-  stage6: implementation_ready
-  stage7: not_established
-  stage8: not_established
-  stage9: not_established
-automation_foundation: single_parent_total_upgrade_in_progress
+  stage1: deferred_manual
+  stage2: deferred_manual
+  stage3: deferred_manual
+  stage4: deferred_manual
+  stage5: deferred_manual
+  stage6: deferred_manual
+  stage7: deferred_manual
+  stage8: deferred_manual
+  stage9: deferred_manual
+automation_foundation: stale_successor_inputs_under_correction
 ---
 
 # AX9S Development Roadmap
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-019`: `治理收口与后继清理` is the live coordination task for `governance-closeout-artifact-alignment-v1`.
+
 ## Recently Closed
 
+- `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.
 - `TASK-GOV-017`: closed the continuity-aware successor recovery and clean-runtime control-plane split.
 - `TASK-GOV-016`: closed the local multi-agent dispatch foundation.
-- `TASK-GOV-015`: closed continuity stability and continuation hardening.
 
 ## Current Phase Goal
 
-- Rebaseline `TASK-GOV-018` into the single total-upgrade parent task.
-- Move top-level closeout and continuation to `ai_guarded` instead of manual closeout.
-- Expand governed child workflow into contracts, shared contracts, stage7-stage9 runtime, migrations, and integration test surfaces.
-- Complete runtime acceptance decoupling, stateless migration baseline, and downstream smoke validation without touching `src/stage6_facts/`.
-- Graduate eligible blueprints to `autonomous + parallel_parent` only after soak and chaos validation pass.
+- Clear stale roadmap successor inputs left behind after `TASK-GOV-018` closeout.
+- Keep `continue-roadmap` and generated successor recommendation available when a valid direction exists.
+- Permanently exclude absorbed backlog from planner and continuation successor landscapes.
+- Ensure the system returns `no successor` when no valid successor remains instead of reviving stale tasks.
 
-## Six Internal Gates
+## Internal Gates
 
-1. `phase_1_rebaseline_task_scope`
-   - widen `TASK-GOV-018` scope
-   - absorb `TASK-BIZ-001/002/003`, `TASK-SOAK-001`, and `TASK-GRAD-001`
-   - align CURRENT_TASK, roadmap, registry, worktree registry, task file, and runlog
-2. `phase_2_top_level_ai_guarded_closeout`
-   - switch top-level closeout from `manual` to `ai_guarded`
-   - keep `continue-current` idle-only after closeout
-   - keep `continue-roadmap` guarded by uniqueness, dependencies, and boundary completeness
-3. `phase_3_expand_child_workflow_scope`
-   - extend governed child gates into contracts/shared-contracts/stage7-stage9/migrations/integration
-   - keep `src/stage1_orchestration/` through `src/stage6_facts/` reserved
-4. `phase_4_runtime_contract_decoupling`
-   - move runtime acceptance to a contract-owned artifact
-   - land minimal `stage7 -> stage8 -> stage9` consumer chain that only consumes `project_fact`
-5. `phase_5_migration_and_integration_hardening`
-   - add stateless baseline migration pack
-   - upgrade integration validation to `stage6 -> stage7/8 -> stage9` runtime smoke
-6. `phase_6_soak_and_parallel_graduation`
-   - run soak/chaos validation for roadmap runner, heartbeat, restart, and orphan cleanup
-   - only then open eligible heavy blueprints to `autonomous + parallel_parent + 4 lanes`
+1. `phase_1_rebaseline_live_task`
+   - keep `TASK-GOV-019` as the only live current task
+   - align roadmap, task package, and runlog with the scoped correction objective
+2. `phase_2_clear_stale_roadmap_inputs`
+   - remove the stale explicit pointer to `TASK-GOV-018`
+   - neutralize stale `stage_establishment` values so they no longer imply a successor round
+3. `phase_3_filter_absorbed_backlog`
+   - exclude `TASK-BIZ-001/002/003`, `TASK-SOAK-001`, and `TASK-GRAD-001` from planner candidates
+   - exclude absorbed tasks from explicit successor validation and uniqueness checks
+4. `phase_4_clean_local_candidate_cache`
+   - clear `.codex/local/coordination_candidates/` of absorbed backlog artifacts
+   - keep only still-valid recommendation outputs
+5. `phase_5_regression_evidence`
+   - prove absorbed backlog does not re-enter `plan-coordination`
+   - prove stale absorbed explicit pointers do not block valid fallback successors
 
 ## Explicitly Out Of Scope
 
-- Do not create a sibling top-level task for governance, compatibility, soak, or graduation.
+- Do not remove `continue-roadmap`, `plan-coordination`, or generated successor capability.
+- Do not create a replacement sibling task for governance, business automation, soak, or graduation.
 - Do not rewrite `src/stage6_facts/` or create a second fact layer.
+- Do not reopen absorbed backlog as top-level successor candidates.
 - Do not auto-switch to an ambiguous or dependency-blocked successor.
-- Do not enable unconditional full autopilot.
 
-## Exit Criteria For Current Upgrade
+## Exit Criteria
 
-- All six internal gates are complete.
-- `TASK-GOV-018` task file, runlog, roadmap, registry, worktree registry, and CURRENT_TASK are aligned.
-- No registry drift remains.
-- No child lane remains open.
-- `ai_guarded` closeout and guarded `continue-roadmap` behavior are covered by automated evidence.
-- Stage7-stage9 minimal runtime, contract-owned acceptance, stateless migration baseline, and integration smoke all pass.
+- `next_recommended_task_id` is empty or points to a live, non-absorbed, immediate successor.
+- `stage_establishment` no longer causes stale business successor generation.
+- Absorbed backlog is excluded from planner candidates, continuation fallback, and uniqueness checks.
+- Local candidate cache no longer contains absorbed backlog artifacts.
+- Governance and automation regression tests cover the corrected behavior.
 
 ## Absorbed Backlog
 
-- `TASK-BIZ-001`: absorbed into `TASK-GOV-018` phase 4 and phase 5.
-- `TASK-BIZ-002`: absorbed into `TASK-GOV-018` phase 2 and phase 3.
-- `TASK-BIZ-003`: absorbed into `TASK-GOV-018` phase 4 and phase 5.
-- `TASK-SOAK-001`: absorbed into `TASK-GOV-018` phase 6.
-- `TASK-GRAD-001`: absorbed into `TASK-GOV-018` phase 6.
+- `TASK-BIZ-001`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
+- `TASK-BIZ-002`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
+- `TASK-BIZ-003`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
+- `TASK-SOAK-001`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
+- `TASK-GRAD-001`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
 
 ## Next Candidate
 
-- `TASK-GOV-018`: continue the six internal gates until the total-upgrade parent task is fully closed.
+- No valid successor is currently declared.
+- `continue-roadmap` may still recommend a future successor when the roadmap, candidate cache, and capability state become valid again.

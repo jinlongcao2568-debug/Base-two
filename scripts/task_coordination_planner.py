@@ -10,6 +10,7 @@ from governance_lib import (
     build_current_task_payload,
     current_branch,
     dump_yaml,
+    effective_successor_state,
     find_repo_root,
     iso_now,
     load_capability_map,
@@ -239,9 +240,13 @@ def build_coordination_candidates(root: Path) -> list[dict[str, Any]]:
             continue
         if task.get("parent_task_id") is not None:
             continue
+        if task.get("absorbed_by"):
+            continue
         if task["task_id"] == current_payload.get("current_task_id"):
             continue
         if task.get("status") in {"done", "blocked"}:
+            continue
+        if effective_successor_state(task) != "immediate":
             continue
         if not _boundary_complete(task):
             continue

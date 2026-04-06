@@ -519,6 +519,33 @@ def test_continue_roadmap_ignores_backlog_successor_in_uniqueness_check(tmp_path
     assert tasks["TASK-ALT-001"]["successor_state"] == "backlog"
 
 
+def test_continue_roadmap_skips_absorbed_explicit_successor_and_falls_back_to_live_candidate(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    _create_successor(repo, "TASK-ABSORBED-001")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    absorbed = next(task for task in registry["tasks"] if task["task_id"] == "TASK-ABSORBED-001")
+    absorbed["absorbed_by"] = "TASK-GOV-018"
+    absorbed["successor_state"] = "backlog"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-ABSORBED-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    _mark_current_review_ready(repo)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    updated_roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    tasks = {task["task_id"]: task for task in registry["tasks"]}
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert tasks["TASK-ABSORBED-001"]["status"] == "queued"
+    assert tasks["TASK-ABSORBED-001"]["absorbed_by"] == "TASK-GOV-018"
+    assert "next_recommended_task_id: TASK-NEXT-001" in updated_roadmap
+
+
 def test_continue_roadmap_rejects_boundary_unclear_successor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     created = run_python(

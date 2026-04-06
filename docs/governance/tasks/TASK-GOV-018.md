@@ -198,5 +198,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/stage1_orchestration/, src/stage2_ingestion/, src/stage3_parsing/, src/stage4_validation/, src/stage5_reporting/, src/stage6_facts/`
 - `branch`: `feat/TASK-GOV-018-parented-stability-upgrade`
-- `updated_at`: `2026-04-06T13:21:43+08:00`
+- `updated_at`: `2026-04-06T14:12:09+08:00`
 <!-- generated:task-meta:end -->

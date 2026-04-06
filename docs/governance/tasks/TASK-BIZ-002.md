@@ -17,7 +17,6 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-
 ## Primary Goals
 
 - Historical backlog placeholder retained for auditability.
@@ -65,7 +64,6 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
-
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -81,7 +79,7 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-- `reserved_paths`: `src/`
+- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-BIZ-002-stage7-9-autopilot`
-- `updated_at`: `2026-04-06T11:42:19+08:00`
+- `updated_at`: `2026-04-06T14:12:09+08:00`
 <!-- generated:task-meta:end -->
