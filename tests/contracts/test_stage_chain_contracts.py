@@ -32,6 +32,27 @@ def test_rule_hit_example_matches_stage4_schema() -> None:
     assert not errors, [f"{'.'.join(str(part) for part in error.path)}: {error.message}" for error in errors]
 
 
+def test_stage7_sales_context_example_matches_schema() -> None:
+    schema = load_json(REPO_ROOT / "docs/contracts/schemas/stage7_sales_context.schema.json")
+    example = load_json(REPO_ROOT / "docs/contracts/examples/stage7_sales_context.example.json")
+    errors = sorted(Draft202012Validator(schema).iter_errors(example), key=lambda item: list(item.path))
+    assert not errors, [f"{'.'.join(str(part) for part in error.path)}: {error.message}" for error in errors]
+
+
+def test_stage8_contact_context_example_matches_schema() -> None:
+    schema = load_json(REPO_ROOT / "docs/contracts/schemas/stage8_contact_context.schema.json")
+    example = load_json(REPO_ROOT / "docs/contracts/examples/stage8_contact_context.example.json")
+    errors = sorted(Draft202012Validator(schema).iter_errors(example), key=lambda item: list(item.path))
+    assert not errors, [f"{'.'.join(str(part) for part in error.path)}: {error.message}" for error in errors]
+
+
+def test_stage9_delivery_payload_example_matches_schema() -> None:
+    schema = load_json(REPO_ROOT / "docs/contracts/schemas/stage9_delivery_payload.schema.json")
+    example = load_json(REPO_ROOT / "docs/contracts/examples/stage9_delivery_payload.example.json")
+    errors = sorted(Draft202012Validator(schema).iter_errors(example), key=lambda item: list(item.path))
+    assert not errors, [f"{'.'.join(str(part) for part in error.path)}: {error.message}" for error in errors]
+
+
 def test_stage_chain_field_semantics_present() -> None:
     project_base_fields = load_yaml(REPO_ROOT / "docs/contracts/field_semantics/project_base.fields.yaml")
     rule_hit_fields = load_yaml(REPO_ROOT / "docs/contracts/field_semantics/rule_hit.fields.yaml")

@@ -1,4 +1,4 @@
-# TASK-BIZ-001 stage7-stage9 下游契约与测试骨架
+# TASK-BIZ-001 stage7-stage9 contracts and test skeletons (absorbed)
 
 ## Task Baseline
 
@@ -17,47 +17,33 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
+
 ## Primary Goals
 
-- Define the formal downstream contracts for `stage7_sales_context`, `stage8_contact_context`, and `stage9_customer_delivery`.
-- Add the minimum fixtures, contract checks, and stage test skeletons needed to make downstream business automation auditable before implementation opens.
-- Keep `stage6_facts` as the only unified fact layer while documenting how stage7-stage9 consume its outputs.
+- Historical backlog placeholder retained for auditability.
+- The original implementation goal is now executed inside `TASK-GOV-018` instead of this standalone top-level task.
 
 ## Explicitly Not Doing
 
-- Do not implement runtime business logic under `src/` in this task.
-- Do not declare `stage7_to_stage9_business_automation` established in this task.
-- Do not introduce a second fact layer, second truth layer, or stage6 write-back path.
+- Do not activate this task as an independent top-level coordination task.
+- Do not diverge from the absorbed implementation sequence recorded by `TASK-GOV-018`.
+
+## Absorption Status
+
+- `absorbed_by`: `TASK-GOV-018`
+- `absorbed_phase`: `phase_1_rebaseline_task_scope`
+- `absorbed_reason`: `contracts/runtime hardening now runs inside TASK-GOV-018`
 
 ## Allowed Dirs
 
 - `docs/governance/`
-- `docs/contracts/`
-- `tests/contracts/`
-- `tests/stage7/`
-- `tests/stage8/`
-- `tests/stage9/`
-- `tests/integration/`
-- `tests/governance/`
 
 ## Planned Write Paths
 
 - `docs/governance/`
-- `docs/contracts/`
-- `tests/contracts/`
-- `tests/stage7/`
-- `tests/stage8/`
-- `tests/stage9/`
-- `tests/integration/`
-- `tests/governance/`
 
 ## Planned Test Paths
 
-- `tests/contracts/`
-- `tests/stage7/`
-- `tests/stage8/`
-- `tests/stage9/`
-- `tests/integration/`
 - `tests/governance/`
 
 ## Required Tests
@@ -65,18 +51,12 @@
 - `python scripts/check_repo.py`
 - `python scripts/check_hygiene.py`
 - `python scripts/check_authority_alignment.py`
-- `python scripts/validate_contracts.py`
-- `pytest tests/contracts -q`
-- `pytest tests/stage7 -q`
-- `pytest tests/stage8 -q`
-- `pytest tests/stage9 -q`
-- `pytest tests/integration -q`
 - `pytest tests/governance -q`
 
 ## Reserved Paths
 
 - `src/`
-- `db/migrations/`
+
 ## Narrative Assertions
 
 - `narrative_status`: `queued`
@@ -85,6 +65,7 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
+
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -100,7 +81,7 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-- `reserved_paths`: `src/, db/migrations/`
+- `reserved_paths`: `src/`
 - `branch`: `feat/TASK-BIZ-001-stage7-9-contracts`
-- `updated_at`: `2026-04-05T21:52:29+08:00`
+- `updated_at`: `2026-04-06T11:42:19+08:00`
 <!-- generated:task-meta:end -->

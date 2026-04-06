@@ -1,4 +1,4 @@
-# TASK-GRAD-001 heavy 默认策略毕业到受控自动化
+# TASK-GRAD-001 heavy autonomy graduation (absorbed)
 
 ## Task Baseline
 
@@ -17,36 +17,34 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
+
 ## Primary Goals
 
-- Graduate heavy-task default automation from `manual` to governed `assisted` once the soak thresholds and publish readiness gates are proven.
-- Encode the autonomous entry gate so heavy tasks only become `autonomous` when planner, tests, publish readiness, lane conflict, and graduation capability checks all pass.
-- Record the final policy and capability updates that define the `9.5+` default operating mode.
+- Historical backlog placeholder retained for auditability.
+- The original implementation goal is now executed inside `TASK-GOV-018` instead of this standalone top-level task.
 
 ## Explicitly Not Doing
 
-- Do not open `5+` lanes.
-- Do not introduce silent auto-publish.
-- Do not enable `autonomous` heavy execution when the graduation gate is not fully satisfied.
+- Do not activate this task as an independent top-level coordination task.
+- Do not diverge from the absorbed implementation sequence recorded by `TASK-GOV-018`.
+
+## Absorption Status
+
+- `absorbed_by`: `TASK-GOV-018`
+- `absorbed_phase`: `phase_1_rebaseline_task_scope`
+- `absorbed_reason`: `graduation now runs inside TASK-GOV-018`
 
 ## Allowed Dirs
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Test Paths
 
 - `tests/governance/`
-- `tests/automation/`
 
 ## Required Tests
 
@@ -54,14 +52,11 @@
 - `python scripts/check_hygiene.py`
 - `python scripts/check_authority_alignment.py`
 - `pytest tests/governance -q`
-- `pytest tests/automation -q`
 
 ## Reserved Paths
 
 - `src/`
-- `docs/contracts/`
-- `db/migrations/`
-- `tests/integration/`
+
 ## Narrative Assertions
 
 - `narrative_status`: `queued`
@@ -70,6 +65,7 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
+
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -85,7 +81,7 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
+- `reserved_paths`: `src/`
 - `branch`: `feat/TASK-GRAD-001-autonomy-graduation`
-- `updated_at`: `2026-04-05T21:52:29+08:00`
+- `updated_at`: `2026-04-06T11:42:19+08:00`
 <!-- generated:task-meta:end -->

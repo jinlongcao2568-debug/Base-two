@@ -1,0 +1,14 @@
+{
+  "object_type": "contact_context",
+  "context_ref": "contact_context:project-cn-hold-001:3",
+  "project_id": "project-cn-hold-001",
+  "fact_version": 3,
+  "source_project_fact_ref": "project_fact:project-cn-hold-001:3",
+  "public_chain_status": "INCOMPLETE",
+  "sale_gate_status": "HOLD",
+  "review_status": "PENDING",
+  "manual_override_status": "PENDING",
+  "contact_strategy": "hold_no_outreach",
+  "analyst_follow_up_required": true,
+  "summary": "Contact stays hold_no_outreach because sale gate is HOLD and manual override status is PENDING."
+}

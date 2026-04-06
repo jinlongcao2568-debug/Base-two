@@ -10,6 +10,9 @@ from src.stage3_parsing.runtime import build_project_base
 from src.stage4_validation.runtime import evaluate_formal_objects
 from src.stage5_reporting.runtime import build_report_record
 from src.stage6_facts.runtime import build_project_fact
+from src.stage7_sales.runtime import build_sales_context
+from src.stage8_contact.runtime import build_contact_context
+from src.stage9_delivery.runtime import build_delivery_payload
 from src.shared.contracts.runtime_support import write_json
 
 
@@ -35,6 +38,9 @@ def run_minimal_runtime_chain(
         report_record,
         resolved_scenario_id,
     )
+    sales_context = build_sales_context(project_fact)
+    contact_context = build_contact_context(project_fact)
+    delivery_payload = build_delivery_payload(project_fact, sales_context, contact_context)
     public_chain_view = build_public_chain_view(project_base, project_fact)
     return {
         "scenario_id": resolved_scenario_id,
@@ -44,6 +50,9 @@ def run_minimal_runtime_chain(
         "stage4": stage4_outputs,
         "stage5": {"report_record": report_record},
         "stage6": {"project_fact": project_fact},
+        "stage7": {"sales_context": sales_context},
+        "stage8": {"contact_context": contact_context},
+        "stage9": {"delivery_payload": delivery_payload},
         "consumers": {"public_chain_view": public_chain_view},
     }
 
@@ -59,6 +68,9 @@ def write_runtime_outputs(output_dir: str | Path, bundle: dict[str, Any]) -> dic
         "stage4.review_requests": base_dir / "stage4" / "review_requests.json",
         "stage5.report_record": base_dir / "stage5" / "report_record.json",
         "stage6.project_fact": base_dir / "stage6" / "project_fact.json",
+        "stage7.sales_context": base_dir / "stage7" / "sales_context.json",
+        "stage8.contact_context": base_dir / "stage8" / "contact_context.json",
+        "stage9.delivery_payload": base_dir / "stage9" / "delivery_payload.json",
         "consumers.public_chain_view": base_dir / "consumers" / "public_chain_view.json",
     }
     write_json(artifacts["stage1.ingestion_job"], bundle["stage1"]["ingestion_job"])
@@ -69,5 +81,8 @@ def write_runtime_outputs(output_dir: str | Path, bundle: dict[str, Any]) -> dic
     write_json(artifacts["stage4.review_requests"], bundle["stage4"]["review_requests"])
     write_json(artifacts["stage5.report_record"], bundle["stage5"]["report_record"])
     write_json(artifacts["stage6.project_fact"], bundle["stage6"]["project_fact"])
+    write_json(artifacts["stage7.sales_context"], bundle["stage7"]["sales_context"])
+    write_json(artifacts["stage8.contact_context"], bundle["stage8"]["contact_context"])
+    write_json(artifacts["stage9.delivery_payload"], bundle["stage9"]["delivery_payload"])
     write_json(artifacts["consumers.public_chain_view"], bundle["consumers"]["public_chain_view"])
     return {name: path.as_posix() for name, path in artifacts.items()}

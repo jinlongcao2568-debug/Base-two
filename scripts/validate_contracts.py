@@ -5,6 +5,7 @@ from contracts_validation_lib import (
     validate_authority_snippets,
     validate_contract_bundle,
     validate_handoff_catalog,
+    validate_minimal_chain_acceptance_contract,
     validate_registry_files,
     main,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "validate_authority_snippets",
     "validate_contract_bundle",
     "validate_handoff_catalog",
+    "validate_minimal_chain_acceptance_contract",
     "validate_registry_files",
     "main",
 ]

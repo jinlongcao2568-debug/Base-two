@@ -46,3 +46,6 @@ def test_cli_runs_minimal_runtime_chain_and_accepts(case_id: str, tmp_path: Path
     acceptance = load_json(output_dir / "acceptance" / "result.json")
     assert acceptance["accepted"] is True
     assert load_json(output_dir / "stage6" / "project_fact.json")["project_id"].startswith("project-cn-")
+    assert load_json(output_dir / "stage7" / "sales_context.json")["project_id"].startswith("project-cn-")
+    assert load_json(output_dir / "stage8" / "contact_context.json")["project_id"].startswith("project-cn-")
+    assert load_json(output_dir / "stage9" / "delivery_payload.json")["project_id"].startswith("project-cn-")

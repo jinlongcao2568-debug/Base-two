@@ -1,0 +1,16 @@
+{
+  "object_type": "sales_context",
+  "context_ref": "sales_context:project-cn-block-001:4",
+  "project_id": "project-cn-block-001",
+  "fact_version": 4,
+  "source_project_fact_ref": "project_fact:project-cn-block-001:4",
+  "sale_gate_status": "BLOCK",
+  "real_competitor_count": 5,
+  "serviceable_competitor_count": 0,
+  "competitor_quality_grade": "D",
+  "price_cluster_score": 14,
+  "price_gradient_pattern": "COLLUSION_PATTERN",
+  "sales_readiness_bucket": "blocked",
+  "recommended_sales_action": "do_not_sell_escalate_risk",
+  "summary": "BLOCK gate with 0 serviceable competitors and price cluster score 14."
+}

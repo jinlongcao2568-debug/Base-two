@@ -1,0 +1,14 @@
+{
+  "object_type": "contact_context",
+  "context_ref": "contact_context:project-cn-block-001:4",
+  "project_id": "project-cn-block-001",
+  "fact_version": 4,
+  "source_project_fact_ref": "project_fact:project-cn-block-001:4",
+  "public_chain_status": "COMPLETE",
+  "sale_gate_status": "BLOCK",
+  "review_status": "CONFIRMED",
+  "manual_override_status": "BLOCK_CONFIRMED",
+  "contact_strategy": "block_external_contact",
+  "analyst_follow_up_required": true,
+  "summary": "Contact stays block_external_contact because sale gate is BLOCK and manual override status is BLOCK_CONFIRMED."
+}

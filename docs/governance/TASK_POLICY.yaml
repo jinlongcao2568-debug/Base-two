@@ -1,23 +1,23 @@
 version: '1.0'
-updated_at: '2026-04-06T10:08:00+08:00'
+updated_at: '2026-04-06T11:41:34+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 operator_source: docs/governance/OPERATOR_MANUAL.md
 size_classes:
   micro:
-    target_duration: '<=45m'
+    target_duration: <=45m
     max_scope_roots: 1
     default_topology: single_task
     default_automation_mode: assisted
     split_allowed: false
   standard:
-    target_duration: '45m-4h'
+    target_duration: 45m-4h
     max_scope_roots: 2
     default_topology: single_worker
     default_automation_mode: assisted
     split_allowed: false
   heavy:
     target_duration: '>4h'
-    max_scope_roots: '2+'
+    max_scope_roots: 2+
     default_topology: single_worker
     default_automation_mode: manual
     split_allowed: true
@@ -29,51 +29,57 @@ size_classes:
     auto_downgrade_to_single_worker_on_conflict: true
 automation_modes:
   manual:
-    description: Human approval remains required for worktree preparation and closeout decisions.
+    description: Human approval remains required for worktree preparation and closeout
+      decisions.
   assisted:
     description: Automation may prepare work but does not auto-close children.
   autonomous:
-    description: Automation may prepare and close only when topology, tests, and boundaries are fully satisfied.
+    description: Automation may prepare and close only when topology, tests, and boundaries
+      are fully satisfied.
 stop_conditions:
-  - current_task drift across registry, roadmap, task file, runlog, or worktree entry
-  - contract validation failure
-  - hygiene hard failure
-  - integration chain failure on authority-critical paths
-  - branch mismatch for the live current task
-  - review bundle failure on an autonomous execution child
+- current_task drift across registry, roadmap, task file, runlog, or worktree entry
+- contract validation failure
+- hygiene hard failure
+- integration chain failure on authority-critical paths
+- branch mismatch for the live current task
+- review bundle failure on an autonomous execution child
 closeout_rules:
-  - required_tests must appear in the runlog
-  - task status must not remain doing after formal closeout
-  - closing a live top-level coordination task without successor activation must write the formal idle CURRENT_TASK payload
-  - idle closeout must set roadmap current_task_id to null, roadmap current_phase to idle, and leave no active coordination worktree
-  - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied
-  - child execution auto-close requires the full review bundle to pass inside the execution worktree
-  - child execution auto-close may not auto-close the top-level coordination parent
+- required_tests must appear in the runlog
+- task status must not remain doing after formal closeout
+- closing a live top-level coordination task without successor activation must write
+  the formal idle CURRENT_TASK payload
+- idle closeout must set roadmap current_task_id to null, roadmap current_phase to
+  idle, and leave no active coordination worktree
+- next task is never auto-activated unless roadmap uniqueness and dependency rules
+  are satisfied
+- child execution auto-close requires the full review bundle to pass inside the execution
+  worktree
+- child execution auto-close may not auto-close the top-level coordination parent
 child_execution_workflow:
   truth_sources:
     primary:
-      - docs/governance/CURRENT_TASK.yaml
-      - docs/governance/tasks/*.md
-      - docs/governance/runlogs/*.md
+    - docs/governance/CURRENT_TASK.yaml
+    - docs/governance/tasks/*.md
+    - docs/governance/runlogs/*.md
     derived_indexes:
-      - docs/governance/TASK_REGISTRY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
+    - docs/governance/TASK_REGISTRY.yaml
+    - docs/governance/WORKTREE_REGISTRY.yaml
     reconcile_command: python scripts/task_ops.py reconcile-ledgers --write
   prepare_stage:
     baseline_checks:
       always:
-        - python scripts/check_repo.py
-        - python scripts/check_hygiene.py
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py
       conditional:
-        - command: python scripts/check_authority_alignment.py
-          when: authority_alignment_guard_files_exist
+      - command: python scripts/check_authority_alignment.py
+        when: authority_alignment_guard_files_exist
     authority_alignment_guard_files:
-      - README.md
-      - docs/product/AUTHORITY_SPEC.md
-      - docs/product/MVP_SCOPE.md
-      - docs/product/PRODUCT_BOUNDARIES.md
-      - docs/product/GLOSSARY.md
-      - docs/governance/README.md
+    - README.md
+    - docs/product/AUTHORITY_SPEC.md
+    - docs/product/MVP_SCOPE.md
+    - docs/product/PRODUCT_BOUNDARIES.md
+    - docs/product/GLOSSARY.md
+    - docs/governance/README.md
     prepared_state:
       registry_status_on_pass: doing
       worker_state_on_pass: idle
@@ -81,129 +87,171 @@ child_execution_workflow:
       worker_state_on_fail: blocked
   workflow_gates:
     worker_start_requires:
-      - baseline_passed
-      - design_confirmation_passed
-      - detailed_execution_plan_ready
-      - code_task_test_first_ready_when_applicable
+    - baseline_passed
+    - design_confirmation_passed
+    - detailed_execution_plan_ready
+    - code_task_test_first_ready_when_applicable
     review_sequence:
-      - spec_review
-      - quality_review
+    - spec_review
+    - quality_review
     finish_requires:
-      - design_confirmation_passed
-      - detailed_execution_plan_ready
-      - code_task_test_first_ready_when_applicable
-      - spec_review_passed
-      - quality_review_passed
-      - required_tests_recorded
-      - clean_nontransient_child_worktree
+    - design_confirmation_passed
+    - detailed_execution_plan_ready
+    - code_task_test_first_ready_when_applicable
+    - spec_review_passed
+    - quality_review_passed
+    - required_tests_recorded
+    - clean_nontransient_child_worktree
     transient_child_artifacts:
-      - docs/governance/CURRENT_TASK.yaml
-      - docs/governance/TASK_REGISTRY.yaml
-      - docs/governance/WORKTREE_REGISTRY.yaml
-      - child task file mirror
-      - child runlog file mirror
+    - docs/governance/CURRENT_TASK.yaml
+    - docs/governance/TASK_REGISTRY.yaml
+    - docs/governance/WORKTREE_REGISTRY.yaml
+    - child task file mirror
+    - child runlog file mirror
   parent_closeout_policy:
-    top_level_parent_mode: manual
+    top_level_parent_mode: ai_guarded
     auto_promote_after_children_close: false
     auto_activate_successor_after_close: false
+    closeout_requirements:
+    - required tests fully pass
+    - registry has no drift
+    - no child lane remains open
+    - review and closeout evidence is complete
+    - task file, runlog, design doc, and CURRENT_TASK are aligned
+    - no pending exception approval exists
+    - no unresolved high-risk blocker remains
+    manual_intervention_required_when:
+    - development direction changes
+    - scope expands or a new feature is introduced
+    - a new exception is required
+    - successor is not unique
+    - dependencies are not satisfied
+    - a high-risk conflict remains unresolved
+    continue_current_behavior: close the current top-level task to idle when ai_guarded
+      closeout is satisfied; never auto-activate a successor
+    continue_roadmap_behavior: auto-activate the next top-level task only when the
+      successor is unique, dependencies are satisfied, and the boundary is explicit;
+      otherwise stop with blockers
+  governed_scope_paths:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - docs/contracts/
+  - src/shared/contracts/
+  - src/stage7_sales/
+  - src/stage8_contact/
+  - src/stage9_delivery/
+  - db/migrations/
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  - .gitignore
+  single_writer_roots:
+  - db/migrations/
+  - src/stage7_sales/
+  - src/stage8_contact/
+  - src/stage9_delivery/
 coordination_planner:
   policy_file: docs/governance/COORDINATION_PLANNER_POLICY.yaml
   candidate_output_dir: .codex/local/coordination_candidates/
   candidate_generation_mode: candidate_then_activate
   required_candidate_fields:
-    - priority_rank
-    - reason
-    - serial_or_parallel
-    - parent_candidate
-    - child_candidates
-    - allowed_dirs
-    - planned_write_paths
-    - planned_test_paths
-    - required_tests
-    - depends_on_task_ids
-    - candidate_branch
+  - priority_rank
+  - reason
+  - serial_or_parallel
+  - parent_candidate
+  - child_candidates
+  - allowed_dirs
+  - planned_write_paths
+  - planned_test_paths
+  - required_tests
+  - depends_on_task_ids
+  - candidate_branch
 task_blueprints:
-  - blueprint_id: roadmap_autopilot_continuation
-    title: 路线图自动推进编排层
-    task_kind: coordination
-    execution_mode: shared_coordination
-    stage: automation-roadmap-continuation-v1
-    size_class: heavy
-    automation_mode: manual
-    topology: single_worker
-    allowed_dirs:
-      - docs/governance/
-      - scripts/
-      - tests/governance/
-      - tests/automation/
-    planned_write_paths:
-      - docs/governance/
-      - scripts/
-      - tests/governance/
-      - tests/automation/
-    planned_test_paths:
-      - tests/governance/
-      - tests/automation/
-    required_tests:
-      - python scripts/check_authority_alignment.py
-      - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-      - pytest -q
-    branch_template: feat/{task_id}-roadmap-autopilot-continuation
-  - blueprint_id: business_parallel_parent_stage1_to_stage6
-    title: Business automation round
-    task_kind: coordination
-    execution_mode: shared_coordination
-    stage: business-full-chain-round
-    size_class: heavy
-    automation_mode: autonomous
-    topology: parallel_parent
-    allowed_dirs:
-      - docs/governance/
-      - scripts/
-      - tests/governance/
-      - tests/automation/
-      - docs/contracts/
-      - tests/integration/
-    planned_write_paths:
-      - docs/governance/
-      - scripts/
-      - tests/governance/
-      - tests/automation/
-      - docs/contracts/
-      - tests/integration/
-    planned_test_paths:
-      - tests/governance/
-      - tests/automation/
-      - tests/contracts/
-      - tests/integration/
-    required_tests:
-      - python scripts/check_authority_alignment.py
-      - python scripts/validate_contracts.py
-      - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
-      - pytest tests/governance -q
-      - pytest tests/automation -q
-      - pytest tests/contracts -q
-      - pytest tests/integration -q
-    branch_template: feat/{task_id}-business-automation-round
-  - blueprint_id: business_stage_bootstrap_execution
-    title: Stage bootstrap lane
-    task_kind: execution
-    execution_mode: isolated_worktree
-    stage: business-bootstrap-lane
-    size_class: standard
-    automation_mode: autonomous
-    topology: single_worker
-    branch_template: feat/{task_id}-{module_slug}-bootstrap
-  - blueprint_id: business_stage_implementation_execution
-    title: Stage implementation lane
-    task_kind: execution
-    execution_mode: isolated_worktree
-    stage: business-implementation-lane
-    size_class: standard
-    automation_mode: autonomous
-    topology: single_worker
-    branch_template: feat/{task_id}-{module_slug}-implementation
+- blueprint_id: roadmap_autopilot_continuation
+  title: 路线图自动推进编排层
+  task_kind: coordination
+  execution_mode: shared_coordination
+  stage: automation-roadmap-continuation-v1
+  size_class: heavy
+  automation_mode: manual
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  planned_write_paths:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  planned_test_paths:
+  - tests/governance/
+  - tests/automation/
+  required_tests:
+  - python scripts/check_authority_alignment.py
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+  - pytest -q
+  branch_template: feat/{task_id}-roadmap-autopilot-continuation
+- blueprint_id: business_parallel_parent_stage1_to_stage6
+  title: Business automation round
+  task_kind: coordination
+  execution_mode: shared_coordination
+  stage: business-full-chain-round
+  size_class: heavy
+  automation_mode: autonomous
+  topology: parallel_parent
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - docs/contracts/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - docs/contracts/
+  - tests/integration/
+  planned_test_paths:
+  - tests/governance/
+  - tests/automation/
+  - tests/contracts/
+  - tests/integration/
+  required_tests:
+  - python scripts/check_authority_alignment.py
+  - python scripts/validate_contracts.py
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+  - pytest tests/contracts -q
+  - pytest tests/integration -q
+  branch_template: feat/{task_id}-business-automation-round
+- blueprint_id: business_stage_bootstrap_execution
+  title: Stage bootstrap lane
+  task_kind: execution
+  execution_mode: isolated_worktree
+  stage: business-bootstrap-lane
+  size_class: standard
+  automation_mode: autonomous
+  topology: single_worker
+  branch_template: feat/{task_id}-{module_slug}-bootstrap
+- blueprint_id: business_stage_implementation_execution
+  title: Stage implementation lane
+  task_kind: execution
+  execution_mode: isolated_worktree
+  stage: business-implementation-lane
+  size_class: standard
+  automation_mode: autonomous
+  topology: single_worker
+  branch_template: feat/{task_id}-{module_slug}-implementation

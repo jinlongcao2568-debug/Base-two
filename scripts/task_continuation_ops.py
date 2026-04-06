@@ -400,10 +400,14 @@ def _load_continue_roadmap_state(root):
 def _close_review_task_if_needed(root, current_task: dict[str, Any] | None, worktrees: dict[str, Any]) -> None:
     if current_task is None:
         return
-    if current_task["status"] != "review":
+    if current_task["status"] not in {"doing", "review"}:
         return
     assessment = assess_live_closeout(root, current_task=current_task, worktrees=worktrees)
+    if assessment["status"] == "not_applicable":
+        return
     if assessment["status"] != "ready":
+        if current_task["status"] == "doing":
+            return
         details = [*assessment.get("blockers", []), *assessment.get("diagnostics", [])]
         if not details:
             details = [assessment.get("summary", "current review task cannot auto-close")]
@@ -761,7 +765,7 @@ def _checkpoint_context(
         blockers.append(f"current task is blocked: {reason or 'blocked without recorded reason'}")
     elif current_status == "done":
         blockers.append("CURRENT_TASK.yaml should not remain on a done task; repair the live control-plane state first")
-    elif current_status == "review" and current_task is not None:
+    elif current_status in {"doing", "paused", "review"} and current_task is not None:
         closeout = assess_live_closeout(
             root,
             registry=registry,
@@ -769,7 +773,7 @@ def _checkpoint_context(
             current_payload=current_payload,
             current_task=current_task,
         )
-        if dirty["checkpoint_required"]:
+        if dirty["checkpoint_required"] and closeout["status"] in {"ready", "blocked"}:
             checkpoint_task = current_task
     elif recoverable_predecessor is not None:
         recoverable_task_id = recoverable_predecessor["task_id"]
@@ -784,6 +788,25 @@ def _checkpoint_context(
         )
 
     return blockers, checkpoint_task, closeout, recoverable_task_id
+
+
+def _apply_live_task_continuation_guard(
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    closeout: dict[str, Any] | None,
+    current_payload: dict[str, Any],
+) -> None:
+    if current_payload.get("status") not in {"doing", "paused"}:
+        return
+    if closeout is None or closeout["status"] == "not_applicable":
+        blockers.append(
+            "current task is still active; continue-roadmap cannot switch until ai_guarded closeout is ready"
+        )
+        readiness["recommended_action"] = "continue-current"
+        return
+    if closeout["status"] != "ready":
+        readiness["recommended_action"] = "continue-current"
 
 
 def _apply_checkpoint_readiness(
@@ -888,8 +911,6 @@ def assess_continuation_readiness(
         current_task=current_task,
         recoverable_predecessor=recoverable_predecessor,
     )
-    if current_payload.get("status") in {"doing", "paused"}:
-        return _continue_current_readiness(dirty)
 
     readiness = _base_continuation_readiness(dirty)
     blockers, checkpoint_task, closeout, recoverable_task_id = _checkpoint_context(
@@ -910,6 +931,12 @@ def assess_continuation_readiness(
         checkpoint_task=checkpoint_task,
         closeout=closeout,
         dirty=dirty,
+    )
+    _apply_live_task_continuation_guard(
+        readiness=readiness,
+        blockers=blockers,
+        closeout=closeout,
+        current_payload=current_payload,
     )
     _preview_continuation_successor(
         root,
@@ -959,8 +986,20 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
         claim_coordination_lease(root, task, reason="continue-current")
 
     branch_action = _switch_or_create_branch(root, task["branch"])
-    if task["status"] == "review":
+    closeout = assess_live_closeout(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        current_payload=current_payload,
+        current_task=task,
+    )
+    if closeout["status"] == "ready" and task["status"] in {"doing", "review"}:
         return _close_review_ready_current_task(root, registry, worktrees, current_payload, task, branch_action)
+    if task["status"] == "review":
+        details = [*closeout.get("blockers", []), *closeout.get("diagnostics", [])]
+        if not details:
+            details = [closeout.get("summary", "current review task cannot auto-close")]
+        raise GovernanceError("; ".join(details))
     if task["status"] == "doing":
         _record_continue_current_event(
             root,
@@ -979,8 +1018,6 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry, worktrees, capability_map, task_policy, current_task_payload, current_task = _load_continue_roadmap_state(root)
 
-    if current_task_payload["status"] in {"doing", "paused"}:
-        return cmd_continue_current(args)
     readiness = assess_continuation_readiness(
         root,
         registry=registry,

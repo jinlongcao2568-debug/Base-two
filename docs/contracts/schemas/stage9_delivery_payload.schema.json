@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/stage9_delivery_payload.schema.json",
+  "title": "AX9 Stage 9 Delivery Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "object_type",
+    "payload_ref",
+    "project_id",
+    "fact_version",
+    "source_project_fact_ref",
+    "sales_context_ref",
+    "contact_context_ref",
+    "report_record_ref",
+    "sale_gate_status",
+    "review_status",
+    "report_status",
+    "delivery_readiness",
+    "fact_summary",
+    "risk_summary",
+    "payload_summary"
+  ],
+  "properties": {
+    "object_type": { "const": "delivery_payload" },
+    "payload_ref": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "fact_version": { "type": "integer", "minimum": 1 },
+    "source_project_fact_ref": { "type": "string", "minLength": 1 },
+    "sales_context_ref": { "type": "string", "minLength": 1 },
+    "contact_context_ref": { "type": "string", "minLength": 1 },
+    "report_record_ref": { "type": "string", "minLength": 1 },
+    "sale_gate_status": { "type": "string", "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"] },
+    "review_status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"] },
+    "report_status": { "type": "string", "enum": ["DRAFT", "READY", "ISSUED", "REVOKED"] },
+    "delivery_readiness": { "type": "string", "enum": ["ready", "review_pending", "on_hold", "blocked"] },
+    "fact_summary": { "type": "string", "minLength": 1 },
+    "risk_summary": { "type": "string", "minLength": 1 },
+    "payload_summary": { "type": "string", "minLength": 1 }
+  }
+}

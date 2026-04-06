@@ -40,6 +40,9 @@ def test_stage_chain_case_matrix_consumes_multi_sample_flow(case_id: str) -> Non
     review_request = bundle["stage4"]["review_requests"][0]
     report_record = bundle["stage5"]["report_record"]
     project_fact = bundle["stage6"]["project_fact"]
+    sales_context = bundle["stage7"]["sales_context"]
+    contact_context = bundle["stage8"]["contact_context"]
+    delivery_payload = bundle["stage9"]["delivery_payload"]
     public_chain_view = bundle["consumers"]["public_chain_view"]
     golden = load_json(ROOT / f"tests/fixtures/golden/{case_id}.stage_chain.json")
 
@@ -49,6 +52,9 @@ def test_stage_chain_case_matrix_consumes_multi_sample_flow(case_id: str) -> Non
     validate("stage4_review_request.schema.json", review_request)
     validate("stage5_report_record.schema.json", report_record)
     validate("stage6_project_fact.schema.json", project_fact)
+    validate("stage7_sales_context.schema.json", sales_context)
+    validate("stage8_contact_context.schema.json", contact_context)
+    validate("stage9_delivery_payload.schema.json", delivery_payload)
 
     assert raw_payload["project_id"] == project_base["project_id"] == rule_hit["project_id"]
     assert project_base["project_id"] == evidence["project_id"] == review_request["project_id"] == report_record["project_id"] == project_fact["project_id"]
@@ -65,3 +71,9 @@ def test_stage_chain_case_matrix_consumes_multi_sample_flow(case_id: str) -> Non
     assert public_chain_view["project_name"] == project_base["project_name"]
     assert public_chain_view["public_chain_status"] == project_fact["public_chain_status"]
     assert public_chain_view["sale_gate_status"] == project_fact["sale_gate_status"]
+    assert sales_context["project_id"] == project_fact["project_id"]
+    assert contact_context["project_id"] == project_fact["project_id"]
+    assert delivery_payload["project_id"] == project_fact["project_id"]
+    assert delivery_payload["sales_context_ref"] == sales_context["context_ref"]
+    assert delivery_payload["contact_context_ref"] == contact_context["context_ref"]
+    assert delivery_payload["report_record_ref"] == report_record["report_id"].replace("report-", "report_record:report-")

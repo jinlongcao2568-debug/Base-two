@@ -283,6 +283,24 @@ def test_runner_reports_cleanup_blocked(tmp_path: Path) -> None:
     assert entry["cleanup_state"] == "blocked_manual"
 
 
+def test_runner_cleans_orphaned_execution_worktree_on_success(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    orphan_dir = tmp_path / "orphan.worktree"
+    orphan_dir.mkdir()
+    BUILDERS.create_cleanup_orphan(repo, orphan_dir, task_id="TASK-EXEC-ORPHAN")
+    orphan_dir.rmdir()
+
+    result = run_runner(repo, "once")
+    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-ORPHAN")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert entry["cleanup_state"] == "done"
+    assert entry["cleanup_attempts"] == 1
+    assert entry["last_cleanup_error"] is None
+    assert "[METRIC] orphan_cleanup_failures=0" in result.stdout
+
+
 def test_runner_continue_roadmap_advances_review_task(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     create_successor(repo)
@@ -297,6 +315,26 @@ def test_runner_continue_roadmap_advances_review_task(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
+
+
+def test_runner_loop_continue_roadmap_stops_after_cycle_limit(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    mark_review_ready(repo)
+
+    result = run_runner(repo, "loop", "--continue-roadmap", "--cycles", "1")
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "[CYCLE] automation-runner cycle=1" in result.stdout
+    assert "[STOP] automation-runner loop stopped cycle=1 reason=cycle limit reached" in result.stdout
+    assert current_task["current_task_id"] == "TASK-NEXT-001"
+    assert current_task["status"] == "doing"
     assert repo_gate.returncode == 0, repo_gate.stdout + repo_gate.stderr
 
 
@@ -329,6 +367,20 @@ def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None
     result = run_runner(repo, "once", "--continue-roadmap")
     assert result.returncode == 1
     assert "no successor" in result.stdout
+
+
+def test_runner_continue_roadmap_blocks_live_task_without_ai_guarded_closeout(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    git_commit_all(repo, "prepare successor while current task is still active")
+
+    result = run_runner(repo, "once", "--continue-roadmap")
+
+    assert result.returncode == 1
+    assert "ai_guarded closeout is ready" in result.stdout
 
 
 def test_runner_continue_roadmap_fails_without_successor_from_idle(tmp_path: Path) -> None:

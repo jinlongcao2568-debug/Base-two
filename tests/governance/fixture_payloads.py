@@ -1,6 +1,18 @@
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
 from typing import Any
+
+try:
+    from .policy_fixture_payloads import task_policy_payload
+except ImportError:
+    _POLICY_FIXTURE_PATH = Path(__file__).with_name("policy_fixture_payloads.py")
+    _POLICY_FIXTURE_SPEC = importlib.util.spec_from_file_location("gov_policy_fixture_payloads", _POLICY_FIXTURE_PATH)
+    _POLICY_FIXTURE_MODULE = importlib.util.module_from_spec(_POLICY_FIXTURE_SPEC)
+    assert _POLICY_FIXTURE_SPEC is not None and _POLICY_FIXTURE_SPEC.loader is not None
+    _POLICY_FIXTURE_SPEC.loader.exec_module(_POLICY_FIXTURE_MODULE)
+    task_policy_payload = _POLICY_FIXTURE_MODULE.task_policy_payload
 
 
 def roadmap_text() -> str:
@@ -231,163 +243,6 @@ def capability_map_payload() -> dict[str, Any]:
         "authority_source": "docs/product/AUTHORITY_SPEC.md",
         "capabilities": [*_governance_capability_entries(), *_business_capability_entries()],
     }
-
-
-def _roadmap_blueprint() -> dict[str, Any]:
-    return {
-        "blueprint_id": "roadmap_autopilot_continuation",
-        "title": "路线图自动续跑编排层",
-        "task_kind": "coordination",
-        "execution_mode": "shared_coordination",
-        "stage": "automation-roadmap-continuation-v1",
-        "size_class": "heavy",
-        "automation_mode": "manual",
-        "topology": "single_worker",
-        "allowed_dirs": ["docs/governance/", "scripts/", "tests/governance/", "tests/automation/"],
-        "planned_write_paths": ["docs/governance/", "scripts/", "tests/governance/", "tests/automation/"],
-        "planned_test_paths": ["tests/governance/", "tests/automation/"],
-        "required_tests": [
-            "python scripts/check_repo.py",
-            "python scripts/check_hygiene.py",
-            "pytest tests/governance -q",
-            "pytest tests/automation -q",
-            "pytest -q",
-        ],
-        "branch_template": "feat/{task_id}-roadmap-autopilot-continuation",
-    }
-
-
-def _business_parent_blueprint() -> dict[str, Any]:
-    return {
-        "blueprint_id": "business_parallel_parent_stage1_to_stage6",
-        "title": "Business automation round",
-        "task_kind": "coordination",
-        "execution_mode": "shared_coordination",
-        "stage": "business-full-chain-round",
-        "size_class": "heavy",
-        "automation_mode": "autonomous",
-        "topology": "parallel_parent",
-        "allowed_dirs": [
-            "docs/governance/",
-            "scripts/",
-            "tests/governance/",
-            "tests/automation/",
-            "docs/contracts/",
-            "tests/integration/",
-        ],
-        "planned_write_paths": [
-            "docs/governance/",
-            "scripts/",
-            "tests/governance/",
-            "tests/automation/",
-            "docs/contracts/",
-            "tests/integration/",
-        ],
-        "planned_test_paths": [
-            "tests/governance/",
-            "tests/automation/",
-            "tests/contracts/",
-            "tests/integration/",
-        ],
-        "required_tests": [
-            "python scripts/check_authority_alignment.py",
-            "python scripts/validate_contracts.py",
-            "python scripts/check_repo.py",
-            "python scripts/check_hygiene.py",
-            "pytest tests/governance -q",
-            "pytest tests/automation -q",
-            "pytest tests/contracts -q",
-            "pytest tests/integration -q",
-        ],
-        "branch_template": "feat/{task_id}-business-automation-round",
-    }
-
-
-def _business_lane_blueprint(blueprint_id: str, title: str, stage: str, suffix: str) -> dict[str, Any]:
-    return {
-        "blueprint_id": blueprint_id,
-        "title": title,
-        "task_kind": "execution",
-        "execution_mode": "isolated_worktree",
-        "stage": stage,
-        "size_class": "standard",
-        "automation_mode": "autonomous",
-        "topology": "single_worker",
-        "branch_template": f"feat/{{task_id}}-{{module_slug}}-{suffix}",
-    }
-
-
-def task_blueprints_payload() -> list[dict[str, Any]]:
-    return [
-        _roadmap_blueprint(),
-        _business_parent_blueprint(),
-        _business_lane_blueprint(
-            "business_stage_bootstrap_execution",
-            "Stage bootstrap lane",
-            "business-bootstrap-lane",
-            "bootstrap",
-        ),
-        _business_lane_blueprint(
-            "business_stage_implementation_execution",
-            "Stage implementation lane",
-            "business-implementation-lane",
-            "implementation",
-        ),
-    ]
-
-
-def task_policy_payload() -> dict[str, Any]:
-    return {
-        "version": "1.0",
-        "updated_at": "2026-04-04T00:00:00+08:00",
-        "authority_source": "docs/product/AUTHORITY_SPEC.md",
-        "operator_source": "docs/governance/OPERATOR_MANUAL.md",
-        "size_classes": {
-            "micro": {
-                "target_duration": "<=45m",
-                "max_scope_roots": 1,
-                "default_topology": "single_task",
-                "default_automation_mode": "assisted",
-                "split_allowed": False,
-            },
-            "standard": {
-                "target_duration": "45m-4h",
-                "max_scope_roots": 2,
-                "default_topology": "single_worker",
-                "default_automation_mode": "assisted",
-                "split_allowed": False,
-            },
-            "heavy": {
-                "target_duration": ">4h",
-                "max_scope_roots": "2+",
-                "default_topology": "single_worker",
-                "default_automation_mode": "manual",
-                "split_allowed": True,
-                "parallelism_mode": "dynamic",
-                "dynamic_lane_ceiling_v1": 4,
-                "min_disjoint_write_roots": 2,
-                "required_tests_complete": True,
-                "reserved_path_conflict_policy": "block_parallelism",
-                "auto_downgrade_to_single_worker_on_conflict": True,
-            },
-        },
-        "automation_modes": {
-            "manual": {"description": "Manual coordination."},
-            "assisted": {"description": "Assisted coordination."},
-            "autonomous": {"description": "Autonomous coordination."},
-        },
-        "stop_conditions": [
-            "current_task drift across registry, roadmap, task file, runlog, or worktree entry",
-            "contract validation failure",
-            "hygiene hard failure",
-        ],
-        "closeout_rules": [
-            "required_tests must appear in the runlog",
-            "task status must not remain doing after formal closeout",
-        ],
-        "task_blueprints": task_blueprints_payload(),
-    }
-
 
 def _stage_module(
     module_id: str,

@@ -201,8 +201,11 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
         if current_task["status"] == "blocked":
             reason = current_task.get("blocked_reason") or "blocked without recorded reason"
             blockers.append(f"当前任务已阻塞：{reason}")
-        elif current_task["status"] in {"review", "done"}:
-            blockers.append("当前任务处于 review/done；请改用路线图推进完成关账或切换。")
+        elif current_task["status"] == "done":
+            blockers.append("当前任务已关账；请改用路线图推进，或显式激活下一个任务。")
+        elif current_task["status"] == "review" and closeout["status"] != "ready":
+            blockers.extend(closeout.get("blockers", []))
+            blockers.extend(closeout.get("diagnostics", []))
         if lease is not None and lease["enforced"] and not lease["can_write"]:
             blockers.append(
                 f"当前任务写租约已被其他窗口持有：{lease['owner_session_id']}；默认仅允许只读恢复，请先执行 release 或 takeover"
@@ -226,12 +229,18 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
 
     task_id = current_task["task_id"] if current_task is not None else current_payload.get("current_task_id")
     task_status = current_task["status"] if current_task is not None else current_payload.get("status")
+    if closeout["status"] == "ready" and current_task is not None and current_task["status"] in {"doing", "review"}:
+        explanation = (
+            f"将对 live 当前任务 `{task_id}` 执行 ai_guarded 关账；当前状态为 `{task_status}`，符合条件时会直接回到 idle。"
+        )
+    else:
+        explanation = f"将继续 live 当前任务 `{task_id}`，当前状态为 `{task_status}`，不会选择后继任务。"
     return {
         "status": "ready",
         "matched_phrase": matched_phrase,
         "intent_id": intent["intent_id"],
         "mapped_command": intent["mapped_command"],
-        "explanation": f"将继续 live 当前任务 `{task_id}`，当前状态为 `{task_status}`，不会选择后继任务。",
+        "explanation": explanation,
         "blockers": [],
         "closeout_recommendation": closeout,
         "recovery_pack": recovery_pack,

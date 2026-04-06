@@ -177,6 +177,63 @@ def test_split_check_detects_overlap_and_reserved_conflict(tmp_path: Path) -> No
     assert "overlaps" in result.stdout
 
 
+def test_split_check_detects_single_writer_root_conflict(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    first = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-101",
+        "--title",
+        "stage7 execution one",
+        "--stage",
+        "stage7",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--parent-task-id",
+        "TASK-BASE-001",
+        "--allowed-dirs",
+        "src/stage7_sales/",
+        "tests/stage7/",
+        "--planned-write-paths",
+        "src/stage7_sales/",
+        "--planned-test-paths",
+        "tests/stage7/",
+    )
+    second = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-102",
+        "--title",
+        "stage7 execution two",
+        "--stage",
+        "stage7",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--parent-task-id",
+        "TASK-BASE-001",
+        "--allowed-dirs",
+        "src/stage7_sales/",
+        "tests/stage7/",
+        "--planned-write-paths",
+        "src/stage7_sales/runtime.py",
+        "--planned-test-paths",
+        "tests/stage7/",
+    )
+
+    assert first.returncode == 0
+    assert second.returncode == 0
+    result = run_python(TASK_OPS_SCRIPT, repo, "split-check", "TASK-BASE-001")
+    assert result.returncode == 1
+    assert "single-writer root" in result.stdout
+    assert "src/stage7_sales/" in result.stdout
+
+
 def test_decide_topology_respects_size_class(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     micro = run_python(

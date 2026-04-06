@@ -1,0 +1,3 @@
+-- Stateless baseline seed/demo
+-- This phase creates no persistent downstream objects.
+-- The runtime smoke fixtures remain under tests/fixtures/ and are the only demo inputs.

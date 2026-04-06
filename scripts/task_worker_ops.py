@@ -13,6 +13,7 @@ from governance_lib import (
     git,
     iso_now,
     load_task_registry,
+    load_task_policy,
     load_worktree_registry,
     missing_required_tests,
     safe_rmtree,
@@ -58,8 +59,8 @@ def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
     return entry
 
 
-def _requires_governed_child_workflow(task: dict) -> bool:
-    return is_governed_child_task(task)
+def _requires_governed_child_workflow(root: Path, task: dict) -> bool:
+    return is_governed_child_task(task, load_task_policy(root))
 
 
 def _load_child_bundle(root: Path, registry: dict, worktrees: dict, task_id: str) -> tuple[dict, dict, dict, Path]:
@@ -230,7 +231,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     except GovernanceError:
         record_blocked_split(root, registry, task)
         raise
-    if _requires_governed_child_workflow(task):
+    if _requires_governed_child_workflow(root, task):
         _, entry, context, _ = _load_child_bundle(root, registry, worktrees, task["task_id"])
         start_error = validate_worker_start(context)
         if start_error:
@@ -417,7 +418,7 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     claim_coordination_lease(root, task, reason="worker-finish")
     entry = _execution_entry(worktrees, task["task_id"])
     context = None
-    if _requires_governed_child_workflow(task):
+    if _requires_governed_child_workflow(root, task):
         task, entry, context, _ = _load_child_bundle(root, registry, worktrees, task["task_id"])
         finish_error = validate_finish_ready(context)
         if finish_error:
@@ -730,7 +731,7 @@ def _close_legacy_child(root: Path, worktrees: dict, task: dict) -> str | None:
 
 
 def _close_ready_child(root: Path, worktrees: dict, task: dict) -> str | None:
-    if not _requires_governed_child_workflow(task):
+    if not _requires_governed_child_workflow(root, task):
         return _close_legacy_child(root, worktrees, task)
     worktree_path, error = _resolve_execution_worktree(worktrees, task)
     if error:
@@ -763,17 +764,26 @@ def _mark_parent_governed_children_done(root: Path, parent: dict) -> str:
     parent["worker_state"] = "running"
     parent["blocked_reason"] = None
     parent["last_reported_at"] = iso_now()
-    append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: all child lanes finished; parent closeout remains manual"])
-    update_current_task_if_active(root, parent, "All child lanes finished; parent closeout remains under manual governance control.")
+    append_runlog_bullets(
+        root,
+        parent,
+        "Execution Log",
+        [f"`{iso_now()}`: all child lanes finished; parent is now an ai_guarded closeout candidate"],
+    )
+    update_current_task_if_active(
+        root,
+        parent,
+        "All child lanes finished; the top-level task stays live until ai_guarded closeout is explicitly continued.",
+    )
     write_handoff(
         root,
         parent,
         summary_status=parent["status"],
-        remaining_items=["Review the aggregate result and decide whether to keep iterating or manually close the parent task."],
-        next_step="Parent closeout is manual; validate the aggregated evidence before deciding the next move.",
+        remaining_items=["Validate the aggregate evidence and use ai_guarded continue-current or continue-roadmap when the parent is ready to close."],
+        next_step="Use continue-current to close this parent back to idle, or continue-roadmap only when a unique successor is explicitly ready.",
         next_tests=list(parent.get("required_tests") or []),
         current_risks=[],
-        resume_notes=["All child lanes finished; parent closeout remains manual."],
+        resume_notes=["All child lanes finished; parent is an ai_guarded closeout candidate."],
         append_resume_notes=True,
     )
     return "doing"
@@ -856,7 +866,7 @@ def _promote_parent_after_children(
     ]
     if not children:
         return None, [], []
-    governed_parent = all(_requires_governed_child_workflow(task) for task in children)
+    governed_parent = all(_requires_governed_child_workflow(root, task) for task in children)
     blocked = [task["task_id"] for task in children if task["status"] == "blocked"]
     open_children = [task["task_id"] for task in children if task["status"] not in {"done", "blocked"}]
     if all(task["status"] == "done" for task in children):
@@ -908,7 +918,7 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
         if open_children:
             print(f"[OK] parent still doing: {args.parent_task_id} waiting on {', '.join(open_children)}")
         else:
-            print(f"[OK] parent still doing: {args.parent_task_id} closeout remains manual after child finish")
+            print(f"[OK] parent still doing: {args.parent_task_id} ai_guarded closeout candidate after child finish")
     for item in blocked:
         print(f"[BLOCKED] {item}")
     if parent_state == "blocked":

@@ -1,0 +1,17 @@
+{
+  "object_type": "delivery_payload",
+  "payload_ref": "delivery_payload:project-cn-review-001:1",
+  "project_id": "project-cn-review-001",
+  "fact_version": 1,
+  "source_project_fact_ref": "project_fact:project-cn-review-001:1",
+  "sales_context_ref": "sales_context:project-cn-review-001:1",
+  "contact_context_ref": "contact_context:project-cn-review-001:1",
+  "report_record_ref": "report_record:report-review-001",
+  "sale_gate_status": "REVIEW",
+  "review_status": "PENDING",
+  "report_status": "READY",
+  "delivery_readiness": "review_pending",
+  "fact_summary": "Project is sellable after review of the remaining competitor clue.",
+  "risk_summary": "Manual review is still required before promotion to OPEN.",
+  "payload_summary": "Delivery payload is review_pending based on sale gate REVIEW and report status READY."
+}

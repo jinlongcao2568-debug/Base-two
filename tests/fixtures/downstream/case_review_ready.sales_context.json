@@ -1,0 +1,16 @@
+{
+  "object_type": "sales_context",
+  "context_ref": "sales_context:project-cn-review-001:1",
+  "project_id": "project-cn-review-001",
+  "fact_version": 1,
+  "source_project_fact_ref": "project_fact:project-cn-review-001:1",
+  "sale_gate_status": "REVIEW",
+  "real_competitor_count": 3,
+  "serviceable_competitor_count": 2,
+  "competitor_quality_grade": "B",
+  "price_cluster_score": 68,
+  "price_gradient_pattern": "NARROW_BAND",
+  "sales_readiness_bucket": "needs_review",
+  "recommended_sales_action": "escalate_manual_review",
+  "summary": "REVIEW gate with 2 serviceable competitors and price cluster score 68."
+}

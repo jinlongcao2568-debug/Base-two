@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T10:25:54+08:00'
+updated_at: '2026-04-06T13:21:43+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -951,7 +951,7 @@ tasks:
   automation_mode: manual
   worker_state: idle
   blocked_reason: null
-  last_reported_at: '2026-04-05T18:54:21+08:00'
+  last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -1013,6 +1013,9 @@ tasks:
   created_at: '2026-04-05T18:54:21+08:00'
   activated_at: null
   closed_at: null
+  absorbed_by: TASK-GOV-018
+  absorbed_phase: phase_1_rebaseline_task_scope
+  absorbed_reason: stage7-stage9 minimal runtime smoke now runs inside TASK-GOV-018
 - task_id: TASK-MRG-001
   title: ???? Git ????
   status: done
@@ -1120,7 +1123,7 @@ tasks:
   automation_mode: manual
   worker_state: idle
   blocked_reason: null
-  last_reported_at: '2026-04-05T18:54:21+08:00'
+  last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -1172,6 +1175,9 @@ tasks:
   created_at: '2026-04-05T18:54:21+08:00'
   activated_at: null
   closed_at: null
+  absorbed_by: TASK-GOV-018
+  absorbed_phase: phase_1_rebaseline_task_scope
+  absorbed_reason: contracts/runtime hardening now runs inside TASK-GOV-018
 - task_id: TASK-SOAK-001
   title: ?? soak chaos fallback ??
   status: queued
@@ -1185,7 +1191,7 @@ tasks:
   automation_mode: manual
   worker_state: idle
   blocked_reason: null
-  last_reported_at: '2026-04-05T19:00:02+08:00'
+  last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -1222,6 +1228,9 @@ tasks:
   created_at: '2026-04-05T19:00:02+08:00'
   activated_at: null
   closed_at: null
+  absorbed_by: TASK-GOV-018
+  absorbed_phase: phase_1_rebaseline_task_scope
+  absorbed_reason: soak and chaos validation now runs inside TASK-GOV-018
 - task_id: TASK-GRAD-001
   title: heavy ????????????
   status: queued
@@ -1235,7 +1244,7 @@ tasks:
   automation_mode: manual
   worker_state: idle
   blocked_reason: null
-  last_reported_at: '2026-04-05T19:00:13+08:00'
+  last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -1272,6 +1281,9 @@ tasks:
   created_at: '2026-04-05T19:00:13+08:00'
   activated_at: null
   closed_at: null
+  absorbed_by: TASK-GOV-018
+  absorbed_phase: phase_1_rebaseline_task_scope
+  absorbed_reason: graduation now runs inside TASK-GOV-018
 - task_id: TASK-BIZ-002
   title: stage7-stage9 successor generation
   status: queued
@@ -1285,7 +1297,7 @@ tasks:
   automation_mode: manual
   worker_state: idle
   blocked_reason: null
-  last_reported_at: '2026-04-05T19:02:31+08:00'
+  last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -1322,6 +1334,9 @@ tasks:
   created_at: '2026-04-05T19:02:31+08:00'
   activated_at: null
   closed_at: null
+  absorbed_by: TASK-GOV-018
+  absorbed_phase: phase_1_rebaseline_task_scope
+  absorbed_reason: guarded successor generation now runs inside TASK-GOV-018
 - task_id: TASK-GOV-015
   title: 连续续跑稳定化
   status: done
@@ -1471,46 +1486,85 @@ tasks:
   activated_at: '2026-04-06T07:47:30+08:00'
   closed_at: '2026-04-06T09:23:00+08:00'
 - task_id: TASK-GOV-018
-  title: 单一顶层父任务下的分段稳定升级
-  status: doing
+  title: 'Single Total Upgrade Parent Task: ai_guarded closeout / continuation / contracts-runtime
+    hardening'
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
   successor_state: immediate
-  stage: governance-hybrid-autonomy-parented-upgrade-v1
+  stage: governance-hybrid-autonomy-parented-total-upgrade-v1
   branch: feat/TASK-GOV-018-parented-stability-upgrade
   size_class: heavy
   automation_mode: manual
-  worker_state: running
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-06T10:25:54+08:00'
+  last_reported_at: '2026-04-06T13:21:43+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
   - scripts/
   - tests/governance/
   - tests/automation/
+  - docs/contracts/
+  - src/shared/contracts/
+  - src/stage7_sales/
+  - src/stage8_contact/
+  - src/stage9_delivery/
+  - db/migrations/
+  - tests/contracts/
+  - tests/integration/
+  - tests/fixtures/downstream/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
   - .gitignore
   reserved_paths:
-  - src/
-  - docs/contracts/
-  - db/migrations/
-  - tests/integration/
+  - src/stage1_orchestration/
+  - src/stage2_ingestion/
+  - src/stage3_parsing/
+  - src/stage4_validation/
+  - src/stage5_reporting/
+  - src/stage6_facts/
   planned_write_paths:
   - docs/governance/
   - scripts/
   - tests/governance/
   - tests/automation/
+  - docs/contracts/
+  - src/shared/contracts/
+  - src/stage7_sales/
+  - src/stage8_contact/
+  - src/stage9_delivery/
+  - db/migrations/
+  - tests/contracts/
+  - tests/integration/
+  - tests/fixtures/downstream/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
   - .gitignore
   planned_test_paths:
   - tests/governance/
   - tests/automation/
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
   required_tests:
   - python scripts/check_repo.py
   - python scripts/check_hygiene.py
   - python scripts/check_authority_alignment.py
+  - python scripts/validate_contracts.py
   - pytest tests/governance -q
   - pytest tests/automation -q
+  - pytest tests/contracts -q
+  - pytest tests/integration -q
+  - pytest tests/stage7 -q
+  - pytest tests/stage8 -q
+  - pytest tests/stage9 -q
+  - pytest -q
   task_file: docs/governance/tasks/TASK-GOV-018.md
   runlog_file: docs/governance/runlogs/TASK-GOV-018-RUNLOG.md
   lane_count: 1
@@ -1519,4 +1573,4 @@ tasks:
   review_bundle_status: not_applicable
   created_at: '2026-04-06T09:30:54+08:00'
   activated_at: '2026-04-06T09:30:54+08:00'
-  closed_at: null
+  closed_at: '2026-04-06T13:21:43+08:00'

@@ -116,6 +116,53 @@ REPORT_RECORD_REQUIRED_FIELDS = [
     "report_status",
     "written_back_at",
 ]
+SALES_CONTEXT_REQUIRED_FIELDS = [
+    "object_type",
+    "context_ref",
+    "project_id",
+    "fact_version",
+    "source_project_fact_ref",
+    "sale_gate_status",
+    "real_competitor_count",
+    "serviceable_competitor_count",
+    "competitor_quality_grade",
+    "price_cluster_score",
+    "price_gradient_pattern",
+    "sales_readiness_bucket",
+    "recommended_sales_action",
+    "summary",
+]
+CONTACT_CONTEXT_REQUIRED_FIELDS = [
+    "object_type",
+    "context_ref",
+    "project_id",
+    "fact_version",
+    "source_project_fact_ref",
+    "public_chain_status",
+    "sale_gate_status",
+    "review_status",
+    "manual_override_status",
+    "contact_strategy",
+    "analyst_follow_up_required",
+    "summary",
+]
+DELIVERY_PAYLOAD_REQUIRED_FIELDS = [
+    "object_type",
+    "payload_ref",
+    "project_id",
+    "fact_version",
+    "source_project_fact_ref",
+    "sales_context_ref",
+    "contact_context_ref",
+    "report_record_ref",
+    "sale_gate_status",
+    "review_status",
+    "report_status",
+    "delivery_readiness",
+    "fact_summary",
+    "risk_summary",
+    "payload_summary",
+]
 FORMAL_ENUMS = {
     "sale_gate_status": ["OPEN", "REVIEW", "HOLD", "BLOCK"],
     "review_status": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"],
@@ -138,6 +185,12 @@ HANDOFF_REQUIRED_IDS = {
     "stage6-to-stage8-project_fact",
     "stage6-to-stage9-project_fact",
 }
+MINIMAL_ACCEPTANCE_CASES = (
+    "case_review_ready",
+    "case_open_issued",
+    "case_hold_incomplete_chain",
+    "case_block_high_risk",
+)
 
 CONTRACT_BUNDLES = [
     {"name": "project_base", "schema": SCHEMAS_DIR / "stage3_project_base.schema.json", "example": EXAMPLES_DIR / "project_base.example.json", "fields": FIELD_SEMANTICS_DIR / "project_base.fields.yaml", "object_name": "project_base", "required_fields": PROJECT_BASE_REQUIRED_FIELDS, "enum_fields": {}, "const_field": None},
@@ -146,6 +199,9 @@ CONTRACT_BUNDLES = [
     {"name": "review_request", "schema": SCHEMAS_DIR / "stage4_review_request.schema.json", "example": EXAMPLES_DIR / "review_request.example.json", "fields": FIELD_SEMANTICS_DIR / "review_request.fields.yaml", "object_name": "review_request", "required_fields": REVIEW_REQUEST_REQUIRED_FIELDS, "enum_fields": {}, "const_field": None},
     {"name": "project_fact", "schema": SCHEMAS_DIR / "stage6_project_fact.schema.json", "example": EXAMPLES_DIR / "project_fact.example.json", "fields": FIELD_SEMANTICS_DIR / "project_fact.fields.yaml", "object_name": "project_fact", "required_fields": PROJECT_FACT_REQUIRED_FIELDS, "enum_fields": {"sale_gate_status": FORMAL_ENUMS["sale_gate_status"], "review_status": FORMAL_ENUMS["review_status"], "report_status": FORMAL_ENUMS["report_status"], "competitor_quality_grade": FORMAL_ENUMS["competitor_quality_grade"]}, "const_field": "project_fact"},
     {"name": "report_record", "schema": SCHEMAS_DIR / "stage5_report_record.schema.json", "example": EXAMPLES_DIR / "report_record.example.json", "fields": FIELD_SEMANTICS_DIR / "report_record.fields.yaml", "object_name": "report_record", "required_fields": REPORT_RECORD_REQUIRED_FIELDS, "enum_fields": {"report_status": FORMAL_ENUMS["report_status"]}, "const_field": None},
+    {"name": "sales_context", "schema": SCHEMAS_DIR / "stage7_sales_context.schema.json", "example": EXAMPLES_DIR / "stage7_sales_context.example.json", "fields": None, "object_name": "sales_context", "required_fields": SALES_CONTEXT_REQUIRED_FIELDS, "enum_fields": {"sale_gate_status": FORMAL_ENUMS["sale_gate_status"], "competitor_quality_grade": FORMAL_ENUMS["competitor_quality_grade"], "sales_readiness_bucket": ["ready", "needs_review", "hold", "blocked"]}, "const_field": "sales_context"},
+    {"name": "contact_context", "schema": SCHEMAS_DIR / "stage8_contact_context.schema.json", "example": EXAMPLES_DIR / "stage8_contact_context.example.json", "fields": None, "object_name": "contact_context", "required_fields": CONTACT_CONTEXT_REQUIRED_FIELDS, "enum_fields": {"sale_gate_status": FORMAL_ENUMS["sale_gate_status"], "review_status": FORMAL_ENUMS["review_status"], "contact_strategy": ["standard_outreach", "analyst_review_required", "hold_no_outreach", "block_external_contact"]}, "const_field": "contact_context"},
+    {"name": "delivery_payload", "schema": SCHEMAS_DIR / "stage9_delivery_payload.schema.json", "example": EXAMPLES_DIR / "stage9_delivery_payload.example.json", "fields": None, "object_name": "delivery_payload", "required_fields": DELIVERY_PAYLOAD_REQUIRED_FIELDS, "enum_fields": {"sale_gate_status": FORMAL_ENUMS["sale_gate_status"], "review_status": FORMAL_ENUMS["review_status"], "report_status": FORMAL_ENUMS["report_status"], "delivery_readiness": ["ready", "review_pending", "on_hold", "blocked"]}, "const_field": "delivery_payload"},
 ]
 
 
@@ -211,10 +267,16 @@ def validate_authority_snippets() -> list[str]:
 
 def _validate_bundle_assets(bundle: dict[str, object]) -> list[str]:
     errors: list[str] = []
-    for directory in (EXAMPLES_DIR, FIELD_SEMANTICS_DIR):
+    for directory in (EXAMPLES_DIR,):
         if not directory.exists():
             errors.append(f"missing supporting directory: {directory}")
-    for file_path in (bundle["schema"], bundle["example"], bundle["fields"]):
+    field_path = bundle.get("fields")
+    if field_path is not None and not FIELD_SEMANTICS_DIR.exists():
+        errors.append(f"missing supporting directory: {FIELD_SEMANTICS_DIR}")
+    files = [bundle["schema"], bundle["example"]]
+    if field_path is not None:
+        files.append(field_path)
+    for file_path in files:
         if not Path(file_path).exists():
             errors.append(f"missing {bundle['name']} asset: {file_path}")
     return errors
@@ -274,8 +336,45 @@ def validate_contract_bundle(bundle: dict[str, object]) -> list[str]:
         return errors
     schema = _load_json(Path(bundle["schema"]))
     example = _load_json(Path(bundle["example"]))
+    bundle_errors = _validate_bundle_schema(bundle, schema, example)
+    if bundle.get("fields") is None:
+        return bundle_errors
     field_semantics = _load_yaml(Path(bundle["fields"]))
-    return [*_validate_bundle_schema(bundle, schema, example), *_validate_bundle_fields(bundle, field_semantics)]
+    return [*bundle_errors, *_validate_bundle_fields(bundle, field_semantics)]
+
+
+def validate_minimal_chain_acceptance_contract() -> list[str]:
+    path = CONTRACTS_DIR / "minimal_runtime_chain_acceptance.yaml"
+    if not path.exists():
+        return [f"missing acceptance contract: {path}"]
+    document = _load_yaml(path)
+    acceptance = document.get("acceptance") or {}
+    errors: list[str] = []
+    if not acceptance.get("acceptance_id"):
+        errors.append("acceptance contract missing acceptance_id")
+    for field_name in ("artifacts", "schema_checks", "fixture_checks"):
+        if not acceptance.get(field_name):
+            errors.append(f"acceptance contract missing {field_name}")
+    for artifact_key in ("stage7.sales_context", "stage8.contact_context", "stage9.delivery_payload"):
+        if artifact_key not in (acceptance.get("artifacts") or []):
+            errors.append(f"acceptance contract missing artifact: {artifact_key}")
+        schema_path = acceptance.get("schema_checks", {}).get(artifact_key)
+        fixture_pattern = acceptance.get("fixture_checks", {}).get(artifact_key)
+        if not schema_path or not (ROOT / schema_path).exists():
+            errors.append(f"acceptance contract missing schema target for {artifact_key}")
+        if not fixture_pattern:
+            errors.append(f"acceptance contract missing fixture target for {artifact_key}")
+        else:
+            for case_id in MINIMAL_ACCEPTANCE_CASES:
+                fixture_path = ROOT / fixture_pattern.format(scenario_id=case_id)
+                if not fixture_path.exists():
+                    errors.append(f"acceptance fixture missing for {artifact_key}: {fixture_path}")
+    whitelist_path = acceptance.get("consumer_field_whitelist")
+    if not whitelist_path or not (ROOT / whitelist_path).exists():
+        errors.append("acceptance contract missing consumer_field_whitelist target")
+    if not errors:
+        print(f"[OK] {path.name}")
+    return errors
 
 
 def _validate_handoff_field_semantics(fields_path: Path) -> list[str]:
@@ -377,4 +476,8 @@ def main() -> int:
     if handoff_errors:
         _print_errors("handoff catalog assets", handoff_errors)
         errors.extend(handoff_errors)
+    acceptance_errors = validate_minimal_chain_acceptance_contract()
+    if acceptance_errors:
+        _print_errors("minimal chain acceptance contract", acceptance_errors)
+        errors.extend(acceptance_errors)
     return 1 if errors else 0

@@ -1,0 +1,14 @@
+{
+  "object_type": "contact_context",
+  "context_ref": "contact_context:project-cn-review-001:1",
+  "project_id": "project-cn-review-001",
+  "fact_version": 1,
+  "source_project_fact_ref": "project_fact:project-cn-review-001:1",
+  "public_chain_status": "COMPLETE",
+  "sale_gate_status": "REVIEW",
+  "review_status": "PENDING",
+  "manual_override_status": "PENDING",
+  "contact_strategy": "analyst_review_required",
+  "analyst_follow_up_required": true,
+  "summary": "Contact stays analyst_review_required because sale gate is REVIEW and manual override status is PENDING."
+}

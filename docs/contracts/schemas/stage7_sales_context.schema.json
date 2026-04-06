@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/stage7_sales_context.schema.json",
+  "title": "AX9 Stage 7 Sales Context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "object_type",
+    "context_ref",
+    "project_id",
+    "fact_version",
+    "source_project_fact_ref",
+    "sale_gate_status",
+    "real_competitor_count",
+    "serviceable_competitor_count",
+    "competitor_quality_grade",
+    "price_cluster_score",
+    "price_gradient_pattern",
+    "sales_readiness_bucket",
+    "recommended_sales_action",
+    "summary"
+  ],
+  "properties": {
+    "object_type": { "const": "sales_context" },
+    "context_ref": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "fact_version": { "type": "integer", "minimum": 1 },
+    "source_project_fact_ref": { "type": "string", "minLength": 1 },
+    "sale_gate_status": { "type": "string", "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"] },
+    "real_competitor_count": { "type": "integer", "minimum": 0 },
+    "serviceable_competitor_count": { "type": "integer", "minimum": 0 },
+    "competitor_quality_grade": { "type": "string", "enum": ["A", "B", "C", "D"] },
+    "price_cluster_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "price_gradient_pattern": { "type": "string", "minLength": 1 },
+    "sales_readiness_bucket": { "type": "string", "enum": ["ready", "needs_review", "hold", "blocked"] },
+    "recommended_sales_action": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 }
+  }
+}

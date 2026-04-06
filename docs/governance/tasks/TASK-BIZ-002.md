@@ -1,4 +1,4 @@
-# TASK-BIZ-002 stage7-stage9 successor generation
+# TASK-BIZ-002 stage7-stage9 successor generation (absorbed)
 
 ## Task Baseline
 
@@ -17,36 +17,34 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
+
 ## Primary Goals
 
-- Open governed successor generation for `stage7_sales`, `stage8_contact`, and `stage9_delivery` behind capability gates.
-- Keep downstream generation dependent on `stage6_facts` and on upstream/downstream capability readiness instead of bypassing stage boundaries.
-- Extend continuation and runner governance so downstream tasks can be created in the correct order without weakening existing hard gates.
+- Historical backlog placeholder retained for auditability.
+- The original implementation goal is now executed inside `TASK-GOV-018` instead of this standalone top-level task.
 
 ## Explicitly Not Doing
 
-- Do not implement `src/stage7_sales/`, `src/stage8_contact/`, or `src/stage9_delivery/` business code in this task.
-- Do not allow `stage9_delivery` to start directly from `stage6_facts` without `stage7_sales` and `stage8_contact`.
-- Do not alter continuation command names or add a new execution intent.
+- Do not activate this task as an independent top-level coordination task.
+- Do not diverge from the absorbed implementation sequence recorded by `TASK-GOV-018`.
+
+## Absorption Status
+
+- `absorbed_by`: `TASK-GOV-018`
+- `absorbed_phase`: `phase_1_rebaseline_task_scope`
+- `absorbed_reason`: `guarded successor generation now runs inside TASK-GOV-018`
 
 ## Allowed Dirs
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Test Paths
 
 - `tests/governance/`
-- `tests/automation/`
 
 ## Required Tests
 
@@ -54,14 +52,11 @@
 - `python scripts/check_hygiene.py`
 - `python scripts/check_authority_alignment.py`
 - `pytest tests/governance -q`
-- `pytest tests/automation -q`
 
 ## Reserved Paths
 
 - `src/`
-- `docs/contracts/`
-- `db/migrations/`
-- `tests/integration/`
+
 ## Narrative Assertions
 
 - `narrative_status`: `queued`
@@ -70,6 +65,7 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
+
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -85,7 +81,7 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
+- `reserved_paths`: `src/`
 - `branch`: `feat/TASK-BIZ-002-stage7-9-autopilot`
-- `updated_at`: `2026-04-05T21:52:29+08:00`
+- `updated_at`: `2026-04-06T11:42:19+08:00`
 <!-- generated:task-meta:end -->

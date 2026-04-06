@@ -1,4 +1,4 @@
-# TASK-SOAK-001 连续 soak chaos fallback 验证
+# TASK-SOAK-001 soak / chaos / fallback validation (absorbed)
 
 ## Task Baseline
 
@@ -17,36 +17,34 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
+
 ## Primary Goals
 
-- Add a governed soak and chaos validation loop that exercises `continue-roadmap` and `automation_runner` across `standard`, `heavy 2 lanes`, `heavy 3 lanes`, and `heavy 4 lanes`.
-- Measure ledger drift, fallback behavior, child closeout success, orphan cleanup failures, and branch/worktree mismatches in a repeatable report format.
-- Establish the hard validation threshold for continuous autonomy before heavy tasks can graduate to higher default automation.
+- Historical backlog placeholder retained for auditability.
+- The original implementation goal is now executed inside `TASK-GOV-018` instead of this standalone top-level task.
 
 ## Explicitly Not Doing
 
-- Do not add new production execution intents.
-- Do not change stage business implementation in this task.
-- Do not raise the parallel ceiling beyond `4` or introduce a multi-coordinator model.
+- Do not activate this task as an independent top-level coordination task.
+- Do not diverge from the absorbed implementation sequence recorded by `TASK-GOV-018`.
+
+## Absorption Status
+
+- `absorbed_by`: `TASK-GOV-018`
+- `absorbed_phase`: `phase_1_rebaseline_task_scope`
+- `absorbed_reason`: `soak and chaos validation now runs inside TASK-GOV-018`
 
 ## Allowed Dirs
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
 - `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Test Paths
 
 - `tests/governance/`
-- `tests/automation/`
 
 ## Required Tests
 
@@ -54,14 +52,11 @@
 - `python scripts/check_hygiene.py`
 - `python scripts/check_authority_alignment.py`
 - `pytest tests/governance -q`
-- `pytest tests/automation -q`
 
 ## Reserved Paths
 
 - `src/`
-- `docs/contracts/`
-- `db/migrations/`
-- `tests/integration/`
+
 ## Narrative Assertions
 
 - `narrative_status`: `queued`
@@ -70,6 +65,7 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
+
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -85,7 +81,7 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
+- `reserved_paths`: `src/`
 - `branch`: `feat/TASK-SOAK-001-continuous-autonomy-validation`
-- `updated_at`: `2026-04-05T21:52:29+08:00`
+- `updated_at`: `2026-04-06T11:42:19+08:00`
 <!-- generated:task-meta:end -->

@@ -25,13 +25,40 @@ from governance_runtime import (
     read_text,
 )
 
-GOVERNED_CHILD_SCOPE_PATHS = (
+DEFAULT_GOVERNED_CHILD_SCOPE_PATHS = (
     "docs/governance/",
     "scripts/",
     "tests/governance/",
     "tests/automation/",
     ".gitignore",
 )
+
+DEFAULT_SINGLE_WRITER_ROOTS = (
+    "db/migrations/",
+    "src/stage7_sales/",
+    "src/stage8_contact/",
+    "src/stage9_delivery/",
+)
+
+
+def governed_child_scope_paths(task_policy: dict[str, Any] | None = None) -> tuple[str, ...]:
+    policy = task_policy or {}
+    configured = policy.get("governed_scope_paths")
+    if not configured:
+        configured = ((policy.get("child_execution_workflow") or {}).get("governed_scope_paths"))
+    if isinstance(configured, list) and configured:
+        return tuple(str(path) for path in configured)
+    return DEFAULT_GOVERNED_CHILD_SCOPE_PATHS
+
+
+def single_writer_roots(task_policy: dict[str, Any] | None = None) -> tuple[str, ...]:
+    policy = task_policy or {}
+    configured = policy.get("single_writer_roots")
+    if not configured:
+        configured = ((policy.get("child_execution_workflow") or {}).get("single_writer_roots"))
+    if isinstance(configured, list) and configured:
+        return tuple(str(path) for path in configured)
+    return DEFAULT_SINGLE_WRITER_ROOTS
 
 
 def rule_matches_path(rule, path: str) -> bool:
@@ -65,10 +92,10 @@ def path_hits_reserved(path: str, reserved_paths: Iterable[str] | None = None) -
 
 
 def is_governed_child_scope_path(path: str) -> bool:
-    return path_within_declared(path, GOVERNED_CHILD_SCOPE_PATHS)
+    return path_within_declared(path, DEFAULT_GOVERNED_CHILD_SCOPE_PATHS)
 
 
-def is_governed_child_task(task: dict[str, Any]) -> bool:
+def is_governed_child_task(task: dict[str, Any], task_policy: dict[str, Any] | None = None) -> bool:
     if task.get("task_kind") != "execution":
         return False
     declared_paths = [
@@ -78,7 +105,18 @@ def is_governed_child_task(task: dict[str, Any]) -> bool:
     ]
     if not declared_paths:
         return False
-    return all(is_governed_child_scope_path(path) for path in declared_paths)
+    governed_scope = governed_child_scope_paths(task_policy)
+    return all(path_within_declared(path, governed_scope) for path in declared_paths)
+
+
+def _task_single_writer_hits(task: dict[str, Any], task_policy: dict[str, Any] | None = None) -> set[str]:
+    write_rules = [declared_path(path) for path in task.get("planned_write_paths", [])]
+    hits: set[str] = set()
+    for root in single_writer_roots(task_policy):
+        root_rule = declared_path(root)
+        if any(declared_paths_overlap(write_rule, root_rule) for write_rule in write_rules):
+            hits.add(root_rule.raw)
+    return hits
 
 
 def task_reserved_paths(task: dict[str, Any]) -> list[str]:
@@ -123,10 +161,12 @@ def collect_split_errors(
         left_write_rules = [declared_path(path) for path in left.get("planned_write_paths", [])]
         left_test_rules = [declared_path(path) for path in left.get("planned_test_paths", [])]
         left_reserved_rules = [declared_path(path) for path in left.get("reserved_paths", [])]
+        left_single_writer_hits = _task_single_writer_hits(left, task_policy)
         for right in tasks[index + 1 :]:
             right_write_rules = [declared_path(path) for path in right.get("planned_write_paths", [])]
             right_test_rules = [declared_path(path) for path in right.get("planned_test_paths", [])]
             right_reserved_rules = [declared_path(path) for path in right.get("reserved_paths", [])]
+            right_single_writer_hits = _task_single_writer_hits(right, task_policy)
             for left_rule in left_write_rules:
                 for right_rule in right_write_rules:
                     if declared_paths_overlap(left_rule, right_rule):
@@ -155,6 +195,10 @@ def collect_split_errors(
                             f"{right['task_id']} path overlaps {left['task_id']} reserved path: "
                             f"{right_rule.raw} <-> {left_rule.raw}"
                         )
+            for root in sorted(left_single_writer_hits & right_single_writer_hits):
+                errors.append(
+                    f"{left['task_id']} and {right['task_id']} both write a single-writer root: {root}"
+                )
     return errors
 
 

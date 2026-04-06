@@ -287,7 +287,7 @@ def _prepare_finished_governance_child(repo: Path, task_id: str, destination: Pa
     }
 
 
-def test_auto_close_children_merges_child_and_keeps_parent_manual(tmp_path: Path) -> None:
+def test_auto_close_children_merges_child_and_marks_parent_ai_guarded_candidate(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_execution_child(repo, "TASK-EXEC-018D")
     destination = tmp_path / "repo.worktrees" / "TASK-EXEC-018D"
@@ -310,3 +310,47 @@ def test_auto_close_children_merges_child_and_keeps_parent_manual(tmp_path: Path
     assert entry["cleanup_state"] == "done"
     assert parent["status"] == "doing"
     assert parent["worker_state"] == "running"
+    runlog = (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").read_text(encoding="utf-8")
+    assert "ai_guarded closeout candidate" in runlog
+    assert "ai_guarded closeout candidate after child finish" in closed.stdout
+
+
+def test_stage7_scope_uses_governed_child_workflow(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-018E",
+        "--title",
+        "stage7 child lane",
+        "--stage",
+        "stage7",
+        "--branch",
+        "feat/TASK-EXEC-018E",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--parent-task-id",
+        "TASK-BASE-001",
+        "--allowed-dirs",
+        "src/stage7_sales/",
+        "docs/contracts/",
+        "tests/stage7/",
+        "--planned-write-paths",
+        "src/stage7_sales/",
+        "docs/contracts/",
+        "--planned-test-paths",
+        "tests/stage7/",
+        "--required-tests",
+        f'python "{CHECK_REPO_SCRIPT.as_posix()}"',
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-018E"
+    prepared = run_python(TASK_OPS_SCRIPT, repo, "prepare-child-execution", "TASK-EXEC-018E", "--path", str(destination))
+    blocked = run_python(TASK_OPS_SCRIPT, repo, "worker-start", "TASK-EXEC-018E", "--worker-owner", "worker-01")
+
+    assert prepared.returncode == 0, prepared.stdout + prepared.stderr
+    assert blocked.returncode == 1
+    assert "design confirmation must pass" in blocked.stdout

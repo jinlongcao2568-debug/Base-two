@@ -29,7 +29,11 @@ MAX_SESSION_HISTORY = 8
 def _assess_continuation_readiness(root: Path) -> dict[str, Any]:
     from task_continuation_ops import assess_continuation_readiness
 
-    return assess_continuation_readiness(root)
+    readiness = assess_continuation_readiness(root)
+    if readiness.get("status") == "blocked" and readiness.get("recommended_action") == "continue-current":
+        readiness = dict(readiness)
+        readiness["status"] = "continue-current"
+    return readiness
 
 
 def task_source_registry_defaults() -> dict[str, Any]:

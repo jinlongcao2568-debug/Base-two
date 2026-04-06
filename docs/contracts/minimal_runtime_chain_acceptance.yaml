@@ -1,0 +1,42 @@
+version: "1.0"
+updated_at: "2026-04-06T19:30:00+08:00"
+acceptance:
+  acceptance_id: minimal_runtime_chain_acceptance_v1
+  input_modes:
+    - scenario_id
+    - raw_fixture_path
+  required_command: python scripts/run_minimal_runtime_chain.py --scenario-id <case_id> --output-dir <dir>
+  artifacts:
+    - stage1.ingestion_job
+    - stage2.raw_ingestion_artifact
+    - stage3.project_base
+    - stage4.rule_hits
+    - stage4.evidences
+    - stage4.review_requests
+    - stage5.report_record
+    - stage6.project_fact
+    - stage7.sales_context
+    - stage8.contact_context
+    - stage9.delivery_payload
+    - consumers.public_chain_view
+  schema_checks:
+    stage3.project_base: docs/contracts/schemas/stage3_project_base.schema.json
+    stage4.rule_hits: docs/contracts/schemas/stage4_rule_hit.schema.json
+    stage4.evidences: docs/contracts/schemas/stage4_evidence.schema.json
+    stage4.review_requests: docs/contracts/schemas/stage4_review_request.schema.json
+    stage5.report_record: docs/contracts/schemas/stage5_report_record.schema.json
+    stage6.project_fact: docs/contracts/schemas/stage6_project_fact.schema.json
+    stage7.sales_context: docs/contracts/schemas/stage7_sales_context.schema.json
+    stage8.contact_context: docs/contracts/schemas/stage8_contact_context.schema.json
+    stage9.delivery_payload: docs/contracts/schemas/stage9_delivery_payload.schema.json
+  fixture_checks:
+    stage3.project_base: tests/fixtures/normalized/{scenario_id}.project_base.json
+    stage4.rule_hits: tests/fixtures/rules/{scenario_id}.rule_hit.json
+    stage4.evidences: tests/fixtures/rules/{scenario_id}.evidence.json
+    stage4.review_requests: tests/fixtures/rules/{scenario_id}.review_request.json
+    stage5.report_record: tests/fixtures/reports/{scenario_id}.report_record.json
+    stage6.project_fact: tests/fixtures/facts/{scenario_id}.project_fact.json
+    stage7.sales_context: tests/fixtures/downstream/{scenario_id}.sales_context.json
+    stage8.contact_context: tests/fixtures/downstream/{scenario_id}.contact_context.json
+    stage9.delivery_payload: tests/fixtures/downstream/{scenario_id}.delivery_payload.json
+  consumer_field_whitelist: docs/contracts/customer_delivery_field_whitelist.yaml

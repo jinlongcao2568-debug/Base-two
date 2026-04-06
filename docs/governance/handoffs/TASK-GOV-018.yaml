@@ -1,0 +1,59 @@
+task_id: TASK-GOV-018
+summary_status: review
+last_handoff_at: '2026-04-06T13:21:35+08:00'
+completed_items:
+- phase_1_rebaseline_task_scope done
+- phase_2_top_level_ai_guarded_closeout done
+- phase_3_expand_child_workflow_scope done
+- phase_4_runtime_contract_decoupling done
+- phase_5_migration_and_integration_hardening done
+- phase_6_soak_and_parallel_graduation done
+remaining_items:
+- Validate the review-ready evidence and close the task if eligible.
+next_step: Use continue-current to close TASK-GOV-018 back to idle without activating
+  a successor.
+next_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py
+- python scripts/check_authority_alignment.py
+- python scripts/validate_contracts.py
+- pytest tests/governance -q
+- pytest tests/automation -q
+- pytest tests/contracts -q
+- pytest tests/integration -q
+- pytest tests/stage7 -q
+- pytest tests/stage8 -q
+- pytest tests/stage9 -q
+- pytest -q
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+- docs/contracts/
+- src/shared/contracts/
+- src/stage7_sales/
+- src/stage8_contact/
+- src/stage9_delivery/
+- db/migrations/
+- tests/contracts/
+- tests/integration/
+- tests/fixtures/downstream/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+- .gitignore
+candidate_test_paths:
+- tests/governance/
+- tests/automation/
+- tests/contracts/
+- tests/integration/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- 'Worker finish summary: Completed all six TASK-GOV-018 upgrade phases; guarded closeout
+  evidence, downstream runtime/contracts, migration baseline, and soak graduation
+  are all green.'

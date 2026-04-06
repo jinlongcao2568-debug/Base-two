@@ -31,11 +31,17 @@ def test_stage3_stage4_stage6_minimal_flow_is_real_consumption() -> None:
     project_base = bundle["stage3"]["project_base"]
     rule_hit = bundle["stage4"]["rule_hits"][0]
     project_fact = bundle["stage6"]["project_fact"]
+    sales_context = bundle["stage7"]["sales_context"]
+    contact_context = bundle["stage8"]["contact_context"]
+    delivery_payload = bundle["stage9"]["delivery_payload"]
     golden = load_json(ROOT / "tests/fixtures/golden/case_review_ready.stage_chain.json")
 
     validate(ROOT / "docs/contracts/schemas/stage3_project_base.schema.json", project_base)
     validate(ROOT / "docs/contracts/schemas/stage4_rule_hit.schema.json", rule_hit)
     validate(ROOT / "docs/contracts/schemas/stage6_project_fact.schema.json", project_fact)
+    validate(ROOT / "docs/contracts/schemas/stage7_sales_context.schema.json", sales_context)
+    validate(ROOT / "docs/contracts/schemas/stage8_contact_context.schema.json", contact_context)
+    validate(ROOT / "docs/contracts/schemas/stage9_delivery_payload.schema.json", delivery_payload)
 
     assert project_base["project_id"] == rule_hit["project_id"] == project_fact["project_id"]
     assert project_fact["project_base_ref"] == golden["expected_project_base_ref"]
@@ -46,3 +52,7 @@ def test_stage3_stage4_stage6_minimal_flow_is_real_consumption() -> None:
     assert project_fact["review_status"] == golden["expected_review_status"]
     assert project_fact["report_status"] == golden["expected_report_status"]
     assert rule_hit["review_status"] == project_fact["review_status"]
+    assert sales_context["source_project_fact_ref"] == f"project_fact:{project_fact['project_id']}:{project_fact['fact_version']}"
+    assert contact_context["source_project_fact_ref"] == sales_context["source_project_fact_ref"]
+    assert delivery_payload["sales_context_ref"] == sales_context["context_ref"]
+    assert delivery_payload["contact_context_ref"] == contact_context["context_ref"]

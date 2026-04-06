@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/stage8_contact_context.schema.json",
+  "title": "AX9 Stage 8 Contact Context",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "object_type",
+    "context_ref",
+    "project_id",
+    "fact_version",
+    "source_project_fact_ref",
+    "public_chain_status",
+    "sale_gate_status",
+    "review_status",
+    "manual_override_status",
+    "contact_strategy",
+    "analyst_follow_up_required",
+    "summary"
+  ],
+  "properties": {
+    "object_type": { "const": "contact_context" },
+    "context_ref": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "fact_version": { "type": "integer", "minimum": 1 },
+    "source_project_fact_ref": { "type": "string", "minLength": 1 },
+    "public_chain_status": { "type": "string", "minLength": 1 },
+    "sale_gate_status": { "type": "string", "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"] },
+    "review_status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"] },
+    "manual_override_status": { "type": "string", "minLength": 1 },
+    "contact_strategy": {
+      "type": "string",
+      "enum": ["standard_outreach", "analyst_review_required", "hold_no_outreach", "block_external_contact"]
+    },
+    "analyst_follow_up_required": { "type": "boolean" },
+    "summary": { "type": "string", "minLength": 1 }
+  }
+}

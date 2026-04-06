@@ -1,0 +1,14 @@
+{
+  "object_type": "contact_context",
+  "context_ref": "contact_context:project-cn-open-001:2",
+  "project_id": "project-cn-open-001",
+  "fact_version": 2,
+  "source_project_fact_ref": "project_fact:project-cn-open-001:2",
+  "public_chain_status": "COMPLETE",
+  "sale_gate_status": "OPEN",
+  "review_status": "CONFIRMED",
+  "manual_override_status": "NONE",
+  "contact_strategy": "standard_outreach",
+  "analyst_follow_up_required": false,
+  "summary": "Contact stays standard_outreach because sale gate is OPEN and manual override status is NONE."
+}

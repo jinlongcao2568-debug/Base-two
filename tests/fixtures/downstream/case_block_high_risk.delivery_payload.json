@@ -1,0 +1,17 @@
+{
+  "object_type": "delivery_payload",
+  "payload_ref": "delivery_payload:project-cn-block-001:4",
+  "project_id": "project-cn-block-001",
+  "fact_version": 4,
+  "source_project_fact_ref": "project_fact:project-cn-block-001:4",
+  "sales_context_ref": "sales_context:project-cn-block-001:4",
+  "contact_context_ref": "contact_context:project-cn-block-001:4",
+  "report_record_ref": "report_record:report-block-001",
+  "sale_gate_status": "BLOCK",
+  "review_status": "CONFIRMED",
+  "report_status": "DRAFT",
+  "delivery_readiness": "blocked",
+  "fact_summary": "Project is blocked by a confirmed high-risk public hit.",
+  "risk_summary": "A confirmed high-risk hit blocks sales and delivery until explicit resolution.",
+  "payload_summary": "Delivery payload is blocked based on sale gate BLOCK and report status DRAFT."
+}

@@ -1,4 +1,4 @@
-# TASK-BIZ-003 stage7-stage9 最小闭环
+# TASK-BIZ-003 stage7-stage9 minimal runtime smoke (absorbed)
 
 ## Task Baseline
 
@@ -17,76 +17,46 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
+
 ## Primary Goals
 
-- Deliver the minimum runnable downstream implementation for `stage7_sales`, `stage8_contact`, and `stage9_delivery`.
-- Prove the smallest `stage6 -> stage7/8 -> stage9` chain through integration smoke while preserving the stage6 fact boundary.
-- Promote `stage7_to_stage9_business_automation` to `implemented` only after the downstream smoke path and governance gates pass.
+- Historical backlog placeholder retained for auditability.
+- The original implementation goal is now executed inside `TASK-GOV-018` instead of this standalone top-level task.
 
 ## Explicitly Not Doing
 
-- Do not rewrite or override `src/stage6_facts/`.
-- Do not expand beyond the minimum downstream contexts and customer delivery result needed for the smoke chain.
-- Do not weaken customer-delivery whitelist, blacklist, disclaimer, or outbound approval constraints.
+- Do not activate this task as an independent top-level coordination task.
+- Do not diverge from the absorbed implementation sequence recorded by `TASK-GOV-018`.
+
+## Absorption Status
+
+- `absorbed_by`: `TASK-GOV-018`
+- `absorbed_phase`: `phase_1_rebaseline_task_scope`
+- `absorbed_reason`: `stage7-stage9 minimal runtime smoke now runs inside TASK-GOV-018`
 
 ## Allowed Dirs
 
 - `docs/governance/`
-- `docs/contracts/`
-- `src/stage7_sales/`
-- `src/stage8_contact/`
-- `src/stage9_delivery/`
-- `tests/stage7/`
-- `tests/stage8/`
-- `tests/stage9/`
-- `tests/contracts/`
-- `tests/integration/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
 - `docs/governance/`
-- `docs/contracts/`
-- `src/stage7_sales/`
-- `src/stage8_contact/`
-- `src/stage9_delivery/`
-- `tests/stage7/`
-- `tests/stage8/`
-- `tests/stage9/`
-- `tests/contracts/`
-- `tests/integration/`
-- `tests/governance/`
-- `tests/automation/`
 
 ## Planned Test Paths
 
-- `tests/stage7/`
-- `tests/stage8/`
-- `tests/stage9/`
-- `tests/contracts/`
-- `tests/integration/`
 - `tests/governance/`
-- `tests/automation/`
 
 ## Required Tests
 
 - `python scripts/check_repo.py`
 - `python scripts/check_hygiene.py`
 - `python scripts/check_authority_alignment.py`
-- `python scripts/validate_contracts.py`
-- `pytest tests/contracts -q`
-- `pytest tests/stage7 -q`
-- `pytest tests/stage8 -q`
-- `pytest tests/stage9 -q`
-- `pytest tests/integration -q`
 - `pytest tests/governance -q`
-- `pytest tests/automation -q`
 
 ## Reserved Paths
 
-- `src/stage6_facts/`
-- `db/migrations/`
+- `src/`
+
 ## Narrative Assertions
 
 - `narrative_status`: `queued`
@@ -95,6 +65,7 @@
 - `completed_scope`: `not_started`
 - `remaining_scope`: `active_work_remaining`
 - `next_gate`: `activation_pending`
+
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -110,7 +81,7 @@
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-- `reserved_paths`: `src/stage6_facts/, db/migrations/`
+- `reserved_paths`: `src/`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
-- `updated_at`: `2026-04-05T21:52:29+08:00`
+- `updated_at`: `2026-04-06T11:42:19+08:00`
 <!-- generated:task-meta:end -->

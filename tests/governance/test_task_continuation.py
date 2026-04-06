@@ -209,6 +209,7 @@ def test_continue_current_closes_review_ready_parallel_parent_to_idle(tmp_path: 
     assert current_task["status"] == "idle"
     assert current_task["current_task_id"] is None
     assert parent["status"] == "done"
+    assert "closed TASK-BASE-001 to idle" in result.stdout
 
 
 def test_continue_roadmap_closes_review_task_and_activates_explicit_successor(tmp_path: Path) -> None:
@@ -249,6 +250,20 @@ def test_continue_roadmap_closes_review_ready_parallel_parent_and_activates_succ
     assert current_task["current_task_id"] == "TASK-NEXT-001"
     assert tasks["TASK-BASE-001"]["status"] == "done"
     assert tasks["TASK-NEXT-001"]["status"] == "doing"
+
+
+def test_continue_roadmap_blocks_live_parent_until_ai_guarded_closeout_is_ready(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    git_commit_all(repo, "prepare successor while current task is still active")
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+
+    assert result.returncode == 1
+    assert "ai_guarded closeout is ready" in result.stdout
 
 
 def test_continue_roadmap_activates_explicit_successor_from_idle(tmp_path: Path) -> None:

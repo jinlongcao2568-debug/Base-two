@@ -330,14 +330,19 @@ def _validate_modified_paths(
             raise GovernanceError(f"execution worktree cannot touch reserved path: {path}")
 
 
-def _validate_active_execution_workflows(root, tasks_by_id: dict[str, dict[str, Any]], worktrees: dict[str, Any]) -> None:
+def _validate_active_execution_workflows(
+    root,
+    tasks_by_id: dict[str, dict[str, Any]],
+    worktrees: dict[str, Any],
+    task_policy: dict[str, Any],
+) -> None:
     for entry in worktrees.get("entries", []):
         if entry.get("work_mode") != "execution" or entry.get("status") != "active":
             continue
         task = tasks_by_id.get(entry["task_id"])
         if task is None:
             raise GovernanceError(f"active execution worktree missing task: {entry['task_id']}")
-        if not is_governed_child_task(task):
+        if not is_governed_child_task(task, task_policy):
             continue
         context_path = Path(entry["path"]) / EXECUTION_CONTEXT_FILE
         if not context_path.exists():
@@ -401,7 +406,7 @@ def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[
         planned_write_paths,
         in_execution_context,
     )
-    _validate_active_execution_workflows(root, tasks_by_id, worktrees)
+    _validate_active_execution_workflows(root, tasks_by_id, worktrees, task_policy)
     active_errors = collect_active_execution_errors(tasks_by_id, worktrees, task_policy)
     if active_errors:
         raise GovernanceError(active_errors[0])
