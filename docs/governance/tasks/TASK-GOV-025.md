@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-025`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-025-local-multi-agent-platformization`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `parallel_parent`
 - `lane_count`: `3`
 - `lane_index`: `null`
@@ -75,22 +75,21 @@
 - `tests/automation/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `parallel_parent`
 - `lane_count`: `3`
 - `lane_index`: `null`
@@ -99,5 +98,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, scripts/, tests/governance/, tests/automation/`
 - `branch`: `feat/TASK-GOV-025-local-multi-agent-platformization`
-- `updated_at`: `2026-04-06T19:46:52+08:00`
+- `updated_at`: `2026-04-06T19:52:52+08:00`
 <!-- generated:task-meta:end -->

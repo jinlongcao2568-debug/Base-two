@@ -3,10 +3,10 @@ summary_status: queued
 last_handoff_at: null
 completed_items: []
 remaining_items:
-- Execute first-wave child lanes `TASK-GOV-026` and `TASK-GOV-027` in parallel.
+- 'Execute first-wave child lanes `TASK-GOV-026` and `TASK-GOV-027` in parallel.'
 - Merge first-wave child results back into the parent branch.
-- Execute second-wave child lane `TASK-GOV-028`, then run aggregate validation and close the parent task.
-next_step: Activate the parent task, prepare first-wave child worktrees, and start `TASK-GOV-026/027` in parallel.
+- 'Execute second-wave child lane `TASK-GOV-028`, then run aggregate validation and close the parent task.'
+next_step: 'Activate the parent task, prepare first-wave child worktrees, and start `TASK-GOV-026/027` in parallel.'
 next_tests:
 - python scripts/check_hygiene.py
 - python scripts/check_repo.py
@@ -18,7 +18,7 @@ next_tests:
   tests/automation/test_orchestration_runtime_runner.py tests/automation/test_task_gov_017_runtime.py
   tests/automation/test_task_gov_018_runtime.py -q
 current_risks:
-- First-wave child lanes modify adjacent governance internals and must merge back before `TASK-GOV-028` starts.
+- 'First-wave child lanes modify adjacent governance internals and must merge back before `TASK-GOV-028` starts.'
 - Child closeout and runner behavior are being modified in the same round, so parent ledger reconciliation must stay serial.
 candidate_write_paths:
 - docs/governance/
@@ -34,5 +34,5 @@ candidate_test_paths:
 - tests/automation/test_task_gov_017_runtime.py
 - tests/automation/test_task_gov_018_runtime.py
 resume_notes:
-- Parent package is intended to run in two waves: `026/027` first, `028` second.
+- 'Parent package is intended to run in two waves: `026/027` first, `028` second.'
 - Use the parent branch only for coordination, activation, merges, and final validation.
