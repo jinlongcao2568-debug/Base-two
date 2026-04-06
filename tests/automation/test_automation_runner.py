@@ -367,9 +367,9 @@ def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None
     result = run_runner(repo, "once", "--continue-roadmap")
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
     assert result.returncode == 0, result.stdout + result.stderr
-    assert current_task["current_task_id"] == "TASK-BASE-001"
-    assert current_task["status"] == "review"
-    assert "no successor is available" in result.stdout
+    assert current_task["current_task_id"] is None
+    assert current_task["status"] == "idle"
+    assert "closed TASK-BASE-001 to idle" in result.stdout
 
 
 def test_runner_continue_roadmap_blocks_live_task_without_ai_guarded_closeout(tmp_path: Path) -> None:

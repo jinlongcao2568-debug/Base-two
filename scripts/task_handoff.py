@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +44,14 @@ def load_handoff_policy(root: Path) -> dict[str, Any]:
 def _dedupe(items: list[str]) -> list[str]:
     deduped: list[str] = []
     for item in items:
-        normalized = item.strip()
+        if item is None:
+            continue
+        if isinstance(item, str):
+            normalized = item.strip()
+        elif isinstance(item, (dict, list, tuple)):
+            normalized = json.dumps(item, ensure_ascii=False, sort_keys=True).strip()
+        else:
+            normalized = str(item).strip()
         if normalized and normalized not in deduped:
             deduped.append(normalized)
     return deduped

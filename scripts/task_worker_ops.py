@@ -25,6 +25,7 @@ from child_execution_flow import (
     load_execution_context,
     merge_child_into_parent,
     persist_child_workflow,
+    run_shell_command,
     set_design_confirmation,
     set_execution_plan,
     set_review_gate,
@@ -415,7 +416,9 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
-    claim_coordination_lease(root, task, reason="worker-finish")
+    from task_coordination_lease import ensure_closeout_write_lease
+
+    lease = ensure_closeout_write_lease(root, task, reason="worker-finish", allow_takeover=True)
     entry = _execution_entry(worktrees, task["task_id"])
     context = None
     if _requires_governed_child_workflow(root, task):
@@ -425,6 +428,15 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
             _block_governed_child(root, registry, worktrees, task, entry, context, finish_error)
             raise GovernanceError(finish_error)
     now = iso_now()
+    if lease.get("auto_takeover"):
+        append_runlog_bullets(
+            root,
+            task,
+            "Execution Log",
+            [
+                f"`{now}`: automatic lease takeover previous_owner=`{lease.get('previous_owner_session_id')}` reason=`worker-finish`"
+            ],
+        )
     _mark_task_review_ready(task, now)
     if context is not None:
         context["workflow_state"]["finish"]["status"] = "ready"
@@ -625,9 +637,10 @@ def cmd_worker_heartbeat(args: argparse.Namespace) -> int:
 
 
 def _run_review_command(path: Path, command: str) -> tuple[bool, str]:
-    result = subprocess.run(command, cwd=path, text=True, capture_output=True, shell=True)
-    output = "\n".join(part for part in (result.stdout.strip(), result.stderr.strip()) if part).strip()
-    return result.returncode == 0, output
+    try:
+        return run_shell_command(command, path)
+    except GovernanceError as error:
+        return False, str(error)
 
 
 def _mark_review_bundle_failure(root: Path, task: dict, reason: str) -> None:
@@ -647,6 +660,44 @@ def _resolve_execution_worktree(worktrees: dict, task: dict) -> tuple[Path | Non
     if not worktree_path.exists():
         return None, f"review_bundle_failed: missing worktree path {entry['path']}"
     return worktree_path, None
+
+
+def _reconcile_missing_governed_child(root: Path, worktrees: dict, task: dict) -> str | None:
+    entry = worktree_map(worktrees).get(task["task_id"])
+    if entry is None:
+        return "review_bundle_failed: missing execution worktree entry"
+    workflow = entry.get("workflow_state") or {}
+    finish = workflow.get("finish") or {}
+    review = workflow.get("review") or {}
+    if finish.get("status") not in {"ready", "completed"}:
+        return f"review_bundle_failed: missing worktree path {entry['path']}"
+    if ((review.get("spec_review") or {}).get("status")) != "passed":
+        return "review_bundle_failed: spec review not passed"
+    if ((review.get("quality_review") or {}).get("status")) != "passed":
+        return "review_bundle_failed: quality review not passed"
+    missing = missing_required_tests(root, task)
+    if missing:
+        return f"review_bundle_failed: missing tests {', '.join(missing)}"
+    parent_branch = workflow.get("parent_branch") or git(root, "branch", "--show-current").stdout.strip()
+    merged = git(root, "merge-base", "--is-ancestor", task["branch"], parent_branch, check=False).returncode == 0
+    if not merged:
+        return f"review_bundle_failed: missing worktree path {entry['path']}"
+    entry["cleanup_state"] = "done"
+    entry["status"] = "closed"
+    entry["last_cleanup_error"] = None
+    workflow["phase"] = "child_finished"
+    finish["status"] = "completed"
+    finish["recorded_at"] = finish.get("recorded_at") or iso_now()
+    finish["merged_into_parent_at"] = finish.get("merged_into_parent_at") or iso_now()
+    entry["workflow_state"] = workflow
+    _mark_child_done(task, entry)
+    append_runlog_bullets(
+        root,
+        task,
+        "Closeout Conclusion",
+        [f"`{iso_now()}`: reconciled merged child without local worktree"],
+    )
+    return None
 
 
 def _record_review_bundle_pass(root: Path, task: dict, command: str) -> None:
@@ -735,6 +786,8 @@ def _close_ready_child(root: Path, worktrees: dict, task: dict) -> str | None:
         return _close_legacy_child(root, worktrees, task)
     worktree_path, error = _resolve_execution_worktree(worktrees, task)
     if error:
+        if error.startswith("review_bundle_failed: missing worktree path"):
+            return _reconcile_missing_governed_child(root, worktrees, task)
         return error
     context = load_execution_context(worktree_path)
     finish_error = validate_finish_ready(context)
@@ -884,7 +937,18 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     parent = find_task(registry["tasks"], args.parent_task_id)
-    claim_coordination_lease(root, parent, reason="auto-close-children")
+    from task_coordination_lease import ensure_closeout_write_lease
+
+    lease = ensure_closeout_write_lease(root, parent, reason="auto-close-children", allow_takeover=True)
+    if lease.get("auto_takeover"):
+        append_runlog_bullets(
+            root,
+            parent,
+            "Execution Log",
+            [
+                f"`{iso_now()}`: automatic lease takeover previous_owner=`{lease.get('previous_owner_session_id')}` reason=`auto-close-children`"
+            ],
+        )
     closed: list[str] = []
     blocked: list[str] = []
     open_children: list[str] = []

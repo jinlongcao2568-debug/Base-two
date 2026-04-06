@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-024`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-closeout-lease-runtime-contracts-v1`
 - `branch`: `feat/TASK-GOV-024-closeout-lease-runtime-contracts`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -36,6 +36,7 @@
 - `stage_scope`: governance control-plane and test/runtime support only.
 - `impact_modules`:
   - `scripts/task_coordination_lease.py`
+  - `scripts/task_lifecycle_ops.py`
   - `scripts/task_continuation_ops.py`
   - `scripts/task_worker_ops.py`
   - `scripts/task_worktree_ops.py`
@@ -86,6 +87,7 @@
 
 - `docs/governance/`
 - `scripts/task_coordination_lease.py`
+- `scripts/task_lifecycle_ops.py`
 - `scripts/task_continuation_ops.py`
 - `scripts/task_worker_ops.py`
 - `scripts/task_worktree_ops.py`
@@ -129,22 +131,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `review`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -153,5 +154,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-024-closeout-lease-runtime-contracts`
-- `updated_at`: `2026-04-06T17:20:59+08:00`
+- `updated_at`: `2026-04-06T17:48:58+08:00`
 <!-- generated:task-meta:end -->

@@ -322,7 +322,10 @@ def _validate_modified_paths(
             continue
         if not path_within_declared(path, allowed_dirs):
             raise GovernanceError(f"modified path outside allowed_dirs: {path}")
-        if not path_within_declared(path, planned_write_paths):
+        execution_planned_write_paths = planned_write_paths
+        if in_execution_context and "docs/governance/" not in execution_planned_write_paths:
+            execution_planned_write_paths = ["docs/governance/", *execution_planned_write_paths]
+        if not path_within_declared(path, execution_planned_write_paths):
             raise GovernanceError(f"modified path outside planned_write_paths: {path}")
         if in_execution_context and path_hits_reserved(path, active_task.get("reserved_paths", [])):
             raise GovernanceError(f"execution worktree cannot touch task reserved path: {path}")

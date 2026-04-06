@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shlex
 import subprocess
+import sys
 from typing import Any
 
 from governance_lib import (
     CURRENT_TASK_FILE,
+    ROADMAP_FILE,
     TASK_REGISTRY_FILE,
     WORKTREE_REGISTRY_FILE,
     EXECUTION_CONTEXT_FILE,
@@ -197,6 +200,9 @@ def build_execution_context(worktree_path: Path, task: dict[str, Any], parent_ta
         parent_task,
         baseline_commands=baseline_commands_for_worktree(worktree_path),
     )
+    planned_write_paths = list(task.get("planned_write_paths", []))
+    if task.get("parent_task_id") is not None and "docs/governance/" not in planned_write_paths:
+        planned_write_paths = ["docs/governance/", *planned_write_paths]
     return {
         "task_id": task["task_id"],
         "parent_task_id": task.get("parent_task_id"),
@@ -206,7 +212,7 @@ def build_execution_context(worktree_path: Path, task: dict[str, Any], parent_ta
         "worker_owner": worker_owner,
         "allowed_dirs": task.get("allowed_dirs", []),
         "reserved_paths": task.get("reserved_paths", []),
-        "planned_write_paths": task.get("planned_write_paths", []),
+        "planned_write_paths": planned_write_paths,
         "planned_test_paths": task.get("planned_test_paths", []),
         "required_tests": task.get("required_tests", []),
         "lane_count": task.get("lane_count", 1),
@@ -240,6 +246,7 @@ def mirror_governance_ledgers_to_worktree(
     task: dict[str, Any],
 ) -> None:
     dump_yaml(worktree_path / CURRENT_TASK_FILE, load_yaml(root / CURRENT_TASK_FILE))
+    write_text(worktree_path / ROADMAP_FILE, read_text(root / ROADMAP_FILE))
     dump_yaml(worktree_path / TASK_REGISTRY_FILE, registry)
     dump_yaml(worktree_path / WORKTREE_REGISTRY_FILE, worktrees)
     for relative_path in {task["task_file"], task["runlog_file"]}:
@@ -251,6 +258,7 @@ def mirror_governance_ledgers_to_worktree(
 def transient_child_paths(task: dict[str, Any]) -> set[str]:
     return {
         actual_path(str(CURRENT_TASK_FILE)),
+        actual_path(str(ROADMAP_FILE)),
         actual_path(str(TASK_REGISTRY_FILE)),
         actual_path(str(WORKTREE_REGISTRY_FILE)),
         actual_path(task["task_file"]),
@@ -311,13 +319,29 @@ def cleanup_transient_child_artifacts(worktree_path: Path, task: dict[str, Any])
     return dirty_paths
 
 
+def _command_argv(command: str) -> list[str]:
+    argv = shlex.split(command, posix=True)
+    if not argv:
+        raise GovernanceError("governance command cannot be empty")
+    if any(token in {"&&", "||", "|", ";"} for token in argv):
+        raise GovernanceError(f"unsupported shell syntax in governance command: {command}")
+    if argv[0] == "python":
+        if len(argv) == 1:
+            raise GovernanceError(f"unsupported python command: {command}")
+        return [sys.executable, *argv[1:]]
+    if argv[0] == "pytest":
+        return [sys.executable, "-m", "pytest", *argv[1:]]
+    return argv
+
+
 def run_shell_command(command: str, cwd: Path) -> tuple[bool, str]:
+    argv = _command_argv(command)
     result = subprocess.run(
-        command,
+        argv,
         cwd=cwd,
         text=True,
         capture_output=True,
-        shell=True,
+        shell=False,
         encoding="utf-8",
         errors="replace",
     )

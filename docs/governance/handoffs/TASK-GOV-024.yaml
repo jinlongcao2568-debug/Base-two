@@ -1,10 +1,16 @@
 task_id: TASK-GOV-024
-summary_status: queued
-last_handoff_at: null
-completed_items: []
+summary_status: review
+last_handoff_at: '2026-04-06T17:48:58+08:00'
+completed_items:
+- Added automatic closeout lease takeover/reclaim handling across close, continue-current,
+  continue-roadmap, auto-close-children, and worker-finish flows.
+- Reconciled governed child closeout when worktrees are missing but branches are already
+  merged.
+- Unified governance subprocess execution onto the current interpreter and added a
+  formal pyproject runtime contract.
 remaining_items:
-- Implement the scoped governance control-plane changes and formalize the runtime/subprocess contract.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+- Close the review-ready task after checkpointing the validated implementation.
+next_step: Commit the validated implementation and close TASK-GOV-024 back to idle.
 next_tests:
 - python scripts/check_hygiene.py
 - python scripts/task_ops.py split-check TASK-GOV-024
@@ -15,22 +21,19 @@ next_tests:
   tests/governance/test_task_ops.py -q
 - pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py
   -q
-current_risks:
-- closeout and lease behavior still require manual recovery knowledge in some paths.
-- governed child closeout still depends on fragile worktree/ledger assumptions.
-- Python runtime and subprocess execution contract are still implicit.
+current_risks: []
 candidate_write_paths:
-- docs/governance/
+- README.md
+- pyproject.toml
+- requirements-dev.txt
 - scripts/task_coordination_lease.py
 - scripts/task_continuation_ops.py
+- scripts/task_lifecycle_ops.py
 - scripts/task_worker_ops.py
 - scripts/task_worktree_ops.py
 - scripts/child_execution_flow.py
 - scripts/governance_repo_checks.py
 - scripts/task_handoff.py
-- README.md
-- pyproject.toml
-- requirements-dev.txt
 - tests/governance/test_coordination_lease.py
 - tests/governance/test_parallel_closeout_pipeline.py
 - tests/governance/test_task_continuation.py
@@ -47,3 +50,7 @@ candidate_test_paths:
 - tests/automation/test_high_throughput_runner.py
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.
+- Implementation validated; task is review-ready for closeout.
+- 'Worker finish summary: Implemented closeout lease auto-closure, child closeout
+  reconciliation, governance mirror stabilization, and Python runtime contract unification.'

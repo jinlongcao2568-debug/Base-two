@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python_inline as run_python
 from .scenario_builders import create_review_ready_child
@@ -141,3 +142,99 @@ def test_auto_close_children_keeps_parent_doing_when_open_children_remain(tmp_pa
     assert open_child["review_bundle_status"] == "not_applicable"
     assert parent["status"] == "doing"
     assert parent["worker_state"] == "running"
+
+
+def test_auto_close_children_reconciles_missing_worktree_when_child_branch_is_already_merged(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_parent(repo)
+    create_review_ready_child(
+        repo,
+        "TASK-EXEC-001",
+        write_path="src/exec1/",
+        title="execution task",
+        parent_task_id="TASK-PARENT-001",
+        summary="done",
+        tmp_path=tmp_path,
+        with_worktree=True,
+    )
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-001"
+    subprocess.run(
+        ["git", "merge", "--no-ff", "--no-edit", "feat/TASK-EXEC-001-work"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "worktree", "remove", "--force", str(destination)],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    close = run_python(TASK_OPS_SCRIPT, repo, "auto-close-children", "TASK-PARENT-001")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-001")
+    parent = next(task for task in registry["tasks"] if task["task_id"] == "TASK-PARENT-001")
+
+    assert close.returncode == 0, close.stdout + close.stderr
+    assert child["status"] == "done"
+    assert child["review_bundle_status"] == "passed"
+    assert parent["status"] == "review"
+
+
+def test_auto_close_children_handles_non_ascii_review_bundle_output(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_parent(repo)
+    create_review_ready_child(
+        repo,
+        "TASK-EXEC-001",
+        write_path="src/exec1/",
+        title="execution task",
+        parent_task_id="TASK-PARENT-001",
+        required_test='python -c "print(\'治理验证通过\')"',
+        summary="done",
+        tmp_path=tmp_path,
+        with_worktree=True,
+    )
+
+    close = run_python(TASK_OPS_SCRIPT, repo, "auto-close-children", "TASK-PARENT-001")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-001")
+
+    assert close.returncode == 0, close.stdout + close.stderr
+    assert child["status"] == "done"
+    assert child["review_bundle_status"] == "passed"
+
+
+def test_governed_child_worktree_context_includes_governance_mirror_paths(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _create_parent(repo)
+    create_task = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-EXEC-GOV-001",
+        "--title",
+        "governed execution task",
+        "--stage",
+        "parallel-stage",
+        "--branch",
+        "feat/TASK-EXEC-GOV-001",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--parent-task-id",
+        "TASK-PARENT-001",
+        "--planned-write-paths",
+        "src/execution_gov/",
+    )
+    assert create_task.returncode == 0, create_task.stdout + create_task.stderr
+    destination = tmp_path / "repo.worktrees" / "TASK-EXEC-GOV-001"
+    created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-GOV-001", "--path", str(destination))
+    assert created.returncode == 0, created.stdout + created.stderr
+    context = read_yaml(destination / ".codex/local/EXECUTION_CONTEXT.yaml")
+    assert "docs/governance/" in context["planned_write_paths"]
+    assert (destination / "docs/governance/DEVELOPMENT_ROADMAP.md").exists()

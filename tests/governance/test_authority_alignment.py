@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -55,11 +56,64 @@ def init_alignment_repo(tmp_path: Path) -> Path:
 def write_stale_roadmap(repo: Path) -> None:
     roadmap = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
     text = roadmap.read_text(encoding="utf-8")
-    text = text.replace("current_phase: governance-parallel-repair-bundle-v1", "current_phase: idle")
-    text = text.replace("current_task_id: TASK-GOV-020", "current_task_id: null")
+    text = text.replace("current_phase: authority-consistency-hardening", "current_phase: idle")
+    text = text.replace("current_task_id: TASK-GOV-001", "current_task_id: null")
     text = text.replace(
-        "- `TASK-GOV-020`: `",
+        "- `TASK-GOV-001`: `",
         "- no live current task; waiting for explicit activation or roadmap continuation.\n",
+    )
+    roadmap.write_text(text, encoding="utf-8")
+
+
+def activate_live_task(repo: Path, task_id: str = "TASK-GOV-001") -> None:
+    registry_path = repo / "docs/governance/TASK_REGISTRY.yaml"
+    registry = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
+    task = next(item for item in registry["tasks"] if item["task_id"] == task_id)
+    task["status"] = "doing"
+    task["worker_state"] = "running"
+    task["blocked_reason"] = None
+    registry_path.write_text(yaml.safe_dump(registry, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+    current_task_path = repo / "docs/governance/CURRENT_TASK.yaml"
+    current_task = yaml.safe_load(current_task_path.read_text(encoding="utf-8"))
+    current_task.update(
+        {
+            "current_task_id": task["task_id"],
+            "title": task["title"],
+            "status": task["status"],
+            "task_kind": task["task_kind"],
+            "execution_mode": task["execution_mode"],
+            "parent_task_id": task["parent_task_id"],
+            "stage": task["stage"],
+            "branch": task["branch"],
+            "size_class": task["size_class"],
+            "automation_mode": task["automation_mode"],
+            "worker_state": task["worker_state"],
+            "blocked_reason": task["blocked_reason"],
+            "topology": task["topology"],
+            "allowed_dirs": task["allowed_dirs"],
+            "reserved_paths": task["reserved_paths"],
+            "planned_write_paths": task["planned_write_paths"],
+            "planned_test_paths": task["planned_test_paths"],
+            "required_tests": task["required_tests"],
+            "task_file": task["task_file"],
+            "runlog_file": task["runlog_file"],
+            "lane_count": task["lane_count"],
+            "lane_index": task["lane_index"],
+            "parallelism_plan_id": task["parallelism_plan_id"],
+            "review_bundle_status": task["review_bundle_status"],
+        }
+    )
+    current_task_path.write_text(yaml.safe_dump(current_task, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+    roadmap = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    text = roadmap.read_text(encoding="utf-8")
+    text = text.replace("current_phase: idle", f"current_phase: {task['stage']}", 1)
+    text = text.replace("current_task_id: null", f"current_task_id: {task_id}", 1)
+    text = text.replace(
+        "- no live current task; waiting for explicit activation or roadmap continuation.",
+        f"- `{task_id}`: `synthetic live task` is the live coordination task for `{task['stage']}`.",
+        1,
     )
     roadmap.write_text(text, encoding="utf-8")
 
@@ -73,6 +127,7 @@ def test_authority_alignment_passes_on_current_repo() -> None:
 
 def test_authority_alignment_fails_when_roadmap_is_stale_after_activation(tmp_path: Path) -> None:
     repo = init_alignment_repo(tmp_path)
+    activate_live_task(repo)
     write_stale_roadmap(repo)
     result = run_alignment(repo)
     assert result.returncode == 1

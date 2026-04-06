@@ -1,0 +1,14 @@
+[project]
+name = "ax9s-governance-baseline"
+version = "0.0.0"
+description = "AX9S governance and authority-aligned engineering baseline"
+requires-python = ">=3.10"
+dependencies = [
+  "PyYAML>=6.0,<7",
+  "jsonschema>=4.0,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9",
+]

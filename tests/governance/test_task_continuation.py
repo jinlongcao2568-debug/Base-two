@@ -635,9 +635,9 @@ def test_continue_roadmap_blocks_stage7_successor_until_downstream_capability_is
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert current_task["current_task_id"] == "TASK-BASE-001"
-    assert current_task["status"] == "review"
-    assert "no successor is available" in result.stdout
+    assert current_task["current_task_id"] is None
+    assert current_task["status"] == "idle"
+    assert "closed TASK-BASE-001 to idle" in result.stdout
 
 
 def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_is_implemented(tmp_path: Path) -> None:

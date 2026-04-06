@@ -13,6 +13,7 @@ from business_autopilot import (
 )
 from governance_lib import (
     GovernanceError,
+    append_runlog_bullets,
     branch_exists,
     build_current_task_payload,
     current_branch,
@@ -40,6 +41,7 @@ from task_coordination_lease import (
     claim_coordination_lease,
     coordination_thread_id,
     current_session_id,
+    ensure_closeout_write_lease,
 )
 from task_dirty_state import classify_task_dirty_state, classify_unscoped_dirty_state
 from task_handoff import build_recovery_pack, render_recovery_lines
@@ -72,6 +74,17 @@ def _runtime_status_for_task(task: dict[str, Any] | None) -> str:
     from orchestration_runtime import runtime_status_for_task
 
     return runtime_status_for_task(task)
+
+
+def _append_auto_takeover_note(root, task: dict[str, Any], *, reason: str, lease: dict[str, Any]) -> None:
+    if not lease.get("auto_takeover"):
+        return
+    append_runlog_bullets(
+        root,
+        task,
+        "Execution Log",
+        [f"`{iso_now()}`: automatic lease takeover previous_owner=`{lease.get('previous_owner_session_id')}` reason=`{reason}`"],
+    )
 
 
 def _read_roadmap_state(root):
@@ -570,6 +583,157 @@ def _close_review_ready_current_task(
     return 0
 
 
+def _close_to_idle_when_no_successor(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any],
+) -> int:
+    lease = ensure_closeout_write_lease(root, current_task, reason="continue-roadmap", allow_takeover=True)
+    branch_action = _switch_or_create_branch(root, current_task["branch"])
+    _append_auto_takeover_note(root, current_task, reason="continue-roadmap", lease=lease)
+    return _close_review_ready_current_task(
+        root,
+        registry,
+        worktrees,
+        current_payload,
+        current_task,
+        branch_action,
+    )
+
+
+def _maybe_close_without_successor(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+) -> int | None:
+    if current_task is None:
+        return None
+    closeout = assess_live_closeout(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        current_payload=current_payload,
+        current_task=current_task,
+    )
+    if closeout["status"] != "ready":
+        return None
+    return _close_to_idle_when_no_successor(root, registry, worktrees, current_payload, current_task)
+
+
+def _claim_continue_roadmap_lease(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if current_task is None:
+        return None
+    closeout = assess_live_closeout(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        current_payload=current_payload,
+        current_task=current_task,
+    )
+    return ensure_closeout_write_lease(
+        root,
+        current_task,
+        reason="continue-roadmap",
+        allow_takeover=closeout["status"] == "ready",
+    )
+
+
+def _handle_no_successor_continue_roadmap(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+) -> int:
+    closeout_result = _maybe_close_without_successor(
+        root,
+        registry,
+        worktrees,
+        current_payload,
+        current_task,
+    )
+    if closeout_result is not None:
+        return closeout_result
+    _record_runtime_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="continue-roadmap",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=None,
+        continue_intent="roadmap",
+        runtime_status="idle",
+        safe_write=True,
+    )
+    print("[OK] continue-roadmap no successor is available; repository remains idle")
+    return 0
+
+
+def _advance_continue_roadmap(
+    root,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    capability_map: dict[str, Any],
+    task_policy: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+) -> int:
+    frontmatter, body = _read_roadmap_state(root)
+    lease = _claim_continue_roadmap_lease(
+        root,
+        registry,
+        worktrees,
+        current_payload,
+        current_task,
+    )
+    _close_review_task_if_needed(root, current_task, worktrees)
+    successor, source = _resolve_roadmap_successor(
+        root,
+        registry,
+        capability_map,
+        task_policy,
+        frontmatter,
+        current_task["task_id"] if current_task is not None else None,
+    )
+    branch_action = _activate_successor(
+        root,
+        registry,
+        worktrees,
+        capability_map,
+        frontmatter,
+        body,
+        current_task,
+        successor,
+    )
+    if current_task is not None and lease is not None:
+        _append_auto_takeover_note(root, current_task, reason="continue-roadmap", lease=lease)
+    _record_runtime_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="continue-roadmap",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=successor["task_id"],
+        continue_intent="roadmap",
+        runtime_status=_runtime_status_for_task(successor),
+        safe_write=True,
+    )
+    print(f"[OK] continue-roadmap advanced to {successor['task_id']} source={source} branch={branch_action}")
+    return 0
+
+
 def _reactivate_current_task(
     root,
     registry: dict[str, Any],
@@ -998,13 +1162,6 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
     for line in render_recovery_lines(recovery_pack, recovery_source, recovery_warnings):
         print(line)
 
-    lease = assess_coordination_lease(root, task)
-    if lease["enforced"] and not lease["can_write"]:
-        return _readonly_continue_current(root, task, lease)
-    if lease["enforced"]:
-        claim_coordination_lease(root, task, reason="continue-current")
-
-    branch_action = _switch_or_create_branch(root, task["branch"])
     closeout = assess_live_closeout(
         root,
         registry=registry,
@@ -1012,6 +1169,17 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
         current_payload=current_payload,
         current_task=task,
     )
+    lease = assess_coordination_lease(root, task)
+    if lease["enforced"] and not lease["can_write"]:
+        if closeout["status"] == "ready":
+            lease = ensure_closeout_write_lease(root, task, reason="continue-current", allow_takeover=True)
+        else:
+            return _readonly_continue_current(root, task, lease)
+    elif lease["enforced"]:
+        claim_coordination_lease(root, task, reason="continue-current")
+
+    branch_action = _switch_or_create_branch(root, task["branch"])
+    _append_auto_takeover_note(root, task, reason="continue-current", lease=lease)
     if closeout["status"] == "ready" and task["status"] in {"doing", "review"}:
         return _close_review_ready_current_task(root, registry, worktrees, current_payload, task, branch_action)
     if task["status"] == "review":
@@ -1047,20 +1215,13 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         current_task=current_task,
     )
     if readiness["status"] == "no_successor":
-        _record_runtime_event(
+        return _handle_no_successor_continue_roadmap(
             root,
-            session_id=current_session_id(root),
-            thread_id=coordination_thread_id(root),
-            current_command="continue-roadmap",
-            mode="manual",
-            writer_state="writable",
-            current_task_id=None,
-            continue_intent="roadmap",
-            runtime_status="idle",
-            safe_write=True,
+            registry,
+            worktrees,
+            current_task_payload,
+            current_task,
         )
-        print("[OK] continue-roadmap no successor is available; repository remains idle")
-        return 0
     if readiness["status"] != "ready":
         raise GovernanceError("; ".join(readiness["blockers"]) or "continue-roadmap blocked")
 
@@ -1069,40 +1230,12 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         if checkpoint_task_id is None:
             raise GovernanceError("continuation checkpoint task is missing")
         checkpoint_task_results(root, task_id=checkpoint_task_id)
-
-    frontmatter, body = _read_roadmap_state(root)
-    if current_task is not None:
-        claim_coordination_lease(root, current_task, reason="continue-roadmap")
-    _close_review_task_if_needed(root, current_task, worktrees)
-    successor, source = _resolve_roadmap_successor(
-        root,
-        registry,
-        capability_map,
-        task_policy,
-        frontmatter,
-        current_task["task_id"] if current_task is not None else None,
-    )
-    branch_action = _activate_successor(
+    return _advance_continue_roadmap(
         root,
         registry,
         worktrees,
         capability_map,
-        frontmatter,
-        body,
+        task_policy,
+        current_task_payload,
         current_task,
-        successor,
     )
-    _record_runtime_event(
-        root,
-        session_id=current_session_id(root),
-        thread_id=coordination_thread_id(root),
-        current_command="continue-roadmap",
-        mode="manual",
-        writer_state="writable",
-        current_task_id=successor["task_id"],
-        continue_intent="roadmap",
-        runtime_status=_runtime_status_for_task(successor),
-        safe_write=True,
-    )
-    print(f"[OK] continue-roadmap advanced to {successor['task_id']} source={source} branch={branch_action}")
-    return 0

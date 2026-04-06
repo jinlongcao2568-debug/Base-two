@@ -6,6 +6,7 @@ from pathlib import Path
 from .helpers import (
     AUTOMATION_INTENT_SCRIPT,
     TASK_OPS_SCRIPT,
+    git_commit_all,
     init_governance_repo,
     read_yaml,
     run_python,
@@ -19,6 +20,22 @@ SESSION_B = {"CODEX_THREAD_ID": "session-B"}
 
 def _runtime_payload(repo: Path) -> dict:
     return read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
+
+
+def _mark_review_ready(repo: Path, *, env: dict[str, str]) -> None:
+    finished = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-BASE-001",
+        "--summary",
+        "candidate ready",
+        "--tests",
+        "pytest tests/base -q",
+        env=env,
+    )
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    git_commit_all(repo, "prepare review-ready closeout")
 
 
 def test_continue_current_allows_only_owner_to_write(tmp_path: Path) -> None:
@@ -87,6 +104,88 @@ def test_stale_lease_can_be_reclaimed_by_continue_current(tmp_path: Path) -> Non
     assert "[READONLY]" not in reclaimed.stdout
     runtime = _runtime_payload(repo)
     assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+
+
+def test_continue_current_auto_takes_over_foreign_closeout_ready_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+
+    _mark_review_ready(repo, env=SESSION_A)
+    resumed = run_python(TASK_OPS_SCRIPT, repo, "continue-current", env=SESSION_B)
+
+    assert resumed.returncode == 0, resumed.stdout + resumed.stderr
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    assert current_task["current_task_id"] is None
+    assert current_task["status"] == "idle"
+    runtime = _runtime_payload(repo)
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+
+
+def test_continue_roadmap_auto_takes_over_foreign_closeout_ready_task_without_successor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
+    autopilot = next(item for item in capability_map["capabilities"] if item["capability_id"] == "roadmap_autopilot_continuation")
+    autopilot["status"] = "defined"
+    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
+    roadmap_path = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    roadmap_text = roadmap_path.read_text(encoding="utf-8")
+    roadmap_text = roadmap_text.replace("auto_create_missing_task: true", "auto_create_missing_task: false", 1)
+    roadmap_path.write_text(roadmap_text, encoding="utf-8")
+
+    _mark_review_ready(repo, env=SESSION_A)
+    continued = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap", env=SESSION_B)
+
+    assert continued.returncode == 0, continued.stdout + continued.stderr
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    assert current_task["current_task_id"] is None
+    assert current_task["status"] == "idle"
+    runtime = _runtime_payload(repo)
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+
+
+def test_close_auto_takes_over_foreign_closeout_ready_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+
+    _mark_review_ready(repo, env=SESSION_A)
+    closed = run_python(TASK_OPS_SCRIPT, repo, "close", "TASK-BASE-001", env=SESSION_B)
+
+    assert closed.returncode == 0, closed.stdout + closed.stderr
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    assert current_task["current_task_id"] is None
+    assert current_task["status"] == "idle"
+    runtime = _runtime_payload(repo)
+    assert runtime["lease"]["tasks"]["TASK-BASE-001"]["owner_session_id"] == "session-B"
+
+
+def test_worker_finish_handles_non_string_handoff_resume_notes(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    handoff_path = repo / "docs/governance/handoffs/TASK-BASE-001.yaml"
+    seeded = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-report",
+        "TASK-BASE-001",
+        "--note",
+        "seed handoff",
+    )
+    assert seeded.returncode == 0, seeded.stdout + seeded.stderr
+    handoff = read_yaml(handoff_path)
+    handoff["resume_notes"] = ["existing", {"recovery": "details"}]
+    write_yaml(handoff_path, handoff)
+
+    finished = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-finish",
+        "TASK-BASE-001",
+        "--summary",
+        "candidate ready",
+        "--tests",
+        "pytest tests/base -q",
+    )
+
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    updated = read_yaml(handoff_path)
+    assert any("recovery" in item for item in updated["resume_notes"])
 
 
 def test_handoff_and_release_leave_auditable_records(tmp_path: Path) -> None:

@@ -202,6 +202,34 @@ def claim_coordination_lease(root: Path, task: dict[str, Any], *, reason: str) -
     return updated
 
 
+def ensure_closeout_write_lease(
+    root: Path,
+    task: dict[str, Any],
+    *,
+    reason: str,
+    allow_takeover: bool,
+) -> dict[str, Any]:
+    assessment = assess_coordination_lease(root, task)
+    if not assessment["enforced"]:
+        assessment["lease_action"] = "not_applicable"
+        assessment["auto_takeover"] = False
+        return assessment
+    if assessment["lease_status"] == "owned_by_other_session":
+        if not allow_takeover:
+            raise GovernanceError(
+                f"{reason} blocked by active coordination lease: owner_session_id={assessment['owner_session_id']}; "
+                "use handoff, release, or takeover"
+            )
+        updated = takeover_coordination_lease(root, task, reason=reason)
+        updated["lease_action"] = updated.get("takeover_result")
+        updated["auto_takeover"] = True
+        return updated
+    updated = claim_coordination_lease(root, task, reason=reason)
+    updated["lease_action"] = updated.get("claim_result")
+    updated["auto_takeover"] = False
+    return updated
+
+
 def release_coordination_lease(root: Path, task: dict[str, Any], *, reason: str) -> dict[str, Any]:
     assessment = assess_coordination_lease(root, task)
     if not assessment["enforced"]:

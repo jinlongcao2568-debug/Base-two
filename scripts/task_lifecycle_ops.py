@@ -5,6 +5,7 @@ import argparse
 from governance_lib import (
     CURRENT_TASK_FILE,
     GovernanceError,
+    append_runlog_bullets,
     build_current_task_payload,
     collect_split_errors,
     current_branch,
@@ -29,10 +30,12 @@ from governance_lib import (
 )
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
+from task_closeout import assess_live_closeout
 from task_coordination_lease import (
     claim_coordination_lease,
     coordination_thread_id,
     current_session_id,
+    ensure_closeout_write_lease,
     release_coordination_lease,
 )
 from task_handoff import ensure_handoff_file, write_handoff
@@ -211,7 +214,19 @@ def cmd_close(args: argparse.Namespace) -> int:
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
     task = find_task(registry["tasks"], args.task_id or current_task["current_task_id"])
-    claim_coordination_lease(root, task, reason="close")
+    is_live_top_level_current = (
+        current_task.get("current_task_id") == task["task_id"]
+        and task["task_kind"] == "coordination"
+        and task.get("parent_task_id") is None
+    )
+    lease = _close_command_lease(root, registry, worktrees, current_task, task, is_live_top_level_current)
+    if lease.get("auto_takeover"):
+        append_runlog_bullets(
+            root,
+            task,
+            "Execution Log",
+            [f"`{iso_now()}`: automatic lease takeover previous_owner=`{lease.get('previous_owner_session_id')}` reason=`close`"],
+        )
     missing = missing_required_tests(root, task)
     if missing:
         raise GovernanceError(f"required tests missing from runlog: {', '.join(missing)}")
@@ -228,11 +243,6 @@ def cmd_close(args: argparse.Namespace) -> int:
             entry["cleanup_state"] = "pending"
     worktrees["updated_at"] = iso_now()
     touched_task_ids = [task["task_id"]]
-    is_live_top_level_current = (
-        current_task.get("current_task_id") == task["task_id"]
-        and task["task_kind"] == "coordination"
-        and task.get("parent_task_id") is None
-    )
     if is_live_top_level_current:
         roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
         persist_idle_state(root, registry, worktrees, roadmap_frontmatter, roadmap_body, touched_task_ids)
@@ -270,6 +280,27 @@ def cmd_close(args: argparse.Namespace) -> int:
     )
     print(f"[OK] closed {task['task_id']}")
     return 0
+
+
+def _close_command_lease(
+    root,
+    registry: dict,
+    worktrees: dict,
+    current_task: dict,
+    task: dict,
+    is_live_top_level_current: bool,
+) -> dict[str, object]:
+    allow_takeover = False
+    if is_live_top_level_current:
+        closeout = assess_live_closeout(
+            root,
+            registry=registry,
+            worktrees=worktrees,
+            current_payload=current_task,
+            current_task=task,
+        )
+        allow_takeover = closeout["status"] == "ready"
+    return ensure_closeout_write_lease(root, task, reason="close", allow_takeover=allow_takeover)
 
 
 def cmd_can_start(args: argparse.Namespace) -> int:

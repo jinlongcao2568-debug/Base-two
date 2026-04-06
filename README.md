@@ -56,6 +56,30 @@ pytest tests/integration -q
 pytest -q
 ```
 
+## Runtime Contract
+
+- Python baseline: `>=3.10`
+- Runtime dependencies: `PyYAML`, `jsonschema`
+- Dev dependency baseline: `pytest`
+
+Recommended local setup:
+
+```powershell
+python -m pip install -e .[dev]
+```
+
+If editable installs are not available, the compatible fallback is:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
+
+Governance subprocess rule:
+
+- Governance command strings may still be recorded as `python scripts/...` or `pytest ...`
+- Actual subprocess execution must reuse the current interpreter (`sys.executable`)
+- Governance Python subprocesses must not rely on `shell=True`
+
 ## Repository Layout
 
 - `docs/baseline/`: authority and execution baseline documents
