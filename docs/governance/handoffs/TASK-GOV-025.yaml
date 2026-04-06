@@ -1,10 +1,12 @@
 task_id: TASK-GOV-025
 summary_status: doing
-last_handoff_at: '2026-04-06T20:34:02+08:00'
-completed_items: []
+last_handoff_at: '2026-04-06T20:46:51+08:00'
+completed_items:
+- All three child lanes completed and merged back into the parent branch.
+- Aggregate governance and automation validation passed on the parent branch.
 remaining_items:
-- 'Wait for child review bundles: TASK-GOV-028'
-next_step: Wait for the remaining child review bundles to finish and rerun auto-close-children.
+- Close the ai_guarded parent task back to idle.
+next_step: Use continue-roadmap to close the parent task because no successor is declared.
 next_tests:
 - python scripts/check_hygiene.py
 - python scripts/check_repo.py
@@ -33,3 +35,6 @@ resume_notes:
 - 'Parent package is intended to run in two waves: `026/027` first, `028` second.'
 - Use the parent branch only for coordination, activation, merges, and final validation.
 - Parent task is still waiting on child review bundles.
+- All child lanes finished; parent is an ai_guarded closeout candidate.
+- Parent aggregate validation completed; ready for ai_guarded closeout.
+- Worker progress was reported.

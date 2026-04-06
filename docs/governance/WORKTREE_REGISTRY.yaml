@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T20:40:18+08:00'
+updated_at: '2026-04-06T20:47:04+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -638,7 +638,7 @@ entries:
   parent_task_id: null
   branch: feat/TASK-GOV-025-local-multi-agent-platformization
   path: D:/Base One/Base-two/AX9
-  status: active
+  status: closed
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null
@@ -948,8 +948,8 @@ entries:
   parent_task_id: TASK-GOV-025
   branch: feat/TASK-GOV-028-runner-local-platformization
   path: D:/Base One/Base-two/AX9.worktrees/TASK-GOV-028
-  status: active
-  cleanup_state: pending
+  status: closed
+  cleanup_state: done
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: worker-01
@@ -960,7 +960,7 @@ entries:
   last_result: Verified automation runner behavior against the stabilized first-wave
     semantics; no further runner code change was required.
   workflow_state:
-    phase: finish_ready
+    phase: child_finished
     prepared_at: '2026-04-06T20:34:40+08:00'
     parent_branch: feat/TASK-GOV-025-local-multi-agent-platformization
     baseline_checks:
@@ -1069,6 +1069,6 @@ entries:
           branch, so the lane can close as verification-only.
         recorded_at: '2026-04-06T20:39:59+08:00'
     finish:
-      status: ready
-      recorded_at: '2026-04-06T20:40:18+08:00'
-      merged_into_parent_at: null
+      status: completed
+      recorded_at: '2026-04-06T20:43:09+08:00'
+      merged_into_parent_at: '2026-04-06T20:43:09+08:00'

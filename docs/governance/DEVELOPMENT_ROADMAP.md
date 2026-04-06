@@ -1,6 +1,6 @@
 ---
-current_phase: governance-local-multi-agent-platformization-v1
-current_task_id: TASK-GOV-025
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: stale_successor_inputs_under_correction
 
 ## Current Task
 
-- `TASK-GOV-025`: `治理本地并发平台化父任务：lease closeout mirror runner` is the live coordination task for `governance-local-multi-agent-platformization-v1`.
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.
