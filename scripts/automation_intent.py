@@ -81,6 +81,16 @@ def _recognize_intent(root: Path, catalog: dict[str, Any], utterance: str) -> tu
     if not normalized_text:
         return None, None, "输入为空，无法识别自动化意图。"
 
+    novice_intent = next(
+        (intent for intent in catalog.get("supported_intents", []) if intent.get("intent_id") == "novice-continue"),
+        None,
+    )
+    if novice_intent is not None:
+        novice_examples = [novice_intent["canonical_phrase"], *(novice_intent.get("examples") or [])]
+        for example in novice_examples:
+            if _normalize_text(example) == normalized_text:
+                return novice_intent, example, f"精确匹配到 `{example}`。"
+
     candidates: list[tuple[int, dict[str, Any], str]] = []
     for intent in catalog.get("supported_intents", []):
         examples = [intent["canonical_phrase"], *(intent.get("examples") or [])]
@@ -322,6 +332,56 @@ def _preflight_publish_action(root: Path, intent: dict[str, Any], matched_phrase
     return result
 
 
+def _decorate_novice_payload(
+    payload: dict[str, Any],
+    *,
+    intent: dict[str, Any],
+    matched_phrase: str | None,
+    resolved_intent: dict[str, Any],
+) -> dict[str, Any]:
+    decorated = dict(payload)
+    decorated["matched_phrase"] = matched_phrase
+    decorated["intent_id"] = intent["intent_id"]
+    decorated["mapped_command"] = intent["mapped_command"]
+    decorated["resolved_intent_id"] = resolved_intent["intent_id"]
+    decorated["resolved_mapped_command"] = resolved_intent["mapped_command"]
+    decorated["novice_entry"] = True
+    if decorated["status"] == "ready":
+        decorated["explanation"] = (
+            f"小白入口已根据当前仓库状态自动选择 `{resolved_intent['intent_id']}`。"
+        )
+    return decorated
+
+
+def _preflight_novice_continue(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    catalog = _load_catalog(root)
+    intents_by_id = _intent_map(catalog)
+    current_payload, current_task = _load_live_task(root)
+    if current_payload.get("status") == "idle":
+        payload = _preflight_continue_roadmap(root, intents_by_id["continue-roadmap"], matched_phrase)
+        return _decorate_novice_payload(
+            payload,
+            intent=intent,
+            matched_phrase=matched_phrase,
+            resolved_intent=intents_by_id["continue-roadmap"],
+        )
+    if current_task is not None and current_task.get("status") in {"doing", "paused", "blocked"}:
+        payload = _preflight_continue_current(root, intents_by_id["continue-current"], matched_phrase)
+        return _decorate_novice_payload(
+            payload,
+            intent=intent,
+            matched_phrase=matched_phrase,
+            resolved_intent=intents_by_id["continue-current"],
+        )
+    payload = _preflight_continue_roadmap(root, intents_by_id["continue-roadmap"], matched_phrase)
+    return _decorate_novice_payload(
+        payload,
+        intent=intent,
+        matched_phrase=matched_phrase,
+        resolved_intent=intents_by_id["continue-roadmap"],
+    )
+
+
 def preflight(root: Path, utterance: str) -> dict[str, Any]:
     catalog = _load_catalog(root)
     intent, matched_phrase, explanation = _recognize_intent(root, catalog, utterance)
@@ -340,6 +400,8 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)
+    if intent["intent_id"] == "novice-continue":
+        return _preflight_novice_continue(root, intent, matched_phrase)
     if intent["intent_id"] in {"continue-roadmap", "continue-roadmap-loop"}:
         return _preflight_continue_roadmap(root, intent, matched_phrase)
     if intent["intent_id"] in PUBLISH_ACTIONS:
@@ -353,6 +415,8 @@ def _command_argv(intent: dict[str, Any]) -> list[str]:
         raise GovernanceError(f"intent command_argv missing: {intent['intent_id']}")
     if argv[0] == "python":
         argv[0] = sys.executable
+        if len(argv) > 1 and argv[1].startswith("scripts/"):
+            argv[1] = str((Path(__file__).resolve().parent / Path(argv[1]).name))
     return argv
 
 
@@ -363,7 +427,27 @@ def execute(root: Path, utterance: str) -> int:
         print(json.dumps(preflight_result, ensure_ascii=False, indent=2))
         return 1
 
-    intent = _intent_map(catalog)[preflight_result["intent_id"]]
+    intents_by_id = _intent_map(catalog)
+    intent = intents_by_id[preflight_result["intent_id"]]
+    if preflight_result["intent_id"] == "novice-continue":
+        resolved_intent = intents_by_id[preflight_result["resolved_intent_id"]]
+        print(
+            f"[OK] automation-intent resolved `{preflight_result['intent_id']}` "
+            f"from `{preflight_result['matched_phrase']}` -> `{resolved_intent['intent_id']}`"
+        )
+        result = subprocess.run(
+            _command_argv(resolved_intent),
+            cwd=root,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if result.stdout.strip():
+            print(result.stdout.strip())
+        if result.stderr.strip():
+            print(result.stderr.strip())
+        return result.returncode
     print(
         f"[OK] automation-intent resolved `{preflight_result['intent_id']}` "
         f"from `{preflight_result['matched_phrase']}`"

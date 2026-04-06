@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-029`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-novice-entry-v1`
 - `branch`: `feat/TASK-GOV-029-novice-entry`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -21,21 +21,20 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-029`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-novice-entry-v1`
 - `branch`: `feat/TASK-GOV-029-novice-entry`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

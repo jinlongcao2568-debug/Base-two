@@ -50,6 +50,31 @@ supported_intents:
       - 后续任务
       - 按计划
       - 按路线
+  - intent_id: novice-continue
+    canonical_phrase: 自动继续开发
+    mapped_command: internal novice router
+    command_argv:
+      - python
+      - scripts/automation_intent.py
+      - execute
+      - --utterance
+      - 自动继续开发
+    description: Novice-friendly single entry that safely chooses continue-current or continue-roadmap from live repo state.
+    examples:
+      - 自动继续开发
+      - 一键继续开发
+      - 帮我自动处理开发流程
+      - 你看着继续开发
+    action_any:
+      - 自动
+      - 一键
+      - 继续
+      - 处理
+    context_any:
+      - 开发
+      - 流程
+      - 任务
+      - 推进
   - intent_id: continue-roadmap
     canonical_phrase: 按路线图继续推进
     mapped_command: python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees

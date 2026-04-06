@@ -80,6 +80,19 @@ Governance subprocess rule:
 - Actual subprocess execution must reuse the current interpreter (`sys.executable`)
 - Governance Python subprocesses must not rely on `shell=True`
 
+## Novice Entry
+
+If you do not want to remember the governance terms, use this one command:
+
+```powershell
+python scripts/automation_intent.py execute --utterance "自动继续开发"
+```
+
+It will safely choose between:
+- continue the live current task
+- continue by roadmap when the repository is idle or the current task is review-ready
+- stop with a clear blocker when the repo state is unsafe or ambiguous
+
 ## Repository Layout
 
 - `docs/baseline/`: authority and execution baseline documents

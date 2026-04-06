@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-029`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-novice-entry-v1`
 - `branch`: `feat/TASK-GOV-029-novice-entry`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -71,22 +71,21 @@
 - `tests/automation/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -95,5 +94,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, tests/automation/`
 - `branch`: `feat/TASK-GOV-029-novice-entry`
-- `updated_at`: `2026-04-07T06:57:09+08:00`
+- `updated_at`: `2026-04-07T06:58:46+08:00`
 <!-- generated:task-meta:end -->

@@ -1,19 +1,21 @@
 task_id: TASK-GOV-029
-summary_status: queued
-last_handoff_at: null
+summary_status: doing
+last_handoff_at: '2026-04-07T06:58:46+08:00'
 completed_items: []
 remaining_items:
-- Implement the novice automation entry in the existing intent router and update its regression coverage.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+- Implement the novice automation entry in the existing intent router and update its
+  regression coverage.
+next_step: Continue the scoped implementation and keep the control plane aligned.
 next_tests:
 - python scripts/check_hygiene.py
 - python scripts/check_repo.py
 - python scripts/check_authority_alignment.py
 - pytest tests/governance/test_automation_intent.py -q
-- TASK-GOV-029
 current_risks:
-- The novice entry must not guess across unsafe blocked or ambiguous continuation states.
-- The implementation should reuse the existing control plane rather than creating a new parallel router.
+- The novice entry must not guess across unsafe blocked or ambiguous continuation
+  states.
+- The implementation should reuse the existing control plane rather than creating
+  a new parallel router.
 candidate_write_paths:
 - docs/governance/AUTOMATION_INTENTS.yaml
 - scripts/automation_intent.py
@@ -23,3 +25,4 @@ candidate_test_paths:
 - tests/governance/test_automation_intent.py
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.

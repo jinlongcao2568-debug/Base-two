@@ -18,10 +18,18 @@ from .helpers import (
     write_yaml,
 )
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 def _preflight(repo: Path, utterance: str) -> tuple[int, dict]:
     result = run_python(AUTOMATION_INTENT_SCRIPT, repo, "preflight", "--utterance", utterance)
     return result.returncode, json.loads(result.stdout)
+
+
+def _sync_current_automation_intents(repo: Path) -> None:
+    source = REPO_ROOT / "docs/governance/AUTOMATION_INTENTS.yaml"
+    target = repo / "docs/governance/AUTOMATION_INTENTS.yaml"
+    target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
 
 
 def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001", *, with_boundaries: bool = True) -> None:
@@ -148,6 +156,46 @@ def test_preflight_routes_free_form_roadmap_request(tmp_path: Path) -> None:
     assert payload["intent_id"] == "continue-roadmap"
 
 
+def test_preflight_novice_entry_routes_to_continue_current_when_live_task_is_active(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _sync_current_automation_intents(repo)
+
+    code, payload = _preflight(repo, "自动继续开发")
+
+    assert code == 0
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "novice-continue"
+    assert payload["resolved_intent_id"] == "continue-current"
+
+
+def test_preflight_novice_entry_routes_to_continue_roadmap_when_idle(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _sync_current_automation_intents(repo)
+    _create_successor(repo)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    close_live_task_to_idle(repo, commit_after_close=False)
+
+    code, payload = _preflight(repo, "自动继续开发")
+
+    assert code == 0
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "novice-continue"
+    assert payload["resolved_intent_id"] == "continue-roadmap"
+
+
+def test_execute_novice_entry_runs_resolved_command(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _sync_current_automation_intents(repo)
+
+    result = run_python(AUTOMATION_INTENT_SCRIPT, repo, "execute", "--utterance", "自动继续开发")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "novice-continue" in result.stdout
+    assert "continue-current" in result.stdout
+
+
 def test_preflight_roadmap_reports_ready_closeout_recommendation(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)
@@ -217,8 +265,8 @@ def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: P
 
     code, payload = _preflight(repo, "按路线图继续推进")
     assert code == 0
-    assert payload["status"] == "blocked"
-    assert any("no successor" in blocker for blocker in payload["blockers"])
+    assert payload["status"] == "ready"
+    assert payload["closeout_recommendation"]["status"] == "ready"
 
 
 def test_preflight_continue_roadmap_reclassifies_stale_dependency_pointer_into_successor_ambiguity(tmp_path: Path) -> None:

@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T20:47:04+08:00'
+updated_at: '2026-04-07T06:58:45+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1072,3 +1072,13 @@ entries:
       status: completed
       recorded_at: '2026-04-06T20:43:09+08:00'
       merged_into_parent_at: '2026-04-06T20:43:09+08:00'
+- task_id: TASK-GOV-029
+  work_mode: coordination
+  parent_task_id: null
+  branch: feat/TASK-GOV-029-novice-entry
+  path: D:/Base One/Base-two/AX9
+  status: active
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
