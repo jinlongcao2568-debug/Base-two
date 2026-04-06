@@ -10,13 +10,28 @@ from governance_lib import (
     append_runlog_bullets,
     dump_yaml,
     find_repo_root,
+    git,
     iso_now,
     load_task_registry,
     load_worktree_registry,
     missing_required_tests,
+    safe_rmtree,
     sync_task_artifacts,
     worktree_map,
 )
+from child_execution_flow import (
+    cleanup_transient_child_artifacts,
+    load_execution_context,
+    merge_child_into_parent,
+    persist_child_workflow,
+    set_design_confirmation,
+    set_execution_plan,
+    set_review_gate,
+    set_test_first,
+    validate_finish_ready,
+    validate_worker_start,
+)
+from governance_rules import is_governed_child_task
 from orchestration_runtime import (
     load_execution_runtime_entry,
     record_session_event,
@@ -41,6 +56,83 @@ def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
     if entry is None or entry.get("work_mode") != "execution":
         return None
     return entry
+
+
+def _requires_governed_child_workflow(task: dict) -> bool:
+    return is_governed_child_task(task)
+
+
+def _load_child_bundle(root: Path, registry: dict, worktrees: dict, task_id: str) -> tuple[dict, dict, dict, Path]:
+    task = find_task(registry["tasks"], task_id)
+    entry = _execution_entry(worktrees, task_id)
+    if entry is None:
+        raise GovernanceError(f"missing execution worktree entry for {task_id}")
+    worktree_path = Path(entry["path"]).resolve()
+    if not worktree_path.exists():
+        raise GovernanceError(f"missing execution worktree path for {task_id}: {entry['path']}")
+    context = load_execution_context(worktree_path)
+    return task, entry, context, worktree_path
+
+
+def _block_governed_child(
+    root: Path,
+    registry: dict,
+    worktrees: dict,
+    task: dict,
+    entry: dict,
+    context: dict,
+    reason: str,
+) -> None:
+    now = iso_now()
+    task["status"] = "blocked"
+    task["worker_state"] = "blocked"
+    task["blocked_reason"] = reason
+    task["last_reported_at"] = now
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Risk and Blockers",
+        bullets=[f"`{now}`: {reason}"],
+    )
+
+
+def _mark_task_review_ready(task: dict, now: str) -> None:
+    task["status"] = "review"
+    task["worker_state"] = "review_pending"
+    task["blocked_reason"] = None
+    task["last_reported_at"] = now
+    if task["task_kind"] == "execution":
+        task["review_bundle_status"] = "pending"
+
+
+def _record_finish_artifacts(root: Path, task: dict, args: argparse.Namespace, now: str) -> None:
+    update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
+    append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-finish `{args.summary}`"])
+    reported_tests = _reported_tests(args)
+    if reported_tests:
+        append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in reported_tests])
+    if args.candidate_paths:
+        append_runlog_bullets(root, task, "Candidate Paths", [f"`{path}`" for path in args.candidate_paths])
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        completed_items=_reported_completed_items(args) or [args.summary],
+        remaining_items=_reported_remaining_items(args)
+        or ["Validate the review-ready evidence and close the task if eligible."],
+        next_step=getattr(args, "next_step", None)
+        or "Review the required tests and use continue-current or close to finish the task.",
+        next_tests=_reported_next_tests(args) or list(task.get("required_tests") or []),
+        current_risks=_reported_risks(args) or [],
+        candidate_write_paths=_reported_candidate_write_paths(args),
+        candidate_test_paths=_reported_candidate_test_paths(args),
+        resume_notes=_reported_resume_notes(args, f"Worker finish summary: {args.summary}"),
+        append_resume_notes=True,
+    )
 
 
 def _mark_execution_runtime(
@@ -138,6 +230,12 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     except GovernanceError:
         record_blocked_split(root, registry, task)
         raise
+    if _requires_governed_child_workflow(task):
+        _, entry, context, _ = _load_child_bundle(root, registry, worktrees, task["task_id"])
+        start_error = validate_worker_start(context)
+        if start_error:
+            _block_governed_child(root, registry, worktrees, task, entry, context, start_error)
+            raise GovernanceError(start_error)
     now = iso_now()
     task["status"] = "doing"
     task["worker_state"] = "running"
@@ -317,14 +415,20 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-finish")
-    now = iso_now()
-    task["status"] = "review"
-    task["worker_state"] = "review_pending"
-    task["blocked_reason"] = None
-    task["last_reported_at"] = now
-    if task["task_kind"] == "execution":
-        task["review_bundle_status"] = "not_applicable"
     entry = _execution_entry(worktrees, task["task_id"])
+    context = None
+    if _requires_governed_child_workflow(task):
+        task, entry, context, _ = _load_child_bundle(root, registry, worktrees, task["task_id"])
+        finish_error = validate_finish_ready(context)
+        if finish_error:
+            _block_governed_child(root, registry, worktrees, task, entry, context, finish_error)
+            raise GovernanceError(finish_error)
+    now = iso_now()
+    _mark_task_review_ready(task, now)
+    if context is not None:
+        context["workflow_state"]["finish"]["status"] = "ready"
+        context["workflow_state"]["finish"]["recorded_at"] = now
+        context["workflow_state"]["phase"] = "finish_ready"
     _mark_execution_runtime(
         root,
         task["task_id"],
@@ -339,29 +443,9 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
-    append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-finish `{args.summary}`"])
-    reported_tests = _reported_tests(args)
-    if reported_tests:
-        append_runlog_bullets(root, task, "Test Log", [f"`{test}`" for test in reported_tests])
-    if args.candidate_paths:
-        append_runlog_bullets(root, task, "Candidate Paths", [f"`{path}`" for path in args.candidate_paths])
-    write_handoff(
-        root,
-        task,
-        summary_status=task["status"],
-        completed_items=_reported_completed_items(args) or [args.summary],
-        remaining_items=_reported_remaining_items(args)
-        or ["Validate the review-ready evidence and close the task if eligible."],
-        next_step=getattr(args, "next_step", None)
-        or "Review the required tests and use continue-current or close to finish the task.",
-        next_tests=_reported_next_tests(args) or list(task.get("required_tests") or []),
-        current_risks=_reported_risks(args) or [],
-        candidate_write_paths=_reported_candidate_write_paths(args),
-        candidate_test_paths=_reported_candidate_test_paths(args),
-        resume_notes=_reported_resume_notes(args, f"Worker finish summary: {args.summary}"),
-        append_resume_notes=True,
-    )
+    _record_finish_artifacts(root, task, args, now)
+    if context is not None and entry is not None:
+        persist_child_workflow(root, registry, worktrees, task, entry, context)
     sync_task_artifacts(root, registry, [task["task_id"]])
     record_session_event(
         root,
@@ -376,6 +460,132 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         safe_write=True,
     )
     print(f"[OK] worker finished {task['task_id']}")
+    return 0
+
+
+def cmd_worker_design_confirm(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
+    claim_coordination_lease(root, task, reason="worker-design-confirm")
+    set_design_confirmation(context, summary=args.summary, implementation_kind=args.implementation_kind)
+    task["last_reported_at"] = iso_now()
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Execution Log",
+        bullets=[f"`{iso_now()}`: design confirmation passed kind=`{args.implementation_kind}` summary=`{args.summary}`"],
+    )
+    print(f"[OK] design confirmation recorded for {task['task_id']}")
+    return 0
+
+
+def cmd_worker_plan(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task, entry, context, worktree_path = _load_child_bundle(root, registry, worktrees, args.task_id)
+    claim_coordination_lease(root, task, reason="worker-plan")
+    set_execution_plan(
+        worktree_path,
+        context,
+        summary=args.summary,
+        files=list(args.file or []),
+        steps=list(args.step or []),
+        tests=list(args.test or []),
+        verifications=list(args.verify or []),
+    )
+    task["last_reported_at"] = iso_now()
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Execution Log",
+        bullets=[f"`{iso_now()}`: detailed execution plan recorded summary=`{args.summary}`"],
+    )
+    print(f"[OK] execution plan recorded for {task['task_id']}")
+    return 0
+
+
+def cmd_worker_test_first(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
+    claim_coordination_lease(root, task, reason="worker-test-first")
+    set_test_first(context, commands=list(args.command or []), note=args.note)
+    task["last_reported_at"] = iso_now()
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Execution Log",
+        bullets=[f"`{iso_now()}`: test-first gate recorded commands=`{', '.join(args.command or [])}`"],
+    )
+    print(f"[OK] test-first gate recorded for {task['task_id']}")
+    return 0
+
+
+def cmd_worker_spec_review(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
+    claim_coordination_lease(root, task, reason="worker-spec-review")
+    set_review_gate(context, "spec_review", status=args.status, summary=args.summary)
+    task["last_reported_at"] = iso_now()
+    if args.status == "failed":
+        task["status"] = "blocked"
+        task["worker_state"] = "blocked"
+        task["blocked_reason"] = f"spec_review_failed: {args.summary}"
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Review Bundle",
+        bullets=[f"`{iso_now()}`: spec_review `{args.status}` `{args.summary}`"],
+    )
+    print(f"[OK] spec review {args.status} for {task['task_id']}")
+    return 0
+
+
+def cmd_worker_quality_review(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
+    claim_coordination_lease(root, task, reason="worker-quality-review")
+    set_review_gate(context, "quality_review", status=args.status, summary=args.summary)
+    task["last_reported_at"] = iso_now()
+    if args.status == "failed":
+        task["status"] = "blocked"
+        task["worker_state"] = "blocked"
+        task["blocked_reason"] = f"quality_review_failed: {args.summary}"
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Review Bundle",
+        bullets=[f"`{iso_now()}`: quality_review `{args.status}` `{args.summary}`"],
+    )
+    print(f"[OK] quality review {args.status} for {task['task_id']}")
     return 0
 
 
@@ -461,16 +671,16 @@ def _run_review_bundle(root: Path, task: dict, worktree_path: Path) -> str | Non
     return None
 
 
-def _mark_child_done(task: dict, worktrees: dict) -> None:
+def _mark_child_done(task: dict, entry: dict | None = None) -> None:
     task["status"] = "done"
     task["worker_state"] = "completed"
     task["blocked_reason"] = None
     task["review_bundle_status"] = "passed"
     task["closed_at"] = iso_now()
     task["last_reported_at"] = iso_now()
-    entry = worktree_map(worktrees)[task["task_id"]]
-    entry["status"] = "closed"
-    entry["cleanup_state"] = "pending"
+    if entry is not None:
+        entry["status"] = "closed"
+        entry["cleanup_state"] = entry.get("cleanup_state", "pending")
 
 
 def _mark_review_bundle_pending(root: Path, task: dict) -> None:
@@ -479,17 +689,158 @@ def _mark_review_bundle_pending(root: Path, task: dict) -> None:
     append_runlog_bullets(root, task, "Review Bundle", [f"`{iso_now()}`: pending"])
 
 
-def _close_ready_child(root: Path, worktrees: dict, task: dict) -> str | None:
+def _merge_legacy_child_into_parent(root: Path, worktree_path: Path, task: dict) -> str | None:
+    child_dirty = cleanup_transient_child_artifacts(worktree_path, task)
+    if child_dirty:
+        return "child_finish_failed: child worktree must be clean before finish merge"
+    try:
+        git(root, "merge", "--no-ff", "--no-edit", task["branch"])
+        git(root, "worktree", "remove", str(worktree_path))
+    except GovernanceError as error:
+        return f"child_finish_failed: {error}"
+    if worktree_path.exists():
+        safe_rmtree(worktree_path)
+    return None
+
+
+def _close_legacy_child(root: Path, worktrees: dict, task: dict) -> str | None:
     worktree_path, error = _resolve_execution_worktree(worktrees, task)
-    if error:
-        return error
+    if worktree_path is None:
+        missing = missing_required_tests(root, task)
+        if missing:
+            return error or f"review_bundle_failed: missing tests {', '.join(missing)}"
+        _mark_child_done(task)
+        append_runlog_bullets(root, task, "Closeout Conclusion", [f"`{iso_now()}`: legacy auto-close passed without execution worktree"])
+        return None
     _mark_review_bundle_pending(root, task)
     failure = _run_review_bundle(root, task, worktree_path)
     if failure:
         return failure
-    _mark_child_done(task, worktrees)
+    merge_error = _merge_legacy_child_into_parent(root, worktree_path, task)
+    if merge_error:
+        return merge_error
+    entry = worktree_map(worktrees)[task["task_id"]]
+    entry["cleanup_state"] = "done"
+    entry["status"] = "closed"
+    entry["last_cleanup_error"] = None
+    entry["path"] = str(worktree_path).replace("\\", "/")
+    _mark_child_done(task, entry)
+    append_runlog_bullets(root, task, "Closeout Conclusion", [f"`{iso_now()}`: legacy auto-close-children passed"])
+    return None
+
+
+def _close_ready_child(root: Path, worktrees: dict, task: dict) -> str | None:
+    if not _requires_governed_child_workflow(task):
+        return _close_legacy_child(root, worktrees, task)
+    worktree_path, error = _resolve_execution_worktree(worktrees, task)
+    if error:
+        return error
+    context = load_execution_context(worktree_path)
+    finish_error = validate_finish_ready(context)
+    if finish_error:
+        return finish_error
+    _mark_review_bundle_pending(root, task)
+    failure = _run_review_bundle(root, task, worktree_path)
+    if failure:
+        return failure
+    try:
+        merge_child_into_parent(root, worktree_path, task, context)
+    except GovernanceError as error:
+        return f"child_finish_failed: {error}"
+    entry = worktree_map(worktrees)[task["task_id"]]
+    entry["cleanup_state"] = "done"
+    entry["status"] = "closed"
+    entry["last_cleanup_error"] = None
+    entry["path"] = str(worktree_path).replace("\\", "/")
+    entry["workflow_state"] = context["workflow_state"]
+    _mark_child_done(task, entry)
     append_runlog_bullets(root, task, "Closeout Conclusion", [f"`{iso_now()}`: auto-close-children passed"])
     return None
+
+
+def _mark_parent_governed_children_done(root: Path, parent: dict) -> str:
+    parent["status"] = "doing"
+    parent["worker_state"] = "running"
+    parent["blocked_reason"] = None
+    parent["last_reported_at"] = iso_now()
+    append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: all child lanes finished; parent closeout remains manual"])
+    update_current_task_if_active(root, parent, "All child lanes finished; parent closeout remains under manual governance control.")
+    write_handoff(
+        root,
+        parent,
+        summary_status=parent["status"],
+        remaining_items=["Review the aggregate result and decide whether to keep iterating or manually close the parent task."],
+        next_step="Parent closeout is manual; validate the aggregated evidence before deciding the next move.",
+        next_tests=list(parent.get("required_tests") or []),
+        current_risks=[],
+        resume_notes=["All child lanes finished; parent closeout remains manual."],
+        append_resume_notes=True,
+    )
+    return "doing"
+
+
+def _mark_parent_legacy_review_ready(root: Path, parent: dict) -> str:
+    parent["status"] = "review"
+    parent["worker_state"] = "review_pending"
+    parent["blocked_reason"] = None
+    parent["last_reported_at"] = iso_now()
+    parent["review_bundle_status"] = "not_applicable"
+    append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: all child lanes finished; parent review bundle is ready"])
+    update_current_task_if_active(root, parent, "All child lanes finished; parent task returned to review-ready state.")
+    write_handoff(
+        root,
+        parent,
+        summary_status=parent["status"],
+        remaining_items=["Review the aggregate child evidence and close the parent task if eligible."],
+        next_step="Review the aggregate child evidence and decide whether to close the parent task.",
+        next_tests=list(parent.get("required_tests") or []),
+        current_risks=[],
+        resume_notes=["All child lanes finished; parent task is review-ready under legacy closeout semantics."],
+        append_resume_notes=True,
+    )
+    return "review"
+
+
+def _mark_parent_waiting_on_children(root: Path, parent: dict, open_children: list[str], blocked: list[str]) -> str:
+    parent["status"] = "doing"
+    parent["worker_state"] = "running"
+    parent["blocked_reason"] = None
+    parent["last_reported_at"] = iso_now()
+    append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: waiting on child review bundles `{', '.join(open_children)}`"])
+    update_current_task_if_active(root, parent, "Child review bundles are still running; coordination task remains active.")
+    write_handoff(
+        root,
+        parent,
+        summary_status=parent["status"],
+        remaining_items=[f"Wait for child review bundles: {', '.join(open_children)}"],
+        next_step="Wait for the remaining child review bundles to finish and rerun auto-close-children.",
+        next_tests=list(parent.get("required_tests") or []),
+        current_risks=[f"blocked child lanes: {', '.join(blocked)}"] if blocked else [],
+        resume_notes=["Parent task is still waiting on child review bundles."],
+        append_resume_notes=True,
+    )
+    return "doing"
+
+
+def _mark_parent_blocked_by_children(root: Path, parent: dict, blocked: list[str]) -> str:
+    parent["status"] = "blocked"
+    parent["worker_state"] = "blocked"
+    parent["blocked_reason"] = f"child_review_bundle_failed: {', '.join(blocked)}"
+    parent["last_reported_at"] = iso_now()
+    append_runlog_bullets(root, parent, "Risk and Blockers", [f"`{iso_now()}`: child review bundle blocked `{', '.join(blocked)}`"])
+    update_current_task_if_active(root, parent, "Child review bundle failed; coordination task is blocked pending repair.")
+    write_handoff(
+        root,
+        parent,
+        summary_status=parent["status"],
+        remaining_items=["Repair the blocked child review bundle before resuming the parent task."],
+        next_step="Repair the blocked child lane and rerun auto-close-children.",
+        next_tests=list(parent.get("required_tests") or []),
+        current_risks=[f"child review bundle blocked: {', '.join(blocked)}"],
+        resume_notes=["Parent task blocked by a child review bundle failure."],
+        append_resume_notes=True,
+    )
+    return "blocked"
 
 
 def _promote_parent_after_children(
@@ -505,65 +856,16 @@ def _promote_parent_after_children(
     ]
     if not children:
         return None, [], []
+    governed_parent = all(_requires_governed_child_workflow(task) for task in children)
     blocked = [task["task_id"] for task in children if task["status"] == "blocked"]
     open_children = [task["task_id"] for task in children if task["status"] not in {"done", "blocked"}]
     if all(task["status"] == "done" for task in children):
-        parent["status"] = "review"
-        parent["worker_state"] = "review_pending"
-        parent["blocked_reason"] = None
-        parent["last_reported_at"] = iso_now()
-        append_runlog_bullets(root, parent, "Closeout Conclusion", [f"`{iso_now()}`: all child review bundles passed"])
-        update_current_task_if_active(root, parent, "All child review bundles passed; coordination task is review-ready.")
-        write_handoff(
-            root,
-            parent,
-            summary_status=parent["status"],
-            remaining_items=["Close the parent task after validating the aggregated review evidence."],
-            next_step="Review the parent task and close it when the required tests are satisfied.",
-            next_tests=list(parent.get("required_tests") or []),
-            current_risks=[],
-            resume_notes=["All child review bundles passed; the parent task is review-ready."],
-            append_resume_notes=True,
-        )
-        return "review", [], []
+        parent_state = _mark_parent_governed_children_done(root, parent) if governed_parent else _mark_parent_legacy_review_ready(root, parent)
+        return parent_state, [], []
     if open_children:
-        parent["status"] = "doing"
-        parent["worker_state"] = "running"
-        parent["blocked_reason"] = None
-        parent["last_reported_at"] = iso_now()
-        append_runlog_bullets(root, parent, "Execution Log", [f"`{iso_now()}`: waiting on child review bundles `{', '.join(open_children)}`"])
-        update_current_task_if_active(root, parent, "Child review bundles are still running; coordination task remains active.")
-        write_handoff(
-            root,
-            parent,
-            summary_status=parent["status"],
-            remaining_items=[f"Wait for child review bundles: {', '.join(open_children)}"],
-            next_step="Wait for the remaining child review bundles to finish and rerun auto-close-children.",
-            next_tests=list(parent.get("required_tests") or []),
-            current_risks=[f"blocked child lanes: {', '.join(blocked)}"] if blocked else [],
-            resume_notes=["Parent task is still waiting on child review bundles."],
-            append_resume_notes=True,
-        )
-        return "doing", [], open_children
+        return _mark_parent_waiting_on_children(root, parent, open_children, blocked), [], open_children
     if blocked:
-        parent["status"] = "blocked"
-        parent["worker_state"] = "blocked"
-        parent["blocked_reason"] = f"child_review_bundle_failed: {', '.join(blocked)}"
-        parent["last_reported_at"] = iso_now()
-        append_runlog_bullets(root, parent, "Risk and Blockers", [f"`{iso_now()}`: child review bundle blocked `{', '.join(blocked)}`"])
-        update_current_task_if_active(root, parent, "Child review bundle failed; coordination task is blocked pending repair.")
-        write_handoff(
-            root,
-            parent,
-            summary_status=parent["status"],
-            remaining_items=["Repair the blocked child review bundle before resuming the parent task."],
-            next_step="Repair the blocked child lane and rerun auto-close-children.",
-            next_tests=list(parent.get("required_tests") or []),
-            current_risks=[f"child review bundle blocked: {', '.join(blocked)}"],
-            resume_notes=["Parent task blocked by a child review bundle failure."],
-            append_resume_notes=True,
-        )
-        return "blocked", blocked, open_children
+        return _mark_parent_blocked_by_children(root, parent, blocked), blocked, open_children
     return None, [], []
 
 
@@ -603,7 +905,10 @@ def cmd_auto_close_children(args: argparse.Namespace) -> int:
     if parent_state == "review":
         print(f"[OK] parent review-ready: {args.parent_task_id}")
     if parent_state == "doing":
-        print(f"[OK] parent still doing: {args.parent_task_id} waiting on {', '.join(open_children)}")
+        if open_children:
+            print(f"[OK] parent still doing: {args.parent_task_id} waiting on {', '.join(open_children)}")
+        else:
+            print(f"[OK] parent still doing: {args.parent_task_id} closeout remains manual after child finish")
     for item in blocked:
         print(f"[BLOCKED] {item}")
     if parent_state == "blocked":

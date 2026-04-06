@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -18,6 +19,7 @@ from governance_lib import (
     extract_narrative_assertions,
     git_status_paths,
     is_idle_current_payload,
+    actual_path,
     load_current_task,
     load_task_policy,
     path_hits_reserved,
@@ -35,6 +37,7 @@ from governance_lib import (
 )
 from task_handoff import is_top_level_coordination_task
 from task_continuation_ops import assess_continuation_readiness
+from governance_rules import is_governed_child_task
 
 
 ROADMAP_ADVANCE_MODES = {"explicit_or_generated"}
@@ -289,12 +292,26 @@ def _validate_modified_paths(
     planned_write_paths: list[str],
     in_execution_context: bool,
 ) -> None:
+    execution_mirror_paths = {
+        "docs/governance/CURRENT_TASK.yaml",
+        "docs/governance/TASK_REGISTRY.yaml",
+        "docs/governance/WORKTREE_REGISTRY.yaml",
+    }
+    if in_execution_context:
+        execution_mirror_paths.update(
+            {
+                actual_path(active_task.get("task_file", "")),
+                actual_path(active_task.get("runlog_file", "")),
+            }
+        )
     active_handoff_path = None
     if active_task.get("task_id") is not None:
         active_handoff_path = f"docs/governance/handoffs/{active_task['task_id']}.yaml"
     if active_task["status"] == "done" and modified_paths:
         raise GovernanceError("implementation changes are not allowed when task status is done")
     for path in modified_paths:
+        if in_execution_context and path in execution_mirror_paths:
+            continue
         if (
             active_handoff_path is not None
             and
@@ -311,6 +328,37 @@ def _validate_modified_paths(
             raise GovernanceError(f"execution worktree cannot touch task reserved path: {path}")
         if in_execution_context and path_hits_reserved(path):
             raise GovernanceError(f"execution worktree cannot touch reserved path: {path}")
+
+
+def _validate_active_execution_workflows(root, tasks_by_id: dict[str, dict[str, Any]], worktrees: dict[str, Any]) -> None:
+    for entry in worktrees.get("entries", []):
+        if entry.get("work_mode") != "execution" or entry.get("status") != "active":
+            continue
+        task = tasks_by_id.get(entry["task_id"])
+        if task is None:
+            raise GovernanceError(f"active execution worktree missing task: {entry['task_id']}")
+        if not is_governed_child_task(task):
+            continue
+        context_path = Path(entry["path"]) / EXECUTION_CONTEXT_FILE
+        if not context_path.exists():
+            raise GovernanceError(f"active execution worktree missing execution context: {entry['task_id']}")
+        context = yaml.safe_load(context_path.read_text(encoding="utf-8")) or {}
+        workflow = context.get("workflow_state")
+        if not isinstance(workflow, dict):
+            raise GovernanceError(f"execution workflow state missing for active child task: {entry['task_id']}")
+        review = workflow.get("review", {})
+        spec_status = ((review.get("spec_review") or {}).get("status")) or "pending"
+        quality_status = ((review.get("quality_review") or {}).get("status")) or "pending"
+        if quality_status == "passed" and spec_status != "passed":
+            raise GovernanceError(f"quality review cannot pass before spec review: {entry['task_id']}")
+        if task.get("worker_state") in {"running", "review_pending", "completed"}:
+            if ((workflow.get("design_confirmation") or {}).get("status")) != "passed":
+                raise GovernanceError(f"design confirmation missing for active child task: {entry['task_id']}")
+            if ((workflow.get("execution_plan") or {}).get("status")) != "ready":
+                raise GovernanceError(f"detailed execution plan missing for active child task: {entry['task_id']}")
+            implementation = workflow.get("implementation") or {}
+            if implementation.get("kind") == "code" and implementation.get("test_first_status") != "ready":
+                raise GovernanceError(f"test-first gate missing for code child task: {entry['task_id']}")
 
 
 def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]], worktrees: dict[str, Any]) -> None:
@@ -353,6 +401,7 @@ def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[
         planned_write_paths,
         in_execution_context,
     )
+    _validate_active_execution_workflows(root, tasks_by_id, worktrees)
     active_errors = collect_active_execution_errors(tasks_by_id, worktrees, task_policy)
     if active_errors:
         raise GovernanceError(active_errors[0])

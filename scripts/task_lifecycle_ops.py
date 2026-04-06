@@ -20,11 +20,14 @@ from governance_lib import (
     load_worktree_registry,
     missing_required_tests,
     sync_task_artifacts,
+    task_map,
     task_parallelism_plan,
     task_required_tests_for_matrix,
+    read_text,
     validate_task,
     worktree_map,
 )
+from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
 from task_coordination_lease import (
     claim_coordination_lease,
@@ -309,6 +312,88 @@ def cmd_sync(args: argparse.Namespace) -> int:
         print("[OK] synced task and runlog metadata blocks")
     else:
         print("[OK] sync dry run: no files written")
+    return 0
+
+
+def _coerce_reconciled_value(key: str, value: str):
+    if value == "null":
+        return None
+    if key == "lane_count":
+        return int(value)
+    if key == "lane_index":
+        return None if value == "null" else int(value)
+    return value
+
+
+def cmd_reconcile_ledgers(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    current_task = load_current_task(root)
+    tasks_by_id = task_map(registry)
+    touched: list[str] = []
+    for task in registry.get("tasks", []):
+        task_path = root / task["task_file"]
+        if not task_path.exists():
+            continue
+        fields = extract_markdown_fields(read_text(task_path))
+        changed = False
+        for key in ("status", "stage", "branch", "worker_state", "lane_count", "lane_index", "parallelism_plan_id", "review_bundle_status"):
+            if key not in fields:
+                continue
+            value = _coerce_reconciled_value(key, fields[key])
+            if task.get(key) != value:
+                task[key] = value
+                changed = True
+        if changed:
+            task["last_reported_at"] = iso_now()
+            touched.append(task["task_id"])
+    if current_task.get("current_task_id") is not None:
+        task = find_task(registry["tasks"], current_task["current_task_id"])
+        for key in (
+            "title",
+            "status",
+            "task_kind",
+            "execution_mode",
+            "stage",
+            "branch",
+            "size_class",
+            "automation_mode",
+            "worker_state",
+            "topology",
+            "allowed_dirs",
+            "reserved_paths",
+            "planned_write_paths",
+            "planned_test_paths",
+            "required_tests",
+            "task_file",
+            "runlog_file",
+            "lane_count",
+            "lane_index",
+            "parallelism_plan_id",
+            "review_bundle_status",
+        ):
+            if task.get(key) != current_task.get(key):
+                task[key] = current_task.get(key)
+                if task["task_id"] not in touched:
+                    touched.append(task["task_id"])
+        from task_rendering import upsert_coordination_entry
+
+        upsert_coordination_entry(worktrees, task, root)
+    else:
+        for entry in worktrees.get("entries", []):
+            if entry.get("work_mode") == "coordination" and entry.get("status") == "active":
+                entry["status"] = "closed"
+    registry["updated_at"] = iso_now()
+    worktrees["updated_at"] = iso_now()
+    if args.write:
+        dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+        dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+        if touched:
+            sync_task_artifacts(root, registry, touched)
+        print(f"[OK] reconciled ledgers from truth sources for: {', '.join(touched) if touched else 'no task fields changed'}")
+    else:
+        print(f"[OK] reconcile dry run: {', '.join(touched) if touched else 'no task fields changed'}")
     return 0
 
 

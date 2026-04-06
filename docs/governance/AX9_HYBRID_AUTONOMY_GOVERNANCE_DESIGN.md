@@ -256,6 +256,35 @@
 14. 清理子任务 worktree
 15. 更新 runlog 和 registry
 
+### 8.0 长周期父任务模型
+
+当一次升级需要跨多个治理阶段持续推进时，允许使用“单一顶层父任务 + 生成式子任务”的模式。
+
+该模式的约束如下：
+
+- 整个升级期间只保留一个 live top-level coordination task
+- 所有执行任务都作为该父任务的 child execution task 生成
+- 不新增 sibling top-level governance tasks
+- 顶层父任务负责 phase gate、closeout 建议和人工批准
+- child task 负责实现、评审、测试与标准化收口
+
+这意味着长周期升级可以持续推进，但不会因为自动化而丢失顶层治理边界。
+
+### 8.6 child prepare baseline 的固定语义
+
+child prepare 的 baseline 不是“无条件复制所有顶层基线”，而是“稳定预检查 + 条件性 authority 对齐”：
+
+1. 始终执行：
+   - `python scripts/check_repo.py`
+   - `python scripts/check_hygiene.py`
+2. 仅当 authority 对齐所需文件在 child worktree 中齐备时，才追加：
+   - `python scripts/check_authority_alignment.py`
+
+这样做的目的有两个：
+
+- 在完整仓库里保留 authority 对齐约束
+- 在最小治理夹具或只包含治理子集的 child 环境里，不让 authority 资产缺失误伤 child prepare
+
 ### 8.1 设计确认门
 
 子任务在以下条件未满足前，不得进入实现：
@@ -335,6 +364,20 @@
 - 自动创建 PR
 - 自动切换顶层任务
 - 自动关闭父任务
+
+### 9.2 child finish 前的临时镜像清理
+
+child worktree 内会镜像一组治理账本文件，用于让 child baseline 与 workflow gate 在隔离环境中可运行。
+
+这些镜像文件只服务于 child execution runtime，不属于 child 的真实实现成果。标准化 child finish 在执行 merge 前，必须先清理或还原以下临时镜像，再判断 child worktree 是否仍有真实未提交改动：
+
+- `docs/governance/CURRENT_TASK.yaml`
+- `docs/governance/TASK_REGISTRY.yaml`
+- `docs/governance/WORKTREE_REGISTRY.yaml`
+- child task file mirror
+- child runlog file mirror
+
+finish 之后如果仍然存在非临时、非忽略的 dirty paths，必须阻断收口。
 
 ### 9.1 顶层父任务收口方式
 
@@ -416,6 +459,31 @@
 
 - 只开放低冲突目录并行
 - 保持高风险路径人工兜底
+
+## 11.1 与 `TASK-GOV-018` 的实施映射
+
+当前这套设计首先落在 `TASK-GOV-018` 上，并采用以下四段 gate：
+
+1. `truth_split`
+   - 明确 `CURRENT_TASK.yaml`、task files、runlogs 为主真相源
+   - 将 `TASK_REGISTRY.yaml`、`WORKTREE_REGISTRY.yaml` 视为可重建索引
+   - 提供 `reconcile-ledgers` 修复路径
+2. `child_preparation`
+   - child execution context
+   - child branch/worktree
+   - stable baseline checks
+   - prepared state 写回
+3. `child_workflow_gates`
+   - design confirmation
+   - detailed execution plan
+   - code-task test-first
+   - ordered review gates
+4. `child_finish_and_stability`
+   - standardized child finish workflow
+   - parent remains manual
+   - rerun / blocked / edge-path testing
+
+`TASK-GOV-018` 完成后，AX9 将具备“顶层治理人工控总、child execution 自动化收口”的稳定基础，但仍不会启用顶层 full autopilot 或多 lane rollout。
 
 ## 12. 成功标准
 

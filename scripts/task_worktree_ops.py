@@ -16,6 +16,7 @@ from governance_lib import (
     find_repo_root,
     git,
     iso_now,
+    load_current_task,
     load_task_policy,
     load_task_registry,
     load_worktree_registry,
@@ -23,6 +24,15 @@ from governance_lib import (
     sync_task_artifacts,
     task_map,
     worktree_map,
+)
+from child_execution_flow import (
+    build_execution_context,
+    cleanup_transient_child_artifacts,
+    mirror_governance_ledgers_to_worktree,
+    persist_child_workflow,
+    record_baseline_results,
+    run_baseline_checks,
+    sync_entry_workflow_state,
 )
 from orchestration_runtime import update_execution_runtime_entry
 from task_rendering import find_task
@@ -59,26 +69,23 @@ def create_worktree_checkout(root: Path, task: dict, destination: Path) -> None:
     git(root, "worktree", "add", "-b", task["branch"], str(destination), "HEAD")
 
 
-def write_execution_context(destination: Path, task: dict, worker_owner: str) -> None:
-    dump_yaml(
-        destination / EXECUTION_CONTEXT_FILE,
-        {
-            "task_id": task["task_id"],
-            "parent_task_id": task.get("parent_task_id"),
-            "branch": task["branch"],
-            "worktree_path": display_path(destination),
-            "worker_owner": worker_owner,
-            "allowed_dirs": task.get("allowed_dirs", []),
-            "reserved_paths": task.get("reserved_paths", []),
-            "planned_write_paths": task.get("planned_write_paths", []),
-            "planned_test_paths": task.get("planned_test_paths", []),
-            "required_tests": task.get("required_tests", []),
-            "lane_count": task.get("lane_count", 1),
-            "lane_index": task.get("lane_index"),
-            "parallelism_plan_id": task.get("parallelism_plan_id"),
-            "runtime_prompt_profile": DEFAULT_RUNTIME_PROMPT_PROFILE,
-        },
-    )
+def write_execution_context(destination: Path, task: dict, parent_task: dict, worker_owner: str) -> dict:
+    context = build_execution_context(destination, task, parent_task, worker_owner)
+    context["runtime_prompt_profile"] = DEFAULT_RUNTIME_PROMPT_PROFILE
+    dump_yaml(destination / EXECUTION_CONTEXT_FILE, context)
+    return context
+
+
+def resolve_parent_task_for_execution(root: Path, tasks_by_id: dict, task: dict) -> dict:
+    parent_task = tasks_by_id.get(task.get("parent_task_id"))
+    if parent_task is not None:
+        return parent_task
+    current_payload = load_current_task(root)
+    current_task_id = current_payload.get("current_task_id")
+    current_task = tasks_by_id.get(current_task_id) if current_task_id else None
+    if current_task is not None:
+        return current_task
+    return {"branch": current_branch(root)}
 
 
 def upsert_execution_entry(worktrees: dict, task: dict, destination: Path, worker_owner: str) -> None:
@@ -96,6 +103,7 @@ def upsert_execution_entry(worktrees: dict, task: dict, destination: Path, worke
             "last_cleanup_error": None,
         }
         _reset_execution_runtime(entry, worker_owner)
+        entry["workflow_state"] = {}
         worktrees.setdefault("entries", []).append(entry)
         return
     current_entry["work_mode"] = "execution"
@@ -107,6 +115,7 @@ def upsert_execution_entry(worktrees: dict, task: dict, destination: Path, worke
     current_entry["cleanup_attempts"] = int(current_entry.get("cleanup_attempts", 0))
     current_entry["last_cleanup_error"] = None
     _reset_execution_runtime(current_entry, worker_owner)
+    current_entry.setdefault("workflow_state", {})
 
 
 def cmd_worktree_create(args: argparse.Namespace) -> int:
@@ -118,12 +127,15 @@ def cmd_worktree_create(args: argparse.Namespace) -> int:
     task = tasks_by_id.get(args.task_id)
     if task is None:
         raise GovernanceError(f"unknown task: {args.task_id}")
+    parent_task = resolve_parent_task_for_execution(root, tasks_by_id, task)
     destination = Path(args.path).resolve()
     validate_worktree_create_request(root, task, tasks_by_id, worktrees, destination)
     create_worktree_checkout(root, task, destination)
     worker_owner = args.worker_owner or choose_worker_owner(worktrees.get("entries", []), task_policy)
-    write_execution_context(destination, task, worker_owner)
+    context = write_execution_context(destination, task, parent_task, worker_owner)
     upsert_execution_entry(worktrees, task, destination, worker_owner)
+    sync_entry_workflow_state(worktree_map(worktrees)[task["task_id"]], context)
+    mirror_governance_ledgers_to_worktree(root, destination, registry, worktrees, task)
     update_execution_runtime_entry(
         root,
         task["task_id"],
@@ -142,6 +154,68 @@ def cmd_worktree_create(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_prepare_child_execution(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task_policy = load_task_policy(root)
+    tasks_by_id = task_map(registry)
+    task = tasks_by_id.get(args.task_id)
+    if task is None:
+        raise GovernanceError(f"unknown task: {args.task_id}")
+    parent_task = tasks_by_id.get(task.get("parent_task_id"))
+    if parent_task is None:
+        raise GovernanceError(f"missing parent task for execution prepare: {task.get('parent_task_id')}")
+    destination = Path(args.path).resolve()
+    validate_worktree_create_request(root, task, tasks_by_id, worktrees, destination)
+    create_worktree_checkout(root, task, destination)
+    worker_owner = args.worker_owner or choose_worker_owner(worktrees.get("entries", []), task_policy)
+    context = write_execution_context(destination, task, parent_task, worker_owner)
+    upsert_execution_entry(worktrees, task, destination, worker_owner)
+    entry = worktree_map(worktrees)[task["task_id"]]
+    sync_entry_workflow_state(entry, context)
+    mirror_governance_ledgers_to_worktree(root, destination, registry, worktrees, task)
+    ok, results = run_baseline_checks(destination, list(context["workflow_state"]["baseline_checks"]["commands"]))
+    record_baseline_results(context["workflow_state"], results, passed=ok)
+    task["status"] = "doing" if ok else "blocked"
+    task["worker_state"] = "idle" if ok else "blocked"
+    task["blocked_reason"] = None if ok else f"child_prepare_failed: {results[-1]['command']}"
+    task["last_reported_at"] = iso_now()
+    context["workflow_state"]["phase"] = "prepared" if ok else "prepare_blocked"
+    context["workflow_state"]["prepared_at"] = iso_now()
+    update_execution_runtime_entry(
+        root,
+        task["task_id"],
+        lane_session_id=None,
+        executor_status="prepared" if ok else "dispatch_failed",
+        started_at=None,
+        last_heartbeat_at=None,
+        last_result="prepare-child-execution" if ok else (results[-1]["output"] if results else "prepare-child-execution failed"),
+    )
+    bullets = [
+        f"`{iso_now()}`: child prepare {'passed' if ok else 'failed'} at `{display_path(destination)}`",
+        *[
+            f"`{item['command']}` -> {'PASS' if item['passed'] else 'FAIL'}"
+            for item in results
+        ],
+    ]
+    persist_child_workflow(
+        root,
+        registry,
+        worktrees,
+        task,
+        entry,
+        context,
+        runlog_section="Execution Log",
+        bullets=bullets,
+    )
+    if not ok:
+        print(f"[ERROR] child prepare failed for {task['task_id']}")
+        return 1
+    print(f"[OK] prepared child execution for {task['task_id']} at {display_path(destination)}")
+    return 0
+
+
 def cmd_worktree_release(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
@@ -154,6 +228,7 @@ def cmd_worktree_release(args: argparse.Namespace) -> int:
         raise GovernanceError(f"no execution worktree registered for {args.task_id}")
     destination = Path(entry["path"]).resolve()
     if destination.exists():
+        cleanup_transient_child_artifacts(destination, task)
         context_path = destination / EXECUTION_CONTEXT_FILE
         if context_path.exists():
             context_path.unlink()

@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-04T23:20:00+08:00'
+updated_at: '2026-04-06T10:08:00+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 operator_source: docs/governance/OPERATOR_MANUAL.md
 size_classes:
@@ -48,6 +48,64 @@ closeout_rules:
   - idle closeout must set roadmap current_task_id to null, roadmap current_phase to idle, and leave no active coordination worktree
   - next task is never auto-activated unless roadmap uniqueness and dependency rules are satisfied
   - child execution auto-close requires the full review bundle to pass inside the execution worktree
+  - child execution auto-close may not auto-close the top-level coordination parent
+child_execution_workflow:
+  truth_sources:
+    primary:
+      - docs/governance/CURRENT_TASK.yaml
+      - docs/governance/tasks/*.md
+      - docs/governance/runlogs/*.md
+    derived_indexes:
+      - docs/governance/TASK_REGISTRY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+    reconcile_command: python scripts/task_ops.py reconcile-ledgers --write
+  prepare_stage:
+    baseline_checks:
+      always:
+        - python scripts/check_repo.py
+        - python scripts/check_hygiene.py
+      conditional:
+        - command: python scripts/check_authority_alignment.py
+          when: authority_alignment_guard_files_exist
+    authority_alignment_guard_files:
+      - README.md
+      - docs/product/AUTHORITY_SPEC.md
+      - docs/product/MVP_SCOPE.md
+      - docs/product/PRODUCT_BOUNDARIES.md
+      - docs/product/GLOSSARY.md
+      - docs/governance/README.md
+    prepared_state:
+      registry_status_on_pass: doing
+      worker_state_on_pass: idle
+      registry_status_on_fail: blocked
+      worker_state_on_fail: blocked
+  workflow_gates:
+    worker_start_requires:
+      - baseline_passed
+      - design_confirmation_passed
+      - detailed_execution_plan_ready
+      - code_task_test_first_ready_when_applicable
+    review_sequence:
+      - spec_review
+      - quality_review
+    finish_requires:
+      - design_confirmation_passed
+      - detailed_execution_plan_ready
+      - code_task_test_first_ready_when_applicable
+      - spec_review_passed
+      - quality_review_passed
+      - required_tests_recorded
+      - clean_nontransient_child_worktree
+    transient_child_artifacts:
+      - docs/governance/CURRENT_TASK.yaml
+      - docs/governance/TASK_REGISTRY.yaml
+      - docs/governance/WORKTREE_REGISTRY.yaml
+      - child task file mirror
+      - child runlog file mirror
+  parent_closeout_policy:
+    top_level_parent_mode: manual
+    auto_promote_after_children_close: false
+    auto_activate_successor_after_close: false
 coordination_planner:
   policy_file: docs/governance/COORDINATION_PLANNER_POLICY.yaml
   candidate_output_dir: .codex/local/coordination_candidates/

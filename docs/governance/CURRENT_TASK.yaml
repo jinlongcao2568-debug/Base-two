@@ -1,27 +1,48 @@
-current_task_id: null
-title: null
-status: idle
-task_kind: null
-execution_mode: null
+current_task_id: TASK-GOV-018
+title: 单一顶层父任务下的分段稳定升级
+status: doing
+task_kind: coordination
+execution_mode: shared_coordination
 parent_task_id: null
-stage: null
-branch: null
-size_class: null
-automation_mode: null
-worker_state: idle
+stage: governance-hybrid-autonomy-parented-upgrade-v1
+branch: feat/TASK-GOV-018-parented-stability-upgrade
+size_class: heavy
+automation_mode: manual
+worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-06T09:23:00+08:00'
-topology: null
-allowed_dirs: []
-reserved_paths: []
-planned_write_paths: []
-planned_test_paths: []
-required_tests: []
-task_file: null
-runlog_file: null
-lane_count: null
+last_reported_at: '2026-04-06T10:25:54+08:00'
+topology: single_worker
+allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - .gitignore
+reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+planned_write_paths:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - .gitignore
+planned_test_paths:
+  - tests/governance/
+  - tests/automation/
+required_tests:
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py
+  - python scripts/check_authority_alignment.py
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+task_file: docs/governance/tasks/TASK-GOV-018.md
+runlog_file: docs/governance/runlogs/TASK-GOV-018-RUNLOG.md
+lane_count: 1
 lane_index: null
 parallelism_plan_id: null
-review_bundle_status: null
-next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-06T09:23:00+08:00'
+review_bundle_status: not_applicable
+next_action: validate the live repo baseline, review TASK-GOV-018 closeout evidence, and decide whether the parent task is ready for manual closeout.
+updated_at: '2026-04-06T10:25:54+08:00'

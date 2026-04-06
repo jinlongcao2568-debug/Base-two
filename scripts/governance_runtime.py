@@ -25,7 +25,6 @@ CAPABILITY_MAP_FILE = Path("docs/governance/CAPABILITY_MAP.yaml")
 CODE_HYGIENE_POLICY_FILE = Path("docs/governance/CODE_HYGIENE_POLICY.md")
 EXECUTION_CONTEXT_FILE = Path(".codex/local/EXECUTION_CONTEXT.yaml")
 RESERVED_PATHS = [
-    "docs/governance/",
     "tests/integration/",
     "docs/governance/INTERFACE_CATALOG.yaml",
     "docs/governance/CURRENT_TASK.yaml",

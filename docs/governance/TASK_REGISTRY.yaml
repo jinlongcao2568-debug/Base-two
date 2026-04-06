@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T09:23:00+08:00'
+updated_at: '2026-04-06T10:25:54+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -1470,3 +1470,53 @@ tasks:
   created_at: '2026-04-06T07:46:56+08:00'
   activated_at: '2026-04-06T07:47:30+08:00'
   closed_at: '2026-04-06T09:23:00+08:00'
+- task_id: TASK-GOV-018
+  title: 单一顶层父任务下的分段稳定升级
+  status: doing
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  successor_state: immediate
+  stage: governance-hybrid-autonomy-parented-upgrade-v1
+  branch: feat/TASK-GOV-018-parented-stability-upgrade
+  size_class: heavy
+  automation_mode: manual
+  worker_state: running
+  blocked_reason: null
+  last_reported_at: '2026-04-06T10:25:54+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - .gitignore
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - .gitignore
+  planned_test_paths:
+  - tests/governance/
+  - tests/automation/
+  required_tests:
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py
+  - python scripts/check_authority_alignment.py
+  - pytest tests/governance -q
+  - pytest tests/automation -q
+  task_file: docs/governance/tasks/TASK-GOV-018.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-018-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  created_at: '2026-04-06T09:30:54+08:00'
+  activated_at: '2026-04-06T09:30:54+08:00'
+  closed_at: null

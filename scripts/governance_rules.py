@@ -25,6 +25,14 @@ from governance_runtime import (
     read_text,
 )
 
+GOVERNED_CHILD_SCOPE_PATHS = (
+    "docs/governance/",
+    "scripts/",
+    "tests/governance/",
+    "tests/automation/",
+    ".gitignore",
+)
+
 
 def rule_matches_path(rule, path: str) -> bool:
     normalized = actual_path(path)
@@ -54,6 +62,23 @@ def path_within_declared(path: str, declared_values: Iterable[str]) -> bool:
 def path_hits_reserved(path: str, reserved_paths: Iterable[str] | None = None) -> bool:
     values = list(reserved_paths or RESERVED_PATHS)
     return any(rule_matches_path(declared_path(value), path) for value in values)
+
+
+def is_governed_child_scope_path(path: str) -> bool:
+    return path_within_declared(path, GOVERNED_CHILD_SCOPE_PATHS)
+
+
+def is_governed_child_task(task: dict[str, Any]) -> bool:
+    if task.get("task_kind") != "execution":
+        return False
+    declared_paths = [
+        *list(task.get("allowed_dirs", []) or []),
+        *list(task.get("planned_write_paths", []) or []),
+        *list(task.get("planned_test_paths", []) or []),
+    ]
+    if not declared_paths:
+        return False
+    return all(is_governed_child_scope_path(path) for path in declared_paths)
 
 
 def task_reserved_paths(task: dict[str, Any]) -> list[str]:

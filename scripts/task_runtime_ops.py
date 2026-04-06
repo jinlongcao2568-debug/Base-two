@@ -23,19 +23,25 @@ from task_lifecycle_ops import (
     cmd_decide_topology,
     cmd_new,
     cmd_pause,
+    cmd_reconcile_ledgers,
     cmd_split_check,
     cmd_sync,
 )
 from task_orchestration_ops import cmd_orchestration_status
 from task_worker_ops import (
     cmd_auto_close_children,
+    cmd_worker_design_confirm,
     cmd_worker_blocked,
     cmd_worker_finish,
     cmd_worker_heartbeat,
+    cmd_worker_plan,
+    cmd_worker_quality_review,
     cmd_worker_report,
+    cmd_worker_spec_review,
     cmd_worker_start,
+    cmd_worker_test_first,
 )
-from task_worktree_ops import cmd_cleanup_orphans, cmd_worktree_create, cmd_worktree_release
+from task_worktree_ops import cmd_cleanup_orphans, cmd_prepare_child_execution, cmd_worktree_create, cmd_worktree_release
 
 
 def add_coordination_commands(subparsers) -> None:
@@ -125,6 +131,10 @@ def add_task_lifecycle_commands(subparsers) -> None:
     sync_parser.add_argument("--write", action="store_true")
     sync_parser.set_defaults(func=cmd_sync)
 
+    reconcile_parser = subparsers.add_parser("reconcile-ledgers")
+    reconcile_parser.add_argument("--write", action="store_true")
+    reconcile_parser.set_defaults(func=cmd_reconcile_ledgers)
+
     split_parser = subparsers.add_parser("split-check")
     split_parser.add_argument("parent_task_id")
     split_parser.set_defaults(func=cmd_split_check)
@@ -183,6 +193,12 @@ def add_publish_commands(subparsers) -> None:
 
 
 def add_worktree_commands(subparsers) -> None:
+    prepare_parser = subparsers.add_parser("prepare-child-execution")
+    prepare_parser.add_argument("task_id")
+    prepare_parser.add_argument("--path", required=True)
+    prepare_parser.add_argument("--worker-owner", choices=list(EXECUTION_WORKER_OWNERS))
+    prepare_parser.set_defaults(func=cmd_prepare_child_execution)
+
     create_parser = subparsers.add_parser("worktree-create")
     create_parser.add_argument("task_id")
     create_parser.add_argument("--path", required=True)
@@ -198,7 +214,7 @@ def add_worktree_commands(subparsers) -> None:
     cleanup_parser.set_defaults(func=cmd_cleanup_orphans)
 
 
-def add_worker_commands(subparsers) -> None:
+def _add_worker_state_commands(subparsers) -> None:
     worker_start_parser = subparsers.add_parser("worker-start")
     worker_start_parser.add_argument("task_id")
     worker_start_parser.add_argument("--worker-owner", choices=["coordinator", *EXECUTION_WORKER_OWNERS])
@@ -246,6 +262,47 @@ def add_worker_commands(subparsers) -> None:
     worker_finish_parser.add_argument("--resume-note", action="append", default=[])
     worker_finish_parser.set_defaults(func=cmd_worker_finish)
 
+
+def _add_worker_gate_commands(subparsers) -> None:
+    worker_design_confirm_parser = subparsers.add_parser("worker-design-confirm")
+    worker_design_confirm_parser.add_argument("task_id")
+    worker_design_confirm_parser.add_argument("--summary", required=True)
+    worker_design_confirm_parser.add_argument(
+        "--implementation-kind",
+        required=True,
+        choices=["unknown", "code", "docs", "governance", "mixed"],
+    )
+    worker_design_confirm_parser.set_defaults(func=cmd_worker_design_confirm)
+
+    worker_plan_parser = subparsers.add_parser("worker-plan")
+    worker_plan_parser.add_argument("task_id")
+    worker_plan_parser.add_argument("--summary", required=True)
+    worker_plan_parser.add_argument("--file", action="append", default=[])
+    worker_plan_parser.add_argument("--step", action="append", default=[])
+    worker_plan_parser.add_argument("--test", action="append", default=[])
+    worker_plan_parser.add_argument("--verify", action="append", default=[])
+    worker_plan_parser.set_defaults(func=cmd_worker_plan)
+
+    worker_test_first_parser = subparsers.add_parser("worker-test-first")
+    worker_test_first_parser.add_argument("task_id")
+    worker_test_first_parser.add_argument("--command", action="append", default=[])
+    worker_test_first_parser.add_argument("--note")
+    worker_test_first_parser.set_defaults(func=cmd_worker_test_first)
+
+    worker_spec_review_parser = subparsers.add_parser("worker-spec-review")
+    worker_spec_review_parser.add_argument("task_id")
+    worker_spec_review_parser.add_argument("--status", required=True, choices=["passed", "failed"])
+    worker_spec_review_parser.add_argument("--summary", required=True)
+    worker_spec_review_parser.set_defaults(func=cmd_worker_spec_review)
+
+    worker_quality_review_parser = subparsers.add_parser("worker-quality-review")
+    worker_quality_review_parser.add_argument("task_id")
+    worker_quality_review_parser.add_argument("--status", required=True, choices=["passed", "failed"])
+    worker_quality_review_parser.add_argument("--summary", required=True)
+    worker_quality_review_parser.set_defaults(func=cmd_worker_quality_review)
+
+
+def _add_worker_runtime_commands(subparsers) -> None:
     worker_heartbeat_parser = subparsers.add_parser("worker-heartbeat")
     worker_heartbeat_parser.add_argument("task_id")
     worker_heartbeat_parser.add_argument("--worker-id", default="worker-local-01")
@@ -257,6 +314,12 @@ def add_worker_commands(subparsers) -> None:
     auto_close_parser = subparsers.add_parser("auto-close-children")
     auto_close_parser.add_argument("parent_task_id")
     auto_close_parser.set_defaults(func=cmd_auto_close_children)
+
+
+def add_worker_commands(subparsers) -> None:
+    _add_worker_state_commands(subparsers)
+    _add_worker_gate_commands(subparsers)
+    _add_worker_runtime_commands(subparsers)
 
 
 def build_parser() -> argparse.ArgumentParser:
