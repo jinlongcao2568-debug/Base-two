@@ -361,7 +361,7 @@ def dynamic_parallelism_policy(task_policy: dict[str, Any] | None = None) -> dic
     heavy_policy = ((task_policy or {}).get("size_classes", {}) or {}).get("heavy", {})
     return {
         "parallelism_mode": heavy_policy.get("parallelism_mode", "dynamic"),
-        "dynamic_lane_ceiling_v1": int(heavy_policy.get("dynamic_lane_ceiling_v1", 4)),
+        "dynamic_lane_ceiling_v1": int(heavy_policy.get("dynamic_lane_ceiling_v1", 20)),
         "min_disjoint_write_roots": int(heavy_policy.get("min_disjoint_write_roots", 2)),
         "required_tests_complete": heavy_policy.get("required_tests_complete", True),
         "reserved_path_conflict_policy": heavy_policy.get("reserved_path_conflict_policy", "block_parallelism"),

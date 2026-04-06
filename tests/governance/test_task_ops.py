@@ -342,25 +342,27 @@ def test_decide_topology_scales_to_three_lanes(tmp_path: Path) -> None:
     assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-003-3"
 
 
-def test_decide_topology_caps_at_four_lanes(tmp_path: Path) -> None:
+def test_decide_topology_caps_at_twenty_lanes(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
+    write_paths = [
+        "src/base/",
+        "docs/base/",
+        "tests/base/",
+        *[f"root{index:02d}/" for index in range(1, 19)],
+    ]
     created = run_python(
         TASK_OPS_SCRIPT,
         repo,
         "new",
         "TASK-HEAVY-004",
         "--title",
-        "heavy task with five roots",
+        "heavy task with many roots",
         "--stage",
         "heavy-stage",
         "--size-class",
         "heavy",
         "--planned-write-paths",
-        "src/base/",
-        "scripts/",
-        "docs/base/",
-        "tools/",
-        "configs/",
+        *write_paths,
         "--required-tests",
         "python scripts/check_repo.py",
     )
@@ -370,8 +372,8 @@ def test_decide_topology_caps_at_four_lanes(tmp_path: Path) -> None:
     task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-004")
     assert result.returncode == 0, result.stdout + result.stderr
     assert task["topology"] == "parallel_parent"
-    assert task["lane_count"] == 4
-    assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-004-4"
+    assert task["lane_count"] == 20
+    assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-004-20"
 
 
 def test_decide_topology_downgrades_when_required_tests_missing(tmp_path: Path) -> None:
@@ -649,9 +651,9 @@ def test_cleanup_orphans_marks_blocked_when_remove_fails(tmp_path: Path) -> None
     assert entry["cleanup_attempts"] == 1
 
 
-def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -> None:
+def test_worktree_create_caps_active_execution_entries_at_twenty(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    task_ids = [f"TASK-EXEC-00{index}" for index in range(1, 6)]
+    task_ids = [f"TASK-EXEC-{index:03d}" for index in range(1, 22)]
     for index, task_id in enumerate(task_ids, start=1):
         create_task = run_python(
             TASK_OPS_SCRIPT,
@@ -674,7 +676,7 @@ def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -
             f"tests/execution{index}/",
         )
         assert create_task.returncode == 0, create_task.stdout + create_task.stderr
-    for task_id in task_ids[:4]:
+    for task_id in task_ids[:20]:
         destination = tmp_path / "repo.worktrees" / task_id
         created = run_python(
             TASK_OPS_SCRIPT,
@@ -689,9 +691,9 @@ def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -
         TASK_OPS_SCRIPT,
         repo,
         "worktree-create",
-        task_ids[4],
+        task_ids[20],
         "--path",
-        str(tmp_path / "repo.worktrees" / task_ids[4]),
+        str(tmp_path / "repo.worktrees" / task_ids[20]),
     )
     assert rejected.returncode == 1
-    assert "already at hard limit 4" in rejected.stdout
+    assert "already at hard limit 20" in rejected.stdout

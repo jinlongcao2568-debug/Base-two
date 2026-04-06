@@ -176,7 +176,7 @@
   9. run `auto-close-children` for review-ready child lanes when allowed by automation mode;
   10. run orphan cleanup and publish the runner metrics block.
 - The runner still honors `manual`, `assisted`, and `autonomous` gating for parallel worktree preparation, launcher dispatch, and child closeout.
-- Runtime topology is now `1 coordinator + 1..4 child lanes`; the planner ceiling stays at `4` even though the external product language remains "dynamic parallelism".
+- Runtime topology is now `1 coordinator + 1..20 child lanes`; the planner ceiling stays at `20` even though the external product language remains "dynamic parallelism".
 - The runner must also refresh runtime tick and reconcile state so operators can inspect a single-machine runtime snapshot after each cycle.
 - Runner recovery must depend only on registry state and heartbeat timestamps, never on in-memory process state.
 

@@ -391,8 +391,8 @@ def test_check_repo_fails_when_execution_touches_reserved_path(tmp_path: Path) -
 
 def test_check_repo_fails_when_active_execution_limit_exceeded(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    for index in range(5):
-        task_id = f"TASK-EXEC-00{index + 1}"
+    for index in range(21):
+        task_id = f"TASK-EXEC-{index + 1:03d}"
         append_registry_task(
             repo,
             execution_task_record(
@@ -409,10 +409,10 @@ def test_check_repo_fails_when_active_execution_limit_exceeded(tmp_path: Path) -
                 task_id,
                 branch=f"feat/{task_id}",
                 path=f"D:/tmp/{task_id}",
-                worker_owner=f"worker-0{(index % 4) + 1}",
+                worker_owner=f"worker-{((index % 20) + 1):02d}",
             ),
         )
     git_commit_all(repo, "add execution entries")
     result = run_python(CHECK_REPO_SCRIPT, repo)
     assert result.returncode == 1
-    assert "hard limit of 4" in result.stdout
+    assert "hard limit of 20" in result.stdout
