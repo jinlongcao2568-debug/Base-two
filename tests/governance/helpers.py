@@ -428,6 +428,26 @@ def git_commit_all(repo: Path, message: str = "update") -> None:
     subprocess.run(["git", "commit", "-m", message], cwd=repo, check=True, capture_output=True, text=True)
 
 
+def _configure_test_repo_git_identity(repo: Path) -> None:
+    subprocess.run(["git", "config", "user.name", "Codex"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "codex@example.com"], cwd=repo, check=True, capture_output=True, text=True)
+
+
+def _clone_template_repo(template_repo: Path, destination: Path) -> None:
+    # Prefer a local clone so each test repo reuses the cached template objects
+    # instead of copying the full repository payload every time.
+    try:
+        subprocess.run(
+            ["git", "clone", "--quiet", "--local", str(template_repo), str(destination)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        shutil.copytree(template_repo, destination)
+    _configure_test_repo_git_identity(destination)
+
+
 def set_idle_control_plane(
     repo: Path,
     *,
@@ -646,10 +666,9 @@ def init_governance_repo(tmp_path: Path) -> Path:
         init_structure(template_repo)
         write_governance_files(template_repo)
         subprocess.run(["git", "init", "-b", "main"], cwd=template_repo, check=True, capture_output=True, text=True)
-        subprocess.run(["git", "config", "user.name", "Codex"], cwd=template_repo, check=True, capture_output=True, text=True)
-        subprocess.run(["git", "config", "user.email", "codex@example.com"], cwd=template_repo, check=True, capture_output=True, text=True)
+        _configure_test_repo_git_identity(template_repo)
         subprocess.run(["git", "add", "."], cwd=template_repo, check=True, capture_output=True, text=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=template_repo, check=True, capture_output=True, text=True)
         _TEMPLATE_REPO = template_repo
-    shutil.copytree(_TEMPLATE_REPO, repo)
+    _clone_template_repo(_TEMPLATE_REPO, repo)
     return repo

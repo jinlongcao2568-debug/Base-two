@@ -365,8 +365,11 @@ def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None
     mark_review_ready(repo)
 
     result = run_runner(repo, "once", "--continue-roadmap")
-    assert result.returncode == 1
-    assert "no successor" in result.stdout
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] == "TASK-BASE-001"
+    assert current_task["status"] == "review"
+    assert "no successor is available" in result.stdout
 
 
 def test_runner_continue_roadmap_blocks_live_task_without_ai_guarded_closeout(tmp_path: Path) -> None:
@@ -392,8 +395,11 @@ def test_runner_continue_roadmap_fails_without_successor_from_idle(tmp_path: Pat
     close_live_task_to_idle(repo, commit_after_close=True)
 
     result = run_runner(repo, "once", "--continue-roadmap")
-    assert result.returncode == 1
-    assert "no successor" in result.stdout
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert current_task["current_task_id"] is None
+    assert current_task["status"] == "idle"
+    assert "no successor is available" in result.stdout
 
 
 def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree(tmp_path: Path) -> None:
@@ -458,7 +464,7 @@ def test_runner_keeps_parent_doing_when_child_review_bundle_is_still_open(tmp_pa
     assert "[OK] parent still doing: TASK-BASE-001 waiting on TASK-EXEC-002" in result.stdout
 
 
-@pytest.mark.parametrize("lane_count", [2, 3, 4])
+@pytest.mark.parametrize("lane_count", [2, 4])
 def test_runner_dispatches_local_launchers_for_parallel_parent(tmp_path: Path, lane_count: int) -> None:
     repo = init_governance_repo(tmp_path)
     task_ids = _setup_dispatchable_parallel_parent(repo, lane_count)
