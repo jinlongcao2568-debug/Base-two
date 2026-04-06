@@ -662,7 +662,7 @@ def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_
     assert [child["module_id"] for child in children] == ["stage7_sales"]
 
 
-def test_continue_roadmap_caps_business_children_at_four(tmp_path: Path) -> None:
+def test_continue_roadmap_uses_full_business_child_set_under_twenty_lane_ceiling(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _enable_business_autopilot(repo)
     roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
@@ -682,9 +682,8 @@ def test_continue_roadmap_caps_business_children_at_four(tmp_path: Path) -> None
     children = [task for task in registry["tasks"] if task.get("parent_task_id") == parent["task_id"]]
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert len(children) == 4
-    assert parent["lane_count"] == 4
-    assert parent["parallelism_plan_id"] == f"plan-{parent['task_id']}-4"
-    assert [child["lane_index"] for child in children] == [1, 2, 3, 4]
-    assert all(child["lane_count"] == 4 for child in children)
-    assert all(child["parallelism_plan_id"] == f"plan-{parent['task_id']}-4" for child in children)
+    assert len(children) == parent["lane_count"]
+    assert parent["parallelism_plan_id"] == f"plan-{parent['task_id']}-{len(children)}"
+    assert [child["lane_index"] for child in children] == list(range(1, len(children) + 1))
+    assert all(child["lane_count"] == len(children) for child in children)
+    assert all(child["parallelism_plan_id"] == f"plan-{parent['task_id']}-{len(children)}" for child in children)
