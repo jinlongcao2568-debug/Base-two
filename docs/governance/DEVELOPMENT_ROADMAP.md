@@ -1,6 +1,6 @@
 ---
-current_phase: governance-novice-entry-v1
-current_task_id: TASK-GOV-029
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: stale_successor_inputs_under_correction
 
 ## Current Task
 
-- `TASK-GOV-029`: `治理小白化入口：统一自动化开发入口` is the live coordination task for `governance-novice-entry-v1`.
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.
