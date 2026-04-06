@@ -10,7 +10,7 @@ from .helpers import (
     git_commit_all,
     init_governance_repo,
     read_yaml,
-    run_python,
+    run_python_inline as run_python,
     set_live_task_review_without_evidence,
     set_idle_control_plane,
     write_yaml,
@@ -421,7 +421,7 @@ def test_continue_roadmap_generates_task_auto_002_from_idle(tmp_path: Path) -> N
     assert tasks["TASK-AUTO-002"]["depends_on_task_ids"] == []
 
 
-def test_continue_roadmap_rejects_unmet_successor_dependency(tmp_path: Path) -> None:
+def test_continue_roadmap_blocks_when_stale_dependency_pointer_leaves_no_unique_safe_successor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
@@ -467,7 +467,7 @@ def test_continue_roadmap_rejects_unmet_successor_dependency(tmp_path: Path) -> 
 
     result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
     assert result.returncode == 1
-    assert "dependency not satisfied" in result.stdout
+    assert "successor landscape is not unique" in result.stdout
 
 
 def test_continue_roadmap_rejects_ambiguous_successor_landscape(tmp_path: Path) -> None:

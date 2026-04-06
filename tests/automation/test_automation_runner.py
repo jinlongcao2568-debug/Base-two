@@ -25,8 +25,20 @@ close_live_task_to_idle = HELPERS.close_live_task_to_idle
 init_governance_repo = HELPERS.init_governance_repo
 git_commit_all = HELPERS.git_commit_all
 read_yaml = HELPERS.read_yaml
-run_python = HELPERS.run_python
+run_python = HELPERS.run_python_inline
 write_yaml = HELPERS.write_yaml
+
+RUNNER_ENV = {
+    "AX9_INLINE_LANE_LAUNCHER": "1",
+    "AX9_INLINE_GOVERNANCE_SCRIPTS": "1",
+}
+
+
+def run_runner(repo: Path, *args: str, env: dict[str, str] | None = None):
+    merged_env = dict(RUNNER_ENV)
+    if env:
+        merged_env.update(env)
+    return run_python(AUTOMATION_RUNNER_SCRIPT, repo, *args, env=merged_env)
 
 
 def sync_task_artifacts(repo: Path) -> None:
@@ -210,7 +222,7 @@ def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
     sync_task_artifacts(repo)
     git_commit_all(repo, "switch to micro")
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once")
+    result = run_runner(repo, "once")
     assert result.returncode == 0, result.stdout + result.stderr
 
 
@@ -238,7 +250,7 @@ def test_runner_heavy_parent_modes(
 ) -> None:
     repo = init_governance_repo(tmp_path)
     task_ids = _setup_parallel_parent(repo, automation_mode)
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     statuses = _task_status_map(repo, task_ids)
     parent = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")["tasks"][0]
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
@@ -264,7 +276,7 @@ def test_runner_reports_cleanup_blocked(tmp_path: Path) -> None:
     blocked_entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-BLOCK")
     blocked_entry["cleanup_attempts"] = 2
     write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once")
+    result = run_runner(repo, "once")
     assert result.returncode == 1
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
     entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-BLOCK")
@@ -279,7 +291,7 @@ def test_runner_continue_roadmap_advances_review_task(tmp_path: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
     mark_review_ready(repo)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    result = run_runner(repo, "once", "--continue-roadmap")
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
     repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
 
@@ -296,7 +308,7 @@ def test_runner_continue_roadmap_advances_idle_task(tmp_path: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
     close_live_task_to_idle(repo, commit_after_close=True)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    result = run_runner(repo, "once", "--continue-roadmap")
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
     repo_gate = run_python(CHECK_REPO_SCRIPT, repo)
 
@@ -314,7 +326,7 @@ def test_runner_continue_roadmap_fails_without_successor(tmp_path: Path) -> None
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
     mark_review_ready(repo)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    result = run_runner(repo, "once", "--continue-roadmap")
     assert result.returncode == 1
     assert "no successor" in result.stdout
 
@@ -327,7 +339,7 @@ def test_runner_continue_roadmap_fails_without_successor_from_idle(tmp_path: Pat
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
     close_live_task_to_idle(repo, commit_after_close=True)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap")
+    result = run_runner(repo, "once", "--continue-roadmap")
     assert result.returncode == 1
     assert "no successor" in result.stdout
 
@@ -337,7 +349,7 @@ def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree
     enable_business_autopilot(repo)
     mark_review_ready(repo)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--continue-roadmap", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--continue-roadmap", "--prepare-worktrees")
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
@@ -358,7 +370,7 @@ def test_runner_continue_roadmap_generates_business_parent_and_prepares_worktree
 def test_runner_blocks_lane_when_review_bundle_fails(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     task_ids = _setup_review_bundle_failure(repo)
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     parent = next(task for task in registry["tasks"] if task["task_id"] == "TASK-BASE-001")
     failing = next(task for task in registry["tasks"] if task["task_id"] == task_ids[1])
@@ -378,7 +390,7 @@ def test_runner_keeps_parent_doing_when_child_review_bundle_is_still_open(tmp_pa
     repo = init_governance_repo(tmp_path)
     task_ids = _setup_open_parallel_parent(repo)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     parent = next(task for task in registry["tasks"] if task["task_id"] == "TASK-BASE-001")
     ready_child = next(task for task in registry["tasks"] if task["task_id"] == task_ids[0])
@@ -405,20 +417,22 @@ def test_runner_dispatches_local_launchers_for_parallel_parent(tmp_path: Path, l
         "AX9_LAUNCHER_HEARTBEAT_TIMEOUT_SECONDS": "10",
     }
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees", env=env)
+    result = run_runner(repo, "once", "--prepare-worktrees", env=env)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    runtime = read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
     entries = [entry for entry in worktrees["entries"] if entry.get("task_id") in task_ids]
+    runtime_entries = runtime["execution"]["entries"]
     tasks = [task for task in registry["tasks"] if task["task_id"] in task_ids]
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert len(entries) == lane_count
     assert len(tasks) == lane_count
     assert all(task["status"] == "doing" for task in tasks)
-    assert all(entry["lane_session_id"] is not None for entry in entries)
-    assert all(entry["executor_status"] == "running" for entry in entries)
-    assert all(entry["started_at"] is not None for entry in entries)
-    assert all(entry["last_heartbeat_at"] is not None for entry in entries)
+    assert all(runtime_entries[task_id]["lane_session_id"] is not None for task_id in task_ids)
+    assert all(runtime_entries[task_id]["executor_status"] == "running" for task_id in task_ids)
+    assert all(runtime_entries[task_id]["started_at"] is not None for task_id in task_ids)
+    assert all(runtime_entries[task_id]["last_heartbeat_at"] is not None for task_id in task_ids)
     assert all(f"[OK] dispatched launcher for {task_id}" in result.stdout for task_id in task_ids)
 
 
@@ -444,20 +458,22 @@ def test_runner_marks_stale_heartbeat_lane_timed_out(tmp_path: Path) -> None:
     destination = tmp_path / "repo.worktrees" / "TASK-EXEC-TIMEOUT"
     created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-TIMEOUT", "--path", str(destination))
     assert created.returncode == 0, created.stdout + created.stderr
-    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
-    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-TIMEOUT")
-    entry["executor_status"] = "running"
-    entry["started_at"] = "2026-04-05T18:00:00+08:00"
-    entry["last_heartbeat_at"] = "2026-04-05T18:00:00+08:00"
-    entry["lane_session_id"] = "lane-timeout-1"
-    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    runtime = read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
+    runtime["execution"]["entries"]["TASK-EXEC-TIMEOUT"] = {
+        "executor_status": "running",
+        "started_at": "2026-04-05T18:00:00+08:00",
+        "last_heartbeat_at": "2026-04-05T18:00:00+08:00",
+        "lane_session_id": "lane-timeout-1",
+        "last_result": "running",
+    }
+    write_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml", runtime)
 
     env = {"AX9_LAUNCHER_HEARTBEAT_TIMEOUT_SECONDS": "1"}
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees", env=env)
+    result = run_runner(repo, "once", "--prepare-worktrees", env=env)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    runtime = read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
     child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-TIMEOUT")
-    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-TIMEOUT")
+    entry = runtime["execution"]["entries"]["TASK-EXEC-TIMEOUT"]
 
     assert result.returncode == 1
     assert child["status"] == "blocked"
@@ -490,19 +506,21 @@ def test_runner_restart_recovers_running_lane_from_registry_state(tmp_path: Path
     destination = tmp_path / "repo.worktrees" / "TASK-EXEC-RUN"
     created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-RUN", "--path", str(destination))
     assert created.returncode == 0, created.stdout + created.stderr
-    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
-    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-RUN")
-    entry["executor_status"] = "running"
-    entry["started_at"] = "2099-04-05T21:00:00+08:00"
-    entry["last_heartbeat_at"] = "2099-04-05T21:00:00+08:00"
-    entry["lane_session_id"] = "lane-running-1"
-    write_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    runtime = read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
+    runtime["execution"]["entries"]["TASK-EXEC-RUN"] = {
+        "executor_status": "running",
+        "started_at": "2099-04-05T21:00:00+08:00",
+        "last_heartbeat_at": "2099-04-05T21:00:00+08:00",
+        "lane_session_id": "lane-running-1",
+        "last_result": "running",
+    }
+    write_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml", runtime)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    runtime = read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
     child = next(task for task in registry["tasks"] if task["task_id"] == "TASK-EXEC-RUN")
-    entry = next(item for item in worktrees["entries"] if item["task_id"] == "TASK-EXEC-RUN")
+    entry = runtime["execution"]["entries"]["TASK-EXEC-RUN"]
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert child["status"] == "doing"
@@ -544,7 +562,7 @@ def test_runner_keeps_parent_doing_when_blocked_and_open_children_coexist(tmp_pa
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
     sync_task_artifacts(repo)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     parent = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")["tasks"][0]
 
     assert result.returncode == 0, result.stdout + result.stderr

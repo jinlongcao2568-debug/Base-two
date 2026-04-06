@@ -5,7 +5,6 @@ from typing import Any
 
 from governance_lib import (
     current_branch,
-    git_status_paths,
     is_idle_current_payload,
     load_current_task,
     load_task_registry,
@@ -13,6 +12,7 @@ from governance_lib import (
     missing_required_tests,
     worktree_map,
 )
+from task_dirty_state import classify_task_dirty_state
 from task_rendering import find_task
 
 
@@ -48,22 +48,17 @@ def _append_unique(items: list[str], value: str | None) -> None:
         items.append(value)
 
 
-def _append_many(items: list[str], values: list[str]) -> None:
-    for value in values:
-        _append_unique(items, value)
-
-
 def _payload_diagnostics(current_payload: dict[str, Any], current_task: dict[str, Any]) -> list[str]:
     diagnostics: list[str] = []
     if current_payload.get("current_task_id") != current_task["task_id"]:
         diagnostics.append(
-            "CURRENT_TASK.yaml current_task_id 与 TASK_REGISTRY live 任务不一致："
-            f"{current_payload.get('current_task_id')} != {current_task['task_id']}"
+            "CURRENT_TASK.yaml current_task_id differs from TASK_REGISTRY: "
+            f"{current_payload.get('current_task_id')!r} != {current_task['task_id']!r}"
         )
     for field in CURRENT_PAYLOAD_SYNC_FIELDS:
         if current_payload.get(field) != current_task.get(field):
             diagnostics.append(
-                f"CURRENT_TASK.yaml 字段 `{field}` 与 TASK_REGISTRY 不一致："
+                f"CURRENT_TASK.yaml field `{field}` differs from TASK_REGISTRY: "
                 f"{current_payload.get(field)!r} != {current_task.get(field)!r}"
             )
     return diagnostics
@@ -73,32 +68,30 @@ def _worktree_diagnostics(root: Path, current_task: dict[str, Any], worktrees: d
     diagnostics: list[str] = []
     entry = worktree_map(worktrees).get(current_task["task_id"])
     if entry is None:
-        diagnostics.append(f"WORKTREE_REGISTRY 缺少 live 任务 `{current_task['task_id']}` 的记录。")
+        diagnostics.append(f"WORKTREE_REGISTRY is missing the live task entry for `{current_task['task_id']}`")
         return diagnostics
     if entry.get("work_mode") != "coordination":
         diagnostics.append(
-            f"WORKTREE_REGISTRY 记录的 work_mode 不正确：{entry.get('work_mode')!r} != 'coordination'"
+            f"WORKTREE_REGISTRY work_mode differs from coordination: {entry.get('work_mode')!r}"
         )
     if entry.get("parent_task_id") != current_task.get("parent_task_id"):
         diagnostics.append(
-            "WORKTREE_REGISTRY 记录的 parent_task_id 与 TASK_REGISTRY 不一致："
+            "WORKTREE_REGISTRY parent_task_id differs from TASK_REGISTRY: "
             f"{entry.get('parent_task_id')!r} != {current_task.get('parent_task_id')!r}"
         )
     if entry.get("branch") != current_task["branch"]:
         diagnostics.append(
-            f"WORKTREE_REGISTRY 记录的 branch 不一致：{entry.get('branch')!r} != {current_task['branch']!r}"
+            f"WORKTREE_REGISTRY branch differs from TASK_REGISTRY: {entry.get('branch')!r} != {current_task['branch']!r}"
         )
     if entry.get("worker_owner") != "coordinator":
         diagnostics.append(
-            f"WORKTREE_REGISTRY 记录的 worker_owner 不正确：{entry.get('worker_owner')!r} != 'coordinator'"
+            f"WORKTREE_REGISTRY worker_owner differs from coordinator: {entry.get('worker_owner')!r}"
         )
     if current_task["status"] == "review" and entry.get("status") != "active":
-        diagnostics.append(
-            f"review 任务的主协调 worktree 应为 active，当前为 {entry.get('status')!r}"
-        )
+        diagnostics.append(f"review task worktree must stay active, got {entry.get('status')!r}")
     if current_branch(root) != current_task["branch"]:
         diagnostics.append(
-            f"当前分支与 live 任务 branch 不一致：{current_branch(root)!r} != {current_task['branch']!r}"
+            f"current branch differs from live task branch: {current_branch(root)!r} != {current_task['branch']!r}"
         )
     return diagnostics
 
@@ -112,6 +105,8 @@ def _assessment(
     summary: str,
     blockers: list[str],
     diagnostics: list[str],
+    dirty_state: str = "clean",
+    dirty_paths_by_class: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     return {
         "status": status,
@@ -121,26 +116,35 @@ def _assessment(
         "summary": summary,
         "blockers": blockers,
         "diagnostics": diagnostics,
+        "dirty_state": dirty_state,
+        "dirty_paths_by_class": dirty_paths_by_class
+        or {"governance_paths": [], "task_scoped_paths": [], "unsafe_paths": []},
     }
 
 
-def _base_closeout_blockers(root: Path, current_task: dict[str, Any]) -> list[str]:
+def _base_closeout_blockers(
+    root: Path, current_payload: dict[str, Any], current_task: dict[str, Any]
+) -> tuple[list[str], dict[str, Any]]:
     blockers: list[str] = []
     if current_task.get("task_kind") != "coordination" or current_task.get("parent_task_id") is not None:
-        _append_unique(blockers, "自动关账只支持 live top-level coordination task。")
+        _append_unique(blockers, "automatic closeout only supports the live top-level coordination task")
     if current_task["status"] == "blocked":
         reason = current_task.get("blocked_reason") or "blocked without recorded reason"
-        _append_unique(blockers, f"当前任务已阻塞：{reason}")
+        _append_unique(blockers, f"current task is blocked: {reason}")
     if current_task["status"] == "done":
-        _append_unique(blockers, "CURRENT_TASK.yaml 不应指向已 done 的 live 任务。")
-    dirty = git_status_paths(root)
-    if dirty:
-        _append_unique(blockers, f"工作区不干净：{', '.join(dirty)}")
-    return blockers
+        _append_unique(blockers, "CURRENT_TASK.yaml should not remain on a done live task")
+    dirty = classify_task_dirty_state(root, current_payload=current_payload, task=current_task)
+    unsafe_paths = dirty["dirty_paths_by_class"]["unsafe_paths"]
+    if unsafe_paths:
+        _append_unique(blockers, f"unsafe dirty paths: {', '.join(unsafe_paths)}")
+    return blockers, dirty
 
 
 def _non_review_assessment(
-    current_task: dict[str, Any], blockers: list[str], diagnostics: list[str]
+    current_task: dict[str, Any],
+    blockers: list[str],
+    diagnostics: list[str],
+    dirty: dict[str, Any],
 ) -> dict[str, Any]:
     if diagnostics:
         return _assessment(
@@ -148,9 +152,11 @@ def _non_review_assessment(
             task_id=current_task["task_id"],
             task_status=current_task["status"],
             eligible=False,
-            summary="live 台账存在漂移，需先修复后再继续。",
+            summary="live ledger drift detected; repair the control-plane state before auto-closeout",
             blockers=["live ledger drift detected"],
             diagnostics=diagnostics,
+            dirty_state=dirty["dirty_state"],
+            dirty_paths_by_class=dirty["dirty_paths_by_class"],
         )
     if blockers:
         return _assessment(
@@ -158,23 +164,31 @@ def _non_review_assessment(
             task_id=current_task["task_id"],
             task_status=current_task["status"],
             eligible=False,
-            summary="当前任务不能进入自动关账路径。",
+            summary="the live task cannot enter automatic closeout yet",
             blockers=blockers,
             diagnostics=[],
+            dirty_state=dirty["dirty_state"],
+            dirty_paths_by_class=dirty["dirty_paths_by_class"],
         )
     return _assessment(
         status="not_applicable",
         task_id=current_task["task_id"],
         task_status=current_task["status"],
         eligible=False,
-        summary=f"当前任务 `{current_task['task_id']}` 状态为 `{current_task['status']}`，暂不进入自动关账判定。",
+        summary=f"live task `{current_task['task_id']}` is `{current_task['status']}`; auto-closeout is not applicable",
         blockers=[],
         diagnostics=[],
+        dirty_state=dirty["dirty_state"],
+        dirty_paths_by_class=dirty["dirty_paths_by_class"],
     )
 
 
 def _review_assessment(
-    root: Path, current_task: dict[str, Any], blockers: list[str], diagnostics: list[str]
+    root: Path,
+    current_task: dict[str, Any],
+    blockers: list[str],
+    diagnostics: list[str],
+    dirty: dict[str, Any],
 ) -> dict[str, Any]:
     missing = missing_required_tests(root, current_task)
     if missing:
@@ -187,18 +201,22 @@ def _review_assessment(
             task_id=current_task["task_id"],
             task_status=current_task["status"],
             eligible=False,
-            summary=f"当前 review 任务 `{current_task['task_id']}` 还不能自动关账。",
+            summary=f"review task `{current_task['task_id']}` is not ready for automatic closeout",
             blockers=blockers,
             diagnostics=diagnostics,
+            dirty_state=dirty["dirty_state"],
+            dirty_paths_by_class=dirty["dirty_paths_by_class"],
         )
     return _assessment(
         status="ready",
         task_id=current_task["task_id"],
         task_status=current_task["status"],
         eligible=True,
-        summary=f"当前 review 任务 `{current_task['task_id']}` 满足自动关账前置条件。",
+        summary=f"review task `{current_task['task_id']}` is ready for automatic closeout",
         blockers=[],
         diagnostics=[],
+        dirty_state=dirty["dirty_state"],
+        dirty_paths_by_class=dirty["dirty_paths_by_class"],
     )
 
 
@@ -222,15 +240,15 @@ def assess_live_closeout(
             task_id=None,
             task_status="idle",
             eligible=False,
-            summary="当前没有 live coordination task，不存在自动关账对象。",
+            summary="there is no live coordination task to close out",
             blockers=[],
             diagnostics=[],
         )
 
     diagnostics = _payload_diagnostics(current_payload, current_task)
     diagnostics.extend(_worktree_diagnostics(root, current_task, worktrees))
-    blockers = _base_closeout_blockers(root, current_task)
+    blockers, dirty = _base_closeout_blockers(root, current_payload, current_task)
 
     if current_task["status"] != "review":
-        return _non_review_assessment(current_task, blockers, diagnostics)
-    return _review_assessment(root, current_task, blockers, diagnostics)
+        return _non_review_assessment(current_task, blockers, diagnostics, dirty)
+    return _review_assessment(root, current_task, blockers, diagnostics, dirty)

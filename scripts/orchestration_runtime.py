@@ -144,6 +144,9 @@ def runtime_defaults() -> dict[str, Any]:
             "active_source_ids": [],
             "entries": {},
         },
+        "execution": {
+            "entries": {},
+        },
     }
 
 
@@ -197,8 +200,14 @@ def _normalize_runtime(root: Path, payload: dict[str, Any] | None) -> dict[str, 
     defaults.update(runtime_block)
     runtime["runtime"] = defaults
 
-    runtime["workers"] = _workers_state_from_registry(load_worker_registry(root))
-    runtime["task_sources"] = _task_sources_state_from_registry(load_task_source_registry(root))
+    execution_block = dict(runtime.get("execution") or {})
+    execution_block["entries"] = dict(execution_block.get("entries") or {})
+    runtime["execution"] = execution_block
+
+    worker_runtime_entries = dict(((runtime.get("workers") or {}).get("entries") or {}))
+    source_runtime_entries = dict(((runtime.get("task_sources") or {}).get("entries") or {}))
+    runtime["workers"] = _workers_state_from_registry(load_worker_registry(root), worker_runtime_entries)
+    runtime["task_sources"] = _task_sources_state_from_registry(load_task_source_registry(root), source_runtime_entries)
     return runtime
 
 
@@ -271,15 +280,21 @@ def refresh_lease_summary(runtime: dict[str, Any], current_task_id: str | None) 
     lease_block["tasks"] = tasks
 
 
-def _task_sources_state_from_registry(registry: dict[str, Any]) -> dict[str, Any]:
+def _task_sources_state_from_registry(
+    registry: dict[str, Any], runtime_entries: dict[str, Any] | None = None
+) -> dict[str, Any]:
     entries: dict[str, Any] = {}
     active_source_ids: list[str] = []
     for item in registry.get("sources", []):
         source = dict(item)
         source_id = str(source["source_id"])
+        source_runtime = dict((runtime_entries or {}).get(source_id) or {})
         observed_status = "active" if source.get("enabled") and source.get("implemented") else "disabled"
         if source.get("unsupported_in_v1"):
             observed_status = "disabled"
+        if source_runtime.get("observed_status"):
+            observed_status = source_runtime["observed_status"]
+        source.update(source_runtime)
         source["observed_status"] = observed_status
         entries[source_id] = source
         if observed_status == "active":
@@ -291,12 +306,15 @@ def _task_sources_state_from_registry(registry: dict[str, Any]) -> dict[str, Any
     }
 
 
-def _workers_state_from_registry(registry: dict[str, Any]) -> dict[str, Any]:
+def _workers_state_from_registry(
+    registry: dict[str, Any], runtime_entries: dict[str, Any] | None = None
+) -> dict[str, Any]:
     entries: dict[str, Any] = {}
     active_worker_ids: list[str] = []
     for item in registry.get("workers", []):
         worker = dict(item)
         worker_id = str(worker["worker_id"])
+        worker_runtime = dict((runtime_entries or {}).get(worker_id) or {})
         kind = str(worker.get("kind") or "unknown")
         if not worker.get("enabled"):
             observed_status = "disabled"
@@ -304,6 +322,9 @@ def _workers_state_from_registry(registry: dict[str, Any]) -> dict[str, Any]:
             observed_status = "unsupported_in_v1"
         else:
             observed_status = worker.get("status") or "active"
+        if worker_runtime.get("observed_status"):
+            observed_status = worker_runtime["observed_status"]
+        worker.update(worker_runtime)
         worker["observed_status"] = observed_status
         entries[worker_id] = worker
         if observed_status == "active":
@@ -316,8 +337,62 @@ def _workers_state_from_registry(registry: dict[str, Any]) -> dict[str, Any]:
 
 
 def sync_runtime_support_surfaces(root: Path, runtime: dict[str, Any]) -> None:
-    runtime["workers"] = _workers_state_from_registry(load_worker_registry(root))
-    runtime["task_sources"] = _task_sources_state_from_registry(load_task_source_registry(root))
+    worker_runtime_entries = dict(((runtime.get("workers") or {}).get("entries") or {}))
+    source_runtime_entries = dict(((runtime.get("task_sources") or {}).get("entries") or {}))
+    runtime["workers"] = _workers_state_from_registry(load_worker_registry(root), worker_runtime_entries)
+    runtime["task_sources"] = _task_sources_state_from_registry(load_task_source_registry(root), source_runtime_entries)
+
+
+def execution_runtime_defaults() -> dict[str, Any]:
+    return {
+        "lane_session_id": None,
+        "executor_status": "prepared",
+        "started_at": None,
+        "last_heartbeat_at": None,
+        "last_result": None,
+    }
+
+
+def load_execution_runtime_entry(root: Path, task_id: str) -> dict[str, Any]:
+    runtime = load_orchestration_runtime(root)
+    entry = dict(runtime.get("execution", {}).get("entries", {}).get(task_id) or {})
+    normalized = execution_runtime_defaults()
+    normalized.update(entry)
+    return normalized
+
+
+def update_execution_runtime_entry(root: Path, task_id: str, **fields: Any) -> dict[str, Any]:
+    runtime = load_orchestration_runtime(root)
+    execution_block = runtime.setdefault("execution", {})
+    entries = execution_block.setdefault("entries", {})
+    entry = execution_runtime_defaults()
+    entry.update(dict(entries.get(task_id) or {}))
+    for key, value in fields.items():
+        if value is not None:
+            entry[key] = value
+    entries[task_id] = entry
+    write_orchestration_runtime(root, runtime)
+    return entry
+
+
+def record_worker_heartbeat(
+    root: Path,
+    worker_id: str,
+    *,
+    timestamp: str | None = None,
+    observed_status: str | None = None,
+) -> dict[str, Any]:
+    runtime = load_orchestration_runtime(root)
+    workers_block = runtime.setdefault("workers", {})
+    entries = workers_block.setdefault("entries", {})
+    entry = dict(entries.get(worker_id) or {})
+    if timestamp is not None:
+        entry["last_heartbeat_at"] = timestamp
+    if observed_status is not None:
+        entry["observed_status"] = observed_status
+    entries[worker_id] = entry
+    write_orchestration_runtime(root, runtime)
+    return entry
 
 
 def record_session_event(

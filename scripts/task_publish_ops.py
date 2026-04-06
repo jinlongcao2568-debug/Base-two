@@ -29,6 +29,7 @@ from governance_lib import (
     task_map,
 )
 from task_handoff import handoff_path, is_top_level_coordination_task
+from task_dirty_state import classify_task_dirty_state
 from task_rendering import find_task
 
 
@@ -153,47 +154,6 @@ def _resolve_publish_task(root: Path, task_id: str | None) -> tuple[dict[str, An
             f"live current task is `{live_task_id}`; explicit publish only supports the live task or idle control plane"
         )
     return current_payload, task
-
-
-def _direct_governance_paths(root: Path, current_payload: dict[str, Any], task: dict[str, Any]) -> list[str]:
-    paths = [
-        actual_path(task["task_file"]),
-        actual_path(task["runlog_file"]),
-        actual_path(str(TASK_REGISTRY_FILE)),
-        actual_path(str(WORKTREE_REGISTRY_FILE)),
-        actual_path(str(ROADMAP_FILE)),
-    ]
-    if current_payload.get("current_task_id") == task["task_id"] or (
-        is_idle_current_payload(current_payload) and task.get("status") == "done"
-    ):
-        paths.append(actual_path(str(CURRENT_TASK_FILE)))
-    if is_top_level_coordination_task(task):
-        task_handoff = handoff_path(root, task["task_id"])
-        if task_handoff.exists():
-            paths.append(actual_path(task_handoff.relative_to(root)))
-    deduped: list[str] = []
-    for value in paths:
-        if value not in deduped:
-            deduped.append(value)
-    return deduped
-
-
-def _classify_dirty_paths(root: Path, current_payload: dict[str, Any], task: dict[str, Any]) -> tuple[list[str], list[str]]:
-    dirty_paths = git_status_paths(root)
-    scope = list(task.get("planned_write_paths") or task.get("allowed_dirs") or [])
-    direct_paths = set(_direct_governance_paths(root, current_payload, task))
-    staged_candidate_paths: list[str] = []
-    out_of_scope_paths: list[str] = []
-    for path in dirty_paths:
-        normalized = actual_path(path)
-        if normalized in direct_paths or path_within_declared(normalized, scope):
-            if normalized not in staged_candidate_paths:
-                staged_candidate_paths.append(normalized)
-            continue
-        out_of_scope_paths.append(normalized)
-    return staged_candidate_paths, out_of_scope_paths
-
-
 def _ledger_blockers(root: Path, current_payload: dict[str, Any], task: dict[str, Any]) -> list[str]:
     blockers: list[str] = []
     if current_payload.get("current_task_id") != task["task_id"]:
@@ -224,7 +184,9 @@ def _allowed_statuses(policy: dict[str, Any]) -> set[str]:
 
 def checkpoint_preflight(root: Path, *, task_id: str | None = None) -> dict[str, Any]:
     current_payload, task = _resolve_publish_task(root, task_id)
-    staged_candidate_paths, out_of_scope_paths = _classify_dirty_paths(root, current_payload, task)
+    dirty = classify_task_dirty_state(root, current_payload=current_payload, task=task)
+    staged_candidate_paths = list(dirty["checkpointable_paths"])
+    out_of_scope_paths = list(dirty["dirty_paths_by_class"]["unsafe_paths"])
     blockers: list[str] = []
     if task["status"] == "blocked":
         reason = task.get("blocked_reason") or "blocked without recorded reason"
@@ -232,13 +194,16 @@ def checkpoint_preflight(root: Path, *, task_id: str | None = None) -> dict[str,
     if current_branch(root) != task["branch"]:
         blockers.append(f"current branch does not match task branch: {current_branch(root)!r} != {task['branch']!r}")
     if not staged_candidate_paths:
-        blockers.append("no task-scoped changes are available to checkpoint")
+        blockers.append("no checkpointable changes are available to checkpoint")
     if out_of_scope_paths:
         blockers.append(f"dirty paths outside task checkpoint scope: {', '.join(out_of_scope_paths)}")
     return {
         "status": "blocked" if blockers else "ready",
         "task_id": task["task_id"],
         "branch": task["branch"],
+        "dirty_state": dirty["dirty_state"],
+        "dirty_paths_by_class": dirty["dirty_paths_by_class"],
+        "checkpoint_strategy": dirty["checkpoint_strategy"],
         "staged_candidate_paths": staged_candidate_paths,
         "out_of_scope_paths": out_of_scope_paths,
         "blockers": blockers,
@@ -261,7 +226,9 @@ def publish_preflight(root: Path, *, action: str, task_id: str | None = None) ->
         raise GovernanceError(f"unsupported publish action: {action}")
     policy = _load_publish_policy(root)
     current_payload, task = _resolve_publish_task(root, task_id)
-    staged_candidate_paths, out_of_scope_paths = _classify_dirty_paths(root, current_payload, task)
+    dirty = classify_task_dirty_state(root, current_payload=current_payload, task=task)
+    staged_candidate_paths = list(dirty["checkpointable_paths"])
+    out_of_scope_paths = list(dirty["dirty_paths_by_class"]["unsafe_paths"])
     blockers: list[str] = []
     if task["status"] not in _allowed_statuses(policy):
         blockers.append(
@@ -306,6 +273,9 @@ def publish_preflight(root: Path, *, action: str, task_id: str | None = None) ->
         "action": action,
         "task_id": task["task_id"],
         "branch": task["branch"],
+        "dirty_state": dirty["dirty_state"],
+        "dirty_paths_by_class": dirty["dirty_paths_by_class"],
+        "checkpoint_strategy": dirty["checkpoint_strategy"],
         "target_remote": remote,
         "target_remote_url": remote_url,
         "target_base_branch": base_branch,

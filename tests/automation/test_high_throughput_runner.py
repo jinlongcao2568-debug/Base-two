@@ -20,8 +20,20 @@ BUILDERS_SPEC.loader.exec_module(BUILDERS)
 AUTOMATION_RUNNER_SCRIPT = HELPERS.AUTOMATION_RUNNER_SCRIPT
 init_governance_repo = HELPERS.init_governance_repo
 read_yaml = HELPERS.read_yaml
-run_python = HELPERS.run_python
+run_python = HELPERS.run_python_inline
 write_yaml = HELPERS.write_yaml
+
+RUNNER_ENV = {
+    "AX9_INLINE_LANE_LAUNCHER": "1",
+    "AX9_INLINE_GOVERNANCE_SCRIPTS": "1",
+}
+
+
+def run_runner(repo: Path, *args: str, env: dict[str, str] | None = None):
+    merged_env = dict(RUNNER_ENV)
+    if env:
+        merged_env.update(env)
+    return run_python(AUTOMATION_RUNNER_SCRIPT, repo, *args, env=merged_env)
 
 
 def _runner_metrics(stdout: str) -> dict[str, str]:
@@ -89,7 +101,7 @@ def test_runner_reports_metrics_for_dynamic_lane_counts(tmp_path: Path) -> None:
         BUILDERS.set_live_task_mode(repo, automation_mode="assisted", lane_count=lane_count)
         BUILDERS.create_review_ready_children(repo, task_ids, write_path_prefix=f"src/lanes_{lane_count}/")
 
-        result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+        result = run_runner(repo, "once", "--prepare-worktrees")
         metrics = _runner_metrics(result.stdout)
 
         assert result.returncode == 0, result.stdout + result.stderr
@@ -109,7 +121,7 @@ def test_runner_respects_effective_budget_under_cleanup_pressure(tmp_path: Path)
     blocked_dir = _mark_cleanup_pressure(repo, tmp_path, cleanup_state="blocked", attempts=1)
     blocked_dir.rmdir()
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     metrics = _runner_metrics(result.stdout)
     child_entry_ids = {entry["task_id"] for entry in _child_worktree_entries(repo, task_ids)}
 
@@ -124,7 +136,7 @@ def test_runner_reports_cleanup_failures_as_fallback_metrics(tmp_path: Path) -> 
     BUILDERS.set_live_task_mode(repo, automation_mode="assisted", lane_count=4)
     _mark_cleanup_pressure(repo, tmp_path, cleanup_state="pending", attempts=2)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once")
+    result = run_runner(repo, "once")
     metrics = _runner_metrics(result.stdout)
 
     assert result.returncode == 1
@@ -160,7 +172,7 @@ def test_runner_tracks_review_bundle_failure_in_metrics(tmp_path: Path) -> None:
         lane_index=3,
     )
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     metrics = _runner_metrics(result.stdout)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     parent = next(task for task in registry["tasks"] if task["task_id"] == "TASK-BASE-001")
@@ -175,7 +187,7 @@ def test_runner_stops_on_lane_conflicts(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     task_ids = _create_conflicting_children(repo)
 
-    result = run_python(AUTOMATION_RUNNER_SCRIPT, repo, "once", "--prepare-worktrees")
+    result = run_runner(repo, "once", "--prepare-worktrees")
     metrics = _runner_metrics(result.stdout)
 
     assert result.returncode == 1

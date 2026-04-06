@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
+import io
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import time
+import traceback
 
 from governance_lib import EXECUTION_CONTEXT_FILE, GovernanceError, find_repo_root, load_yaml, write_text
 
@@ -24,7 +28,45 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _run_script_inline(repo_root: Path, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    command = [sys.executable, str(script), *args]
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+    previous_argv = sys.argv[:]
+    previous_cwd = Path.cwd()
+    previous_sys_path = sys.path[:]
+    exit_code = 0
+    try:
+        os.chdir(repo_root)
+        sys.argv = [str(script), *args]
+        script_dir = str(script.parent)
+        if script_dir not in sys.path:
+            sys.path.insert(0, script_dir)
+        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+            try:
+                runpy.run_path(str(script), run_name="__main__")
+            except SystemExit as exc:
+                code = exc.code
+                if code is None:
+                    exit_code = 0
+                elif isinstance(code, int):
+                    exit_code = code
+                else:
+                    exit_code = 1
+                    print(code, file=sys.stderr)
+    except Exception:
+        exit_code = 1
+        traceback.print_exc(file=stderr_buffer)
+    finally:
+        os.chdir(previous_cwd)
+        sys.argv = previous_argv
+        sys.path[:] = previous_sys_path
+    return subprocess.CompletedProcess(command, exit_code, stdout_buffer.getvalue(), stderr_buffer.getvalue())
+
+
 def _task_ops(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    if os.environ.get("AX9_INLINE_GOVERNANCE_SCRIPTS") == "1":
+        return _run_script_inline(repo_root, SCRIPT_DIR / "task_ops.py", *args)
     return subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "task_ops.py"), *args],
         cwd=repo_root,
@@ -90,14 +132,17 @@ def _load_context(repo_root: Path, worktree_path: Path, task_id: str) -> tuple[d
         raise GovernanceError(f"execution context task mismatch: expected {task_id}, got {context.get('task_id')}")
     prompt_path = repo_root / str(context.get("runtime_prompt_profile") or "")
     if not prompt_path.exists():
-        rendered = subprocess.run(
-            [sys.executable, str(SCRIPT_DIR / "render_runtime_prompts.py")],
-            cwd=repo_root,
-            text=True,
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-        )
+        if os.environ.get("AX9_INLINE_GOVERNANCE_SCRIPTS") == "1":
+            rendered = _run_script_inline(repo_root, SCRIPT_DIR / "render_runtime_prompts.py")
+        else:
+            rendered = subprocess.run(
+                [sys.executable, str(SCRIPT_DIR / "render_runtime_prompts.py")],
+                cwd=repo_root,
+                text=True,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+            )
         if rendered.returncode != 0 or not prompt_path.exists():
             detail = rendered.stdout.strip() or rendered.stderr.strip()
             raise GovernanceError(f"missing runtime prompt profile: {prompt_path}" + (f" :: {detail}" if detail else ""))

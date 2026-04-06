@@ -10,7 +10,7 @@ from .helpers import (
     init_governance_repo,
     read_roadmap,
     read_yaml,
-    run_python,
+    run_python_inline as run_python,
     write_yaml,
 )
 from .scenario_builders import create_cleanup_orphan, create_review_ready_child
@@ -543,6 +543,7 @@ def test_worker_heartbeat_updates_execution_runtime_without_runlog_noise(tmp_pat
     destination = tmp_path / "repo.worktrees" / "TASK-EXEC-HB"
     created = run_python(TASK_OPS_SCRIPT, repo, "worktree-create", "TASK-EXEC-HB", "--path", str(destination))
     assert created.returncode == 0, created.stdout + created.stderr
+    before_worker_registry = (repo / "docs/governance/WORKER_REGISTRY.yaml").read_text(encoding="utf-8")
 
     heartbeat = run_python(
         TASK_OPS_SCRIPT,
@@ -566,9 +567,11 @@ def test_worker_heartbeat_updates_execution_runtime_without_runlog_noise(tmp_pat
     assert entry["last_heartbeat_at"] is not None
     assert entry["last_result"] == "heartbeat"
 
-    workers = read_yaml(repo / "docs/governance/WORKER_REGISTRY.yaml")
-    worker = next(item for item in workers["workers"] if item["worker_id"] == "worker-local-01")
-    assert worker["last_heartbeat_at"] is not None
+    after_worker_registry = (repo / "docs/governance/WORKER_REGISTRY.yaml").read_text(encoding="utf-8")
+    runtime = read_yaml(repo / ".codex/local/COORDINATION_RUNTIME.yaml")
+    assert before_worker_registry == after_worker_registry
+    assert runtime["workers"]["entries"]["worker-local-01"]["last_heartbeat_at"] is not None
+    assert runtime["execution"]["entries"]["TASK-EXEC-HB"]["executor_status"] == "running"
 
     runlog_text = (repo / "docs/governance/runlogs/TASK-EXEC-HB-RUNLOG.md").read_text(encoding="utf-8")
     assert "heartbeat" not in runlog_text

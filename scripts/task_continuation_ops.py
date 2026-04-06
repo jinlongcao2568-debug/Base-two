@@ -20,7 +20,6 @@ from governance_lib import (
     ensure_clean_worktree,
     find_repo_root,
     git,
-    git_status_paths,
     is_idle_current_payload,
     iso_now,
     load_capability_map,
@@ -42,6 +41,7 @@ from task_coordination_lease import (
     coordination_thread_id,
     current_session_id,
 )
+from task_dirty_state import classify_task_dirty_state, classify_unscoped_dirty_state
 from task_handoff import build_recovery_pack, render_recovery_lines
 from task_rendering import (
     find_task,
@@ -164,9 +164,6 @@ def _recoverable_predecessor_task(root, registry: dict[str, Any], current_payloa
     if not is_idle_current_payload(current_payload):
         return None
     branch = current_branch(root)
-    dirty_paths = git_status_paths(root)
-    if not dirty_paths:
-        return None
     candidates = [
         task
         for task in registry.get("tasks", [])
@@ -185,214 +182,12 @@ def _recoverable_predecessor_task(root, registry: dict[str, Any], current_payloa
         ),
         reverse=True,
     )
-    return candidates[0]
+    for candidate in candidates:
+        dirty = classify_task_dirty_state(root, current_payload=current_payload, task=candidate)
+        if dirty["dirty_state"] != "clean":
+            return candidate
+    return None
 
-
-def _checkpoint_resolvable_closeout_blockers(blockers: list[str], dirty_paths: list[str]) -> list[str]:
-    if not dirty_paths:
-        return blockers
-    dirty_suffix = ", ".join(dirty_paths)
-    filtered: list[str] = []
-    for blocker in blockers:
-        if "工作区不干净" in blocker and blocker.endswith(dirty_suffix):
-            continue
-        filtered.append(blocker)
-    return filtered
-
-
-def _base_continuation_readiness(dirty_paths: list[str]) -> dict[str, Any]:
-    return {
-        "status": "blocked",
-        "recoverable_predecessor_task_id": None,
-        "checkpoint_required": bool(dirty_paths),
-        "checkpoint_eligible": False,
-        "next_successor_task_id": None,
-        "successor_source": None,
-        "blockers": [],
-        "recommended_action": "resolve the continuation blockers and rerun continue-roadmap",
-        "checkpoint_task_id": None,
-    }
-
-
-def _continue_current_readiness() -> dict[str, Any]:
-    readiness = _base_continuation_readiness([])
-    readiness["status"] = "continue-current"
-    readiness["recommended_action"] = "continue-current"
-    return readiness
-
-
-def _checkpoint_context(
-    root,
-    *,
-    registry: dict[str, Any],
-    worktrees: dict[str, Any],
-    current_payload: dict[str, Any],
-    current_task: dict[str, Any] | None,
-    recoverable_predecessor: dict[str, Any] | None,
-    dirty_paths: list[str],
-) -> tuple[list[str], dict[str, Any] | None, dict[str, Any] | None, str | None]:
-    blockers: list[str] = []
-    checkpoint_task: dict[str, Any] | None = None
-    closeout: dict[str, Any] | None = None
-    recoverable_task_id: str | None = None
-    current_status = current_payload.get("status")
-
-    if current_status == "blocked":
-        reason = None if current_task is None else current_task.get("blocked_reason")
-        blockers.append(f"current task is blocked: {reason or 'blocked without recorded reason'}")
-    elif current_status == "done":
-        blockers.append("CURRENT_TASK.yaml should not remain on a done task; repair the live control-plane state first")
-    elif current_status == "review" and current_task is not None:
-        closeout = assess_live_closeout(
-            root,
-            registry=registry,
-            worktrees=worktrees,
-            current_payload=current_payload,
-            current_task=current_task,
-        )
-        checkpoint_task = current_task
-    elif recoverable_predecessor is not None:
-        checkpoint_task = recoverable_predecessor
-        recoverable_task_id = recoverable_predecessor["task_id"]
-    elif dirty_paths:
-        blockers.append("idle control plane has dirty paths but no recoverable predecessor task")
-
-    return blockers, checkpoint_task, closeout, recoverable_task_id
-
-
-def _apply_checkpoint_readiness(
-    root,
-    *,
-    readiness: dict[str, Any],
-    blockers: list[str],
-    checkpoint_task: dict[str, Any] | None,
-    closeout: dict[str, Any] | None,
-    dirty_paths: list[str],
-) -> None:
-    if dirty_paths and checkpoint_task is not None:
-        readiness["checkpoint_task_id"] = checkpoint_task["task_id"]
-        checkpoint = checkpoint_preflight(root, task_id=checkpoint_task["task_id"])
-        readiness["checkpoint_eligible"] = checkpoint["status"] == "ready"
-        if checkpoint["status"] != "ready":
-            blockers.extend(checkpoint.get("blockers", []))
-    else:
-        readiness["checkpoint_required"] = False
-
-    if closeout is not None and closeout["status"] != "ready":
-        closeout_blockers = list(closeout.get("blockers", []))
-        if dirty_paths and readiness["checkpoint_eligible"]:
-            closeout_blockers = _checkpoint_resolvable_closeout_blockers(closeout_blockers, dirty_paths)
-        blockers.extend(closeout_blockers)
-        blockers.extend(closeout.get("diagnostics", []))
-
-
-def _preview_continuation_successor(
-    root,
-    *,
-    readiness: dict[str, Any],
-    blockers: list[str],
-    registry: dict[str, Any],
-    capability_map: dict[str, Any],
-    task_policy: dict[str, Any],
-    current_payload: dict[str, Any],
-    current_task: dict[str, Any] | None,
-) -> None:
-    current_task_id = current_task["task_id"] if current_task is not None and not is_idle_current_payload(current_payload) else None
-    try:
-        successor, source = _resolve_roadmap_successor(
-            root,
-            copy.deepcopy(registry),
-            copy.deepcopy(capability_map),
-            copy.deepcopy(task_policy),
-            copy.deepcopy(_read_roadmap_state(root)[0]),
-            current_task_id,
-        )
-        readiness["next_successor_task_id"] = successor["task_id"]
-        readiness["successor_source"] = source
-    except GovernanceError as error:
-        blockers.append(str(error))
-
-
-def _finalize_continuation_readiness(
-    *,
-    readiness: dict[str, Any],
-    blockers: list[str],
-    dirty_paths: list[str],
-    checkpoint_task: dict[str, Any] | None,
-) -> dict[str, Any]:
-    readiness["blockers"] = list(dict.fromkeys(blockers))
-    if not readiness["blockers"]:
-        readiness["status"] = "ready"
-        readiness["recommended_action"] = "continue-roadmap"
-        return readiness
-
-    if dirty_paths and checkpoint_task is not None and not readiness["checkpoint_eligible"]:
-        readiness["recommended_action"] = "clean or narrow the dirty worktree to the task checkpoint scope"
-    elif dirty_paths and checkpoint_task is None:
-        readiness["recommended_action"] = "clean the idle worktree or restore the recoverable predecessor state"
-    elif readiness["next_successor_task_id"] is None:
-        readiness["recommended_action"] = "resolve successor ambiguity or dependencies before continuing"
-    return readiness
-
-
-def assess_continuation_readiness(
-    root,
-    *,
-    registry: dict[str, Any] | None = None,
-    worktrees: dict[str, Any] | None = None,
-    capability_map: dict[str, Any] | None = None,
-    task_policy: dict[str, Any] | None = None,
-    current_payload: dict[str, Any] | None = None,
-    current_task: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    registry = registry or load_task_registry(root)
-    worktrees = worktrees or load_worktree_registry(root)
-    capability_map = capability_map or load_capability_map(root)
-    task_policy = task_policy or load_task_policy(root)
-    current_payload = current_payload or load_current_task(root)
-    if current_task is None and not is_idle_current_payload(current_payload):
-        current_task = find_task(registry["tasks"], current_payload["current_task_id"])
-
-    recoverable_predecessor = _recoverable_predecessor_task(root, registry, current_payload)
-    dirty_paths = git_status_paths(root)
-    if current_payload.get("status") in {"doing", "paused"}:
-        return _continue_current_readiness()
-
-    readiness = _base_continuation_readiness(dirty_paths)
-    blockers, checkpoint_task, closeout, recoverable_task_id = _checkpoint_context(
-        root,
-        registry=registry,
-        worktrees=worktrees,
-        current_payload=current_payload,
-        current_task=current_task,
-        recoverable_predecessor=recoverable_predecessor,
-        dirty_paths=dirty_paths,
-    )
-    readiness["recoverable_predecessor_task_id"] = recoverable_task_id
-    _apply_checkpoint_readiness(
-        root,
-        readiness=readiness,
-        blockers=blockers,
-        checkpoint_task=checkpoint_task,
-        closeout=closeout,
-        dirty_paths=dirty_paths,
-    )
-    _preview_continuation_successor(
-        root,
-        readiness=readiness,
-        blockers=blockers,
-        registry=registry,
-        capability_map=capability_map,
-        task_policy=task_policy,
-        current_payload=current_payload,
-        current_task=current_task,
-    )
-    return _finalize_continuation_readiness(
-        readiness=readiness,
-        blockers=blockers,
-        dirty_paths=dirty_paths,
-        checkpoint_task=checkpoint_task,
-    )
 
 
 def _validate_successor_candidate(
@@ -435,22 +230,6 @@ def _ensure_unique_successor_landscape(
     if conflicting:
         joined = ", ".join(conflicting)
         raise GovernanceError(f"successor landscape is not unique: {successor_id} conflicts with {joined}")
-
-
-def _resolve_explicit_successor(
-    registry: dict[str, Any], frontmatter: dict[str, Any], current_task_id: str | None
-):
-    explicit_id = frontmatter.get("next_recommended_task_id")
-    if not explicit_id:
-        return None
-    tasks_by_id = task_map(registry)
-    task = tasks_by_id.get(explicit_id)
-    if task is None:
-        raise GovernanceError(f"roadmap next_recommended_task_id missing from registry: {explicit_id}")
-    _validate_successor_candidate(task, tasks_by_id, current_task_id)
-    _ensure_unique_successor_landscape(registry.get("tasks", []), current_task_id, task["task_id"])
-    return task
-
 
 def _find_blueprint(task_policy: dict[str, Any], blueprint_id: str) -> dict[str, Any]:
     for blueprint in task_policy.get("task_blueprints", []):
@@ -817,6 +596,338 @@ def _reactivate_current_task(
     print(f"[OK] continue-current reactivated {task['task_id']} branch={branch_action}")
     return 0
 
+def _checkpoint_resolvable_closeout_blockers(blockers: list[str]) -> list[str]:
+    filtered: list[str] = []
+    for blocker in blockers:
+        if blocker.startswith("dirty paths outside task checkpoint scope:"):
+            continue
+        filtered.append(blocker)
+    return filtered
+
+
+def _formal_immediate_candidates(
+    registry: dict[str, Any], current_task_id: str | None
+) -> list[dict[str, Any]]:
+    return [
+        task
+        for task in registry.get("tasks", [])
+        if task.get("task_kind") == "coordination"
+        and task.get("parent_task_id") is None
+        and task["task_id"] != current_task_id
+        and task["status"] != "done"
+        and effective_successor_state(task) == "immediate"
+    ]
+
+
+def _resolve_formal_immediate_successor(
+    registry: dict[str, Any], current_task_id: str | None
+) -> dict[str, Any] | None:
+    tasks_by_id = task_map(registry)
+    candidates = _formal_immediate_candidates(registry, current_task_id)
+    if not candidates:
+        return None
+    if len(candidates) > 1:
+        joined = ", ".join(task["task_id"] for task in candidates)
+        raise GovernanceError(f"successor landscape is not unique: {joined}")
+    candidate = candidates[0]
+    _validate_successor_candidate(candidate, tasks_by_id, current_task_id)
+    return candidate
+
+
+def _resolve_explicit_successor(
+    registry: dict[str, Any], frontmatter: dict[str, Any], current_task_id: str | None
+) -> tuple[dict[str, Any] | None, str | None]:
+    explicit_id = frontmatter.get("next_recommended_task_id")
+    if not explicit_id:
+        return None, None
+    tasks_by_id = task_map(registry)
+    task = tasks_by_id.get(explicit_id)
+    if task is None:
+        return None, explicit_id
+    try:
+        _validate_successor_candidate(task, tasks_by_id, current_task_id)
+        _ensure_unique_successor_landscape(registry.get("tasks", []), current_task_id, task["task_id"])
+    except GovernanceError as error:
+        message = str(error)
+        if (
+            "already done" in message
+            or "not unique" in message
+            or "dependency not satisfied" in message
+        ):
+            return None, explicit_id
+        raise
+    return task, None
+
+
+def _resolve_roadmap_successor(
+    root,
+    registry: dict[str, Any],
+    capability_map: dict[str, Any],
+    task_policy: dict[str, Any],
+    frontmatter: dict[str, Any],
+    current_task_id: str | None,
+):
+    policy = _load_continuation_policy(frontmatter)
+    explicit_successor, stale_explicit_id = _resolve_explicit_successor(registry, frontmatter, current_task_id)
+    if explicit_successor is not None:
+        return explicit_successor, "explicit"
+
+    successor = _resolve_formal_immediate_successor(registry, current_task_id)
+    if successor is not None:
+        if stale_explicit_id is not None:
+            frontmatter["next_recommended_task_id"] = successor["task_id"]
+        return successor, "formal_immediate"
+
+    successor = _resolve_generated_successor(
+        root,
+        registry,
+        capability_map,
+        task_policy,
+        policy,
+        current_task_id,
+    )
+    if successor is None:
+        raise GovernanceError("no successor is available for continue-roadmap")
+    if stale_explicit_id is not None:
+        frontmatter["next_recommended_task_id"] = successor["task_id"]
+    return successor, "generated"
+
+
+def _dirty_for_continuation_context(
+    root,
+    *,
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+    recoverable_predecessor: dict[str, Any] | None,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    if current_task is not None:
+        return classify_task_dirty_state(root, current_payload=current_payload, task=current_task), current_task
+    if recoverable_predecessor is not None:
+        return (
+            classify_task_dirty_state(root, current_payload=current_payload, task=recoverable_predecessor),
+            recoverable_predecessor,
+        )
+    return classify_unscoped_dirty_state(root), None
+
+
+def _base_continuation_readiness(dirty: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": "blocked",
+        "recoverable_predecessor_task_id": None,
+        "dirty_state": dirty["dirty_state"],
+        "dirty_paths_by_class": dirty["dirty_paths_by_class"],
+        "checkpoint_strategy": dirty["checkpoint_strategy"],
+        "checkpoint_required": dirty["checkpoint_required"],
+        "checkpoint_eligible": False,
+        "next_successor_task_id": None,
+        "successor_source": None,
+        "blockers": [],
+        "recommended_action": "resolve the continuation blockers and rerun continue-roadmap",
+        "checkpoint_task_id": None,
+    }
+
+
+def _continue_current_readiness(dirty: dict[str, Any]) -> dict[str, Any]:
+    readiness = _base_continuation_readiness(dirty)
+    if dirty["dirty_state"] == "unsafe_dirty":
+        readiness["blockers"] = [
+            f"unsafe dirty paths: {', '.join(dirty['dirty_paths_by_class']['unsafe_paths'])}"
+        ]
+        readiness["recommended_action"] = "clean the unsafe dirty paths before continuing the live task"
+        return readiness
+    readiness["status"] = "continue-current"
+    readiness["recommended_action"] = "continue-current"
+    return readiness
+
+
+def _checkpoint_context(
+    root,
+    *,
+    registry: dict[str, Any],
+    worktrees: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+    recoverable_predecessor: dict[str, Any] | None,
+    dirty: dict[str, Any],
+) -> tuple[list[str], dict[str, Any] | None, dict[str, Any] | None, str | None]:
+    blockers: list[str] = []
+    checkpoint_task: dict[str, Any] | None = None
+    closeout: dict[str, Any] | None = None
+    recoverable_task_id: str | None = None
+    current_status = current_payload.get("status")
+
+    if current_status == "blocked":
+        reason = None if current_task is None else current_task.get("blocked_reason")
+        blockers.append(f"current task is blocked: {reason or 'blocked without recorded reason'}")
+    elif current_status == "done":
+        blockers.append("CURRENT_TASK.yaml should not remain on a done task; repair the live control-plane state first")
+    elif current_status == "review" and current_task is not None:
+        closeout = assess_live_closeout(
+            root,
+            registry=registry,
+            worktrees=worktrees,
+            current_payload=current_payload,
+            current_task=current_task,
+        )
+        if dirty["checkpoint_required"]:
+            checkpoint_task = current_task
+    elif recoverable_predecessor is not None:
+        recoverable_task_id = recoverable_predecessor["task_id"]
+        if dirty["checkpoint_required"]:
+            checkpoint_task = recoverable_predecessor
+    elif dirty["dirty_state"] != "clean":
+        blockers.append("idle control plane has dirty paths but no recoverable predecessor task")
+
+    if dirty["dirty_state"] == "unsafe_dirty":
+        blockers.append(
+            f"dirty paths outside task checkpoint scope: {', '.join(dirty['dirty_paths_by_class']['unsafe_paths'])}"
+        )
+
+    return blockers, checkpoint_task, closeout, recoverable_task_id
+
+
+def _apply_checkpoint_readiness(
+    root,
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    checkpoint_task: dict[str, Any] | None,
+    closeout: dict[str, Any] | None,
+    dirty: dict[str, Any],
+) -> None:
+    if dirty["checkpoint_required"] and checkpoint_task is not None and dirty["dirty_state"] != "unsafe_dirty":
+        readiness["checkpoint_task_id"] = checkpoint_task["task_id"]
+        checkpoint = checkpoint_preflight(root, task_id=checkpoint_task["task_id"])
+        readiness["checkpoint_eligible"] = checkpoint["status"] == "ready"
+        if checkpoint["status"] != "ready":
+            blockers.extend(checkpoint.get("blockers", []))
+    else:
+        readiness["checkpoint_required"] = False
+
+    if closeout is not None and closeout["status"] != "ready":
+        closeout_blockers = list(closeout.get("blockers", []))
+        if dirty["checkpoint_required"] and readiness["checkpoint_eligible"]:
+            closeout_blockers = _checkpoint_resolvable_closeout_blockers(closeout_blockers)
+        blockers.extend(closeout_blockers)
+        blockers.extend(closeout.get("diagnostics", []))
+
+
+def _preview_continuation_successor(
+    root,
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    registry: dict[str, Any],
+    capability_map: dict[str, Any],
+    task_policy: dict[str, Any],
+    current_payload: dict[str, Any],
+    current_task: dict[str, Any] | None,
+) -> None:
+    current_task_id = current_task["task_id"] if current_task is not None and not is_idle_current_payload(current_payload) else None
+    try:
+        successor, source = _resolve_roadmap_successor(
+            root,
+            copy.deepcopy(registry),
+            copy.deepcopy(capability_map),
+            copy.deepcopy(task_policy),
+            copy.deepcopy(_read_roadmap_state(root)[0]),
+            current_task_id,
+        )
+        readiness["next_successor_task_id"] = successor["task_id"]
+        readiness["successor_source"] = source
+    except GovernanceError as error:
+        blockers.append(str(error))
+
+
+def _finalize_continuation_readiness(
+    *,
+    readiness: dict[str, Any],
+    blockers: list[str],
+    dirty: dict[str, Any],
+    checkpoint_task: dict[str, Any] | None,
+) -> dict[str, Any]:
+    readiness["blockers"] = list(dict.fromkeys(blockers))
+    if not readiness["blockers"]:
+        readiness["status"] = "ready"
+        readiness["recommended_action"] = "continue-roadmap"
+        return readiness
+
+    if dirty["dirty_state"] == "unsafe_dirty":
+        readiness["recommended_action"] = "clean the unsafe dirty paths before continuing"
+    elif dirty["checkpoint_required"] and checkpoint_task is not None and not readiness["checkpoint_eligible"]:
+        readiness["recommended_action"] = "clean or narrow the dirty worktree to the task checkpoint scope"
+    elif dirty["checkpoint_required"] and checkpoint_task is None:
+        readiness["recommended_action"] = "clean the idle worktree or restore the recoverable predecessor state"
+    elif readiness["next_successor_task_id"] is None:
+        readiness["recommended_action"] = "resolve successor ambiguity or dependencies before continuing"
+    return readiness
+
+
+def assess_continuation_readiness(
+    root,
+    *,
+    registry: dict[str, Any] | None = None,
+    worktrees: dict[str, Any] | None = None,
+    capability_map: dict[str, Any] | None = None,
+    task_policy: dict[str, Any] | None = None,
+    current_payload: dict[str, Any] | None = None,
+    current_task: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    registry = registry or load_task_registry(root)
+    worktrees = worktrees or load_worktree_registry(root)
+    capability_map = capability_map or load_capability_map(root)
+    task_policy = task_policy or load_task_policy(root)
+    current_payload = current_payload or load_current_task(root)
+    if current_task is None and not is_idle_current_payload(current_payload):
+        current_task = find_task(registry["tasks"], current_payload["current_task_id"])
+
+    recoverable_predecessor = _recoverable_predecessor_task(root, registry, current_payload)
+    dirty, dirty_owner = _dirty_for_continuation_context(
+        root,
+        current_payload=current_payload,
+        current_task=current_task,
+        recoverable_predecessor=recoverable_predecessor,
+    )
+    if current_payload.get("status") in {"doing", "paused"}:
+        return _continue_current_readiness(dirty)
+
+    readiness = _base_continuation_readiness(dirty)
+    blockers, checkpoint_task, closeout, recoverable_task_id = _checkpoint_context(
+        root,
+        registry=registry,
+        worktrees=worktrees,
+        current_payload=current_payload,
+        current_task=current_task,
+        recoverable_predecessor=recoverable_predecessor,
+        dirty=dirty,
+    )
+    if dirty_owner is recoverable_predecessor and recoverable_predecessor is not None:
+        readiness["recoverable_predecessor_task_id"] = recoverable_task_id
+    _apply_checkpoint_readiness(
+        root,
+        readiness=readiness,
+        blockers=blockers,
+        checkpoint_task=checkpoint_task,
+        closeout=closeout,
+        dirty=dirty,
+    )
+    _preview_continuation_successor(
+        root,
+        readiness=readiness,
+        blockers=blockers,
+        registry=registry,
+        capability_map=capability_map,
+        task_policy=task_policy,
+        current_payload=current_payload,
+        current_task=current_task,
+    )
+    return _finalize_continuation_readiness(
+        readiness=readiness,
+        blockers=blockers,
+        dirty=dirty,
+        checkpoint_task=checkpoint_task,
+    )
+
 
 def cmd_continue_current(args: argparse.Namespace) -> int:
     root = find_repo_root()
@@ -832,6 +943,10 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
         raise GovernanceError(f"current task is blocked: {reason}")
     if task["status"] == "done":
         raise GovernanceError("current task is already done; use continue-roadmap or explicit activation")
+
+    dirty = classify_task_dirty_state(root, current_payload=current_payload, task=task)
+    if dirty["dirty_state"] == "unsafe_dirty":
+        raise GovernanceError(f"unsafe dirty paths: {', '.join(dirty['dirty_paths_by_class']['unsafe_paths'])}")
 
     recovery_pack, recovery_source, recovery_warnings = build_recovery_pack(root, task)
     for line in render_recovery_lines(recovery_pack, recovery_source, recovery_warnings):

@@ -1,15 +1,22 @@
 from __future__ import annotations
 
-from pathlib import Path
-import importlib.util
+from contextlib import redirect_stderr, redirect_stdout
+import io
+import os
+import shutil
 import subprocess
 import sys
-import os
+import tempfile
+from pathlib import Path
+import importlib.util
+import runpy
+import traceback
 from typing import Any
 
 import yaml
 
 try:
+    from .automation_fixture_payloads import automation_intents_payload
     from .fixture_payloads import (
         base_runlog_markdown,
         base_task_markdown,
@@ -22,6 +29,14 @@ try:
     )
     from .runtime_fixture_payloads import task_source_registry_payload, worker_registry_payload
 except ImportError:
+    _AUTOMATION_FIXTURE_PATH = Path(__file__).with_name("automation_fixture_payloads.py")
+    _AUTOMATION_FIXTURE_SPEC = importlib.util.spec_from_file_location(
+        "gov_automation_fixture_payloads", _AUTOMATION_FIXTURE_PATH
+    )
+    _AUTOMATION_FIXTURE_MODULE = importlib.util.module_from_spec(_AUTOMATION_FIXTURE_SPEC)
+    assert _AUTOMATION_FIXTURE_SPEC is not None and _AUTOMATION_FIXTURE_SPEC.loader is not None
+    _AUTOMATION_FIXTURE_SPEC.loader.exec_module(_AUTOMATION_FIXTURE_MODULE)
+    automation_intents_payload = _AUTOMATION_FIXTURE_MODULE.automation_intents_payload
     _FIXTURE_PATH = Path(__file__).with_name("fixture_payloads.py")
     _FIXTURE_SPEC = importlib.util.spec_from_file_location("gov_fixture_payloads", _FIXTURE_PATH)
     _FIXTURE_MODULE = importlib.util.module_from_spec(_FIXTURE_SPEC)
@@ -51,6 +66,7 @@ CHECK_REPO_SCRIPT = REPO_ROOT / "scripts" / "check_repo.py"
 CHECK_HYGIENE_SCRIPT = REPO_ROOT / "scripts" / "check_hygiene.py"
 AUTOMATION_RUNNER_SCRIPT = REPO_ROOT / "scripts" / "automation_runner.py"
 RENDER_RUNTIME_PROMPTS_SCRIPT = REPO_ROOT / "scripts" / "render_runtime_prompts.py"
+_TEMPLATE_REPO: Path | None = None
 
 
 def write_yaml(path: Path, data: Any) -> None:
@@ -131,119 +147,54 @@ def run_python(script: Path, repo: Path, *args: str, env: dict[str, str] | None 
     )
 
 
-def _write_automation_intents(path: Path) -> None:
-    path.write_text(
-        (
-            "version: '1.0'\n"
-            "recognition_mode: heuristic_free_form\n"
-            "generic_continue_signals:\n"
-            "  - 继续\n"
-            "  - 接着\n"
-            "supported_intents:\n"
-            "  - intent_id: continue-current\n"
-            "    canonical_phrase: 继续当前任务\n"
-            "    mapped_command: python scripts/task_ops.py continue-current\n"
-            "    command_argv:\n"
-            "      - python\n"
-            "      - scripts/task_ops.py\n"
-            "      - continue-current\n"
-            "    examples:\n"
-            "      - 继续当前任务\n"
-            "    action_any:\n"
-            "      - 继续\n"
-            "      - 接着\n"
-            "    context_any:\n"
-            "      - 当前任务\n"
-            "      - 手头任务\n"
-            "    disallow_any:\n"
-            "      - 路线图\n"
-            "      - 下一步\n"
-            "  - intent_id: continue-roadmap\n"
-            "    canonical_phrase: 按路线图继续推进\n"
-            "    mapped_command: python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees\n"
-            "    command_argv:\n"
-            "      - python\n"
-            "      - scripts/automation_runner.py\n"
-            "      - once\n"
-            "      - --continue-roadmap\n"
-            "      - --prepare-worktrees\n"
-            "    examples:\n"
-            "      - 按路线图继续推进\n"
-            "    action_any:\n"
-            "      - 继续\n"
-            "      - 推进\n"
-            "    context_any:\n"
-            "      - 路线图\n"
-            "      - 下一步\n"
-        ),
-        encoding="utf-8",
-    )
+def run_python_inline(
+    script: Path, repo: Path, *args: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    merged_env = os.environ.copy()
+    if env:
+        merged_env.update(env)
+    command = [sys.executable, str(script), *args]
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+    previous_argv = sys.argv[:]
+    previous_cwd = Path.cwd()
+    previous_sys_path = sys.path[:]
+    previous_env = os.environ.copy()
+    exit_code = 0
+    try:
+        os.environ.clear()
+        os.environ.update(merged_env)
+        os.chdir(repo)
+        sys.argv = [str(script), *args]
+        script_dir = str(script.parent)
+        if script_dir not in sys.path:
+            sys.path.insert(0, script_dir)
+        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+            try:
+                runpy.run_path(str(script), run_name="__main__")
+            except SystemExit as exc:
+                code = exc.code
+                if code is None:
+                    exit_code = 0
+                elif isinstance(code, int):
+                    exit_code = code
+                else:
+                    exit_code = 1
+                    print(code, file=sys.stderr)
+    except Exception:
+        exit_code = 1
+        traceback.print_exc(file=stderr_buffer)
+    finally:
+        os.environ.clear()
+        os.environ.update(previous_env)
+        os.chdir(previous_cwd)
+        sys.argv = previous_argv
+        sys.path[:] = previous_sys_path
+    return subprocess.CompletedProcess(command, exit_code, stdout_buffer.getvalue(), stderr_buffer.getvalue())
 
 
-def _write_automation_intents_v2(path: Path) -> None:
-    write_yaml(
-        path,
-        {
-            "version": "1.0",
-            "recognition_mode": "heuristic_free_form",
-            "generic_continue_signals": ["继续", "接着"],
-            "supported_intents": [
-                {
-                    "intent_id": "continue-current",
-                    "canonical_phrase": "继续当前任务",
-                    "mapped_command": "python scripts/task_ops.py continue-current",
-                    "command_argv": ["python", "scripts/task_ops.py", "continue-current"],
-                    "examples": ["继续当前任务"],
-                    "action_any": ["继续", "接着"],
-                    "context_any": ["当前任务", "手头任务"],
-                    "disallow_any": ["路线图", "下一步"],
-                },
-                {
-                    "intent_id": "continue-roadmap",
-                    "canonical_phrase": "按路线图继续推进",
-                    "mapped_command": "python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees",
-                    "command_argv": [
-                        "python",
-                        "scripts/automation_runner.py",
-                        "once",
-                        "--continue-roadmap",
-                        "--prepare-worktrees",
-                    ],
-                    "examples": ["按路线图继续推进"],
-                    "action_any": ["继续", "推进"],
-                    "context_any": ["路线图", "下一步"],
-                },
-                {
-                    "intent_id": "commit-task-results",
-                    "canonical_phrase": "提交当前任务成果",
-                    "mapped_command": "python scripts/task_ops.py commit-task-results",
-                    "command_argv": ["python", "scripts/task_ops.py", "commit-task-results"],
-                    "examples": ["提交当前任务成果"],
-                },
-                {
-                    "intent_id": "push-task-branch",
-                    "canonical_phrase": "推送当前任务分支",
-                    "mapped_command": "python scripts/task_ops.py push-task-branch",
-                    "command_argv": ["python", "scripts/task_ops.py", "push-task-branch"],
-                    "examples": ["推送当前任务分支"],
-                },
-                {
-                    "intent_id": "create-task-pr",
-                    "canonical_phrase": "为当前任务开PR",
-                    "mapped_command": "python scripts/task_ops.py create-task-pr",
-                    "command_argv": ["python", "scripts/task_ops.py", "create-task-pr"],
-                    "examples": ["为当前任务开PR"],
-                },
-                {
-                    "intent_id": "publish-task-results",
-                    "canonical_phrase": "发布当前任务成果",
-                    "mapped_command": "python scripts/task_ops.py publish-task-results",
-                    "command_argv": ["python", "scripts/task_ops.py", "publish-task-results"],
-                    "examples": ["发布当前任务成果"],
-                },
-            ],
-        },
-    )
+def _write_automation_intents_catalog(path: Path) -> None:
+    write_yaml(path, automation_intents_payload())
 
 
 def _write_git_publish_policy(path: Path) -> None:
@@ -631,7 +582,7 @@ def write_governance_files(repo: Path) -> None:
     task = base_task_payload()
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
-    _write_automation_intents_v2(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
+    _write_automation_intents_catalog(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
     _write_git_publish_policy(repo / "docs/governance/GIT_PUBLISH_POLICY.yaml")
     _write_handoff_policy(repo / "docs/governance/HANDOFF_POLICY.yaml")
     _write_coordination_planner_policy(repo / "docs/governance/COORDINATION_PLANNER_POLICY.yaml")
@@ -641,7 +592,9 @@ def write_governance_files(repo: Path) -> None:
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map_payload())
     write_yaml(repo / "docs/governance/TASK_POLICY.yaml", task_policy_payload())
     write_yaml(repo / "docs/governance/TASK_SOURCE_REGISTRY.yaml", task_source_registry_payload())
-    write_yaml(repo / "docs/governance/WORKER_REGISTRY.yaml", worker_registry_payload())
+    worker_registry = worker_registry_payload()
+    worker_registry["workers"][0]["last_heartbeat_at"] = "2026-04-04T00:00:00+08:00"
+    write_yaml(repo / "docs/governance/WORKER_REGISTRY.yaml", worker_registry)
     write_yaml(
         repo / "docs/governance/CURRENT_TASK.yaml",
         {
@@ -685,12 +638,18 @@ def write_governance_files(repo: Path) -> None:
 
 
 def init_governance_repo(tmp_path: Path) -> Path:
+    global _TEMPLATE_REPO
     repo = tmp_path / "repo"
-    init_structure(repo)
-    write_governance_files(repo)
-    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "config", "user.name", "Codex"], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "config", "user.email", "codex@example.com"], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True, text=True)
+    if _TEMPLATE_REPO is None or not _TEMPLATE_REPO.exists():
+        template_root = Path(tempfile.mkdtemp(prefix="ax9-governance-template-"))
+        template_repo = template_root / "repo"
+        init_structure(template_repo)
+        write_governance_files(template_repo)
+        subprocess.run(["git", "init", "-b", "main"], cwd=template_repo, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.name", "Codex"], cwd=template_repo, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.email", "codex@example.com"], cwd=template_repo, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "add", "."], cwd=template_repo, check=True, capture_output=True, text=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=template_repo, check=True, capture_output=True, text=True)
+        _TEMPLATE_REPO = template_repo
+    shutil.copytree(_TEMPLATE_REPO, repo)
     return repo

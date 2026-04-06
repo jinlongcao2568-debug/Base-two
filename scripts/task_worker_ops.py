@@ -12,13 +12,18 @@ from governance_lib import (
     find_repo_root,
     iso_now,
     load_task_registry,
-    load_worker_registry,
     load_worktree_registry,
     missing_required_tests,
     sync_task_artifacts,
     worktree_map,
 )
-from orchestration_runtime import record_session_event, runtime_status_for_task
+from orchestration_runtime import (
+    load_execution_runtime_entry,
+    record_session_event,
+    record_worker_heartbeat,
+    runtime_status_for_task,
+    update_execution_runtime_entry,
+)
 from task_coordination_lease import claim_coordination_lease, coordination_thread_id, current_session_id
 from task_handoff import write_handoff
 from task_rendering import (
@@ -31,42 +36,26 @@ from task_rendering import (
 LOCAL_WORKER_ID = "worker-local-01"
 
 
-def _persist_worker_registry(root: Path, workers: dict) -> None:
-    workers["updated_at"] = iso_now()
-    dump_yaml(root / "docs/governance/WORKER_REGISTRY.yaml", workers)
-
-
-def _mark_launcher_worker_heartbeat(workers: dict, *, worker_id: str = LOCAL_WORKER_ID, timestamp: str | None = None) -> None:
-    now = timestamp or iso_now()
-    for worker in workers.get("workers", []):
-        if worker.get("worker_id") == worker_id:
-            worker["last_heartbeat_at"] = now
-            return
-
-
 def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
     entry = worktree_map(worktrees).get(task_id)
     if entry is None or entry.get("work_mode") != "execution":
         return None
-    entry.setdefault("lane_session_id", None)
-    entry.setdefault("executor_status", "prepared" if entry.get("status") != "closed" else "completed")
-    entry.setdefault("started_at", None)
-    entry.setdefault("last_heartbeat_at", None)
-    entry.setdefault("last_result", None)
     return entry
 
 
 def _mark_execution_runtime(
-    entry: dict | None,
+    root: Path,
+    task_id: str,
     *,
     now: str,
+    current_entry: dict | None = None,
     lane_session_id: str | None = None,
     executor_status: str | None = None,
     last_result: str | None = None,
-) -> None:
-    if entry is None:
-        return
-    entry["status"] = "active" if executor_status not in {"completed", "blocked"} else entry.get("status", "active")
+) -> dict[str, object]:
+    entry = load_execution_runtime_entry(root, task_id)
+    if current_entry is not None:
+        entry["status"] = current_entry.get("status", entry.get("status"))
     if lane_session_id is not None:
         entry["lane_session_id"] = lane_session_id
     if entry.get("started_at") is None and executor_status in {"launching", "running", "completed", "blocked"}:
@@ -77,6 +66,14 @@ def _mark_execution_runtime(
         entry["last_heartbeat_at"] = now
     if last_result is not None:
         entry["last_result"] = last_result
+    if current_entry is not None:
+        current_entry["lane_session_id"] = entry["lane_session_id"]
+        current_entry["executor_status"] = entry["executor_status"]
+        current_entry["started_at"] = entry["started_at"]
+        current_entry["last_heartbeat_at"] = entry["last_heartbeat_at"]
+        current_entry["last_result"] = entry["last_result"]
+    update_execution_runtime_entry(root, task_id, **entry)
+    return entry
 
 
 def _reported_completed_items(args: argparse.Namespace) -> list[str] | None:
@@ -134,7 +131,6 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
-    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-start")
     try:
@@ -159,18 +155,19 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
         if args.path:
             entry["path"] = args.path
         _mark_execution_runtime(
-            entry,
+            root,
+            task["task_id"],
             now=now,
+            current_entry=entry,
             lane_session_id=entry.get("lane_session_id") or current_session_id(root),
             executor_status="running",
             last_result="worker-start",
         )
-    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Worker started and the task is actively running.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-start owner=`{args.worker_owner or 'unknown'}`"])
     sync_task_artifacts(root, registry, [task["task_id"]])
@@ -194,7 +191,6 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
-    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-report")
     now = iso_now()
@@ -205,18 +201,19 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     task["last_reported_at"] = now
     entry = _execution_entry(worktrees, task["task_id"])
     _mark_execution_runtime(
-        entry,
+        root,
+        task["task_id"],
         now=now,
+        current_entry=entry,
         lane_session_id=entry.get("lane_session_id") if entry is not None else None,
         executor_status="running" if entry is not None else None,
         last_result="worker-report",
     )
-    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Worker progress was recorded for the live task.")
     bullets = [f"`{now}`: {note}" for note in args.note]
     if bullets:
@@ -259,7 +256,6 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
-    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-blocked")
     now = iso_now()
@@ -269,18 +265,19 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
     task["last_reported_at"] = now
     entry = _execution_entry(worktrees, task["task_id"])
     _mark_execution_runtime(
-        entry,
+        root,
+        task["task_id"],
         now=now,
+        current_entry=entry,
         lane_session_id=entry.get("lane_session_id") if entry is not None else None,
         executor_status="blocked" if entry is not None else None,
         last_result=args.reason,
     )
-    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Task blocked; waiting for blocker resolution before more changes.")
     append_runlog_bullets(root, task, "Risk and Blockers", [f"`{now}`: {args.reason}"])
     write_handoff(
@@ -318,7 +315,6 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
-    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-finish")
     now = iso_now()
@@ -330,18 +326,19 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         task["review_bundle_status"] = "not_applicable"
     entry = _execution_entry(worktrees, task["task_id"])
     _mark_execution_runtime(
-        entry,
+        root,
+        task["task_id"],
         now=now,
+        current_entry=entry,
         lane_session_id=entry.get("lane_session_id") if entry is not None else None,
         executor_status="completed" if entry is not None else None,
         last_result=args.summary,
     )
-    _mark_launcher_worker_heartbeat(workers, timestamp=now)
+    record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    _persist_worker_registry(root, workers)
     update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-finish `{args.summary}`"])
     reported_tests = _reported_tests(args)
@@ -386,31 +383,32 @@ def cmd_worker_heartbeat(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
-    workers = load_worker_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     claim_coordination_lease(root, task, reason="worker-heartbeat")
     now = iso_now()
     entry = _execution_entry(worktrees, task["task_id"])
     if entry is None:
         raise GovernanceError(f"worker-heartbeat requires an execution worktree: {task['task_id']}")
-    executor_status = args.executor_status or entry.get("executor_status") or "running"
+    current_runtime = load_execution_runtime_entry(root, task["task_id"])
+    executor_status = args.executor_status or current_runtime.get("executor_status") or "running"
     if executor_status not in EXECUTOR_STATUS_VALUES:
         raise GovernanceError(f"invalid executor_status: {executor_status}")
-    _mark_execution_runtime(
-        entry,
+    entry = _mark_execution_runtime(
+        root,
+        task["task_id"],
         now=now,
-        lane_session_id=args.lane_session_id or entry.get("lane_session_id") or current_session_id(root),
+        current_entry=entry,
+        lane_session_id=args.lane_session_id or current_runtime.get("lane_session_id") or current_session_id(root),
         executor_status=executor_status,
-        last_result=args.result or entry.get("last_result"),
+        last_result=args.result or current_runtime.get("last_result"),
     )
     if task["status"] not in {"done", "blocked"}:
         task["last_reported_at"] = now
-    _mark_launcher_worker_heartbeat(workers, worker_id=args.worker_id, timestamp=now)
+    record_worker_heartbeat(root, args.worker_id, timestamp=now, observed_status="active")
     registry["updated_at"] = now
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
-    _persist_worker_registry(root, workers)
     print(f"[OK] worker heartbeat {task['task_id']} executor_status={entry['executor_status']}")
     return 0
 

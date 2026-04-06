@@ -30,6 +30,7 @@ from task_closeout import assess_live_closeout
 from task_coordination_lease import assess_coordination_lease
 from task_continuation_ops import _resolve_roadmap_successor
 from task_continuation_ops import assess_continuation_readiness
+from task_dirty_state import classify_task_dirty_state
 from task_handoff import build_recovery_pack
 from task_publish_ops import PUBLISH_ACTIONS, publish_preflight
 from task_rendering import find_task
@@ -116,11 +117,18 @@ def _recognize_intent(root: Path, catalog: dict[str, Any], utterance: str) -> tu
     return None, None, "检测到泛化“继续”表达，但当前状态可能触发任务切换；请补充“当前任务”或“路线图/下一步”等边界词。"
 
 
-def _dirty_blockers(root: Path) -> list[str]:
-    dirty = git_status_paths(root)
-    if not dirty:
-        return []
-    return [f"工作区不干净：{', '.join(dirty)}"]
+def _dirty_blockers(
+    root: Path, current_payload: dict[str, Any] | None, current_task: dict[str, Any] | None
+) -> tuple[list[str], dict[str, Any] | None]:
+    if current_payload is None or current_task is None:
+        dirty = git_status_paths(root)
+        if not dirty:
+            return [], None
+        return [f"unsafe dirty paths: {', '.join(dirty)}"], None
+    classified = classify_task_dirty_state(root, current_payload=current_payload, task=current_task)
+    if classified["dirty_state"] != "unsafe_dirty":
+        return [], classified
+    return [f"unsafe dirty paths: {', '.join(classified['dirty_paths_by_class']['unsafe_paths'])}"], classified
 
 
 def _dedupe_items(values: list[str]) -> list[str]:
@@ -177,8 +185,8 @@ def _preview_roadmap_successor(root: Path, current_task_id: str | None) -> tuple
 
 
 def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
-    blockers = _dirty_blockers(root)
     current_payload, current_task = _load_live_task(root)
+    blockers, dirty = _dirty_blockers(root, current_payload, current_task)
     closeout = assess_live_closeout(root, current_payload=current_payload, current_task=current_task)
     recovery_pack = None
     recovery_source = None
@@ -212,6 +220,8 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
             "recovery_pack": recovery_pack,
             "recovery_source": recovery_source,
             "recovery_warnings": recovery_warnings,
+            "dirty_state": None if dirty is None else dirty["dirty_state"],
+            "dirty_paths_by_class": None if dirty is None else dirty["dirty_paths_by_class"],
         }
 
     task_id = current_task["task_id"] if current_task is not None else current_payload.get("current_task_id")
@@ -227,6 +237,8 @@ def _preflight_continue_current(root: Path, intent: dict[str, Any], matched_phra
         "recovery_pack": recovery_pack,
         "recovery_source": recovery_source,
         "recovery_warnings": recovery_warnings,
+        "dirty_state": None if dirty is None else dirty["dirty_state"],
+        "dirty_paths_by_class": None if dirty is None else dirty["dirty_paths_by_class"],
     }
 
 
@@ -319,7 +331,7 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)
-    if intent["intent_id"] == "continue-roadmap":
+    if intent["intent_id"] in {"continue-roadmap", "continue-roadmap-loop"}:
         return _preflight_continue_roadmap(root, intent, matched_phrase)
     if intent["intent_id"] in PUBLISH_ACTIONS:
         return _preflight_publish_action(root, intent, matched_phrase)

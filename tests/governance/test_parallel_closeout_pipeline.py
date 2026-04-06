@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python
+from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python_inline as run_python
 from .scenario_builders import create_review_ready_child
 
 

@@ -1,5 +1,5 @@
-version: "1.0"
-updated_at: "2026-04-05T17:20:00+08:00"
+version: "1.1"
+updated_at: "2026-04-06T13:10:00+08:00"
 authority_source: docs/governance/OPERATOR_MANUAL.md
 recognition_mode: heuristic_free_form
 ambiguity_policy: block_on_successor_switch_ambiguity
@@ -82,6 +82,35 @@ supported_intents:
       - 按计划
       - 按路线
       - 继续推进
+  - intent_id: continue-roadmap-loop
+    canonical_phrase: 持续按路线图开发
+    mapped_command: python scripts/automation_runner.py loop --continue-roadmap --prepare-worktrees
+    command_argv:
+      - python
+      - scripts/automation_runner.py
+      - loop
+      - --continue-roadmap
+      - --prepare-worktrees
+    description: Continue by roadmap in loop mode until a governed stop condition is hit.
+    planner_preflight_hint: Use plan-coordination when no unique successor is available or when the next coordination package must be generated first.
+    examples:
+      - 持续按路线图开发
+      - 持续按路线图推进
+      - 一直按路线图开发
+    action_any:
+      - 持续
+      - 一直
+      - 循环
+      - 连续
+      - 推进
+      - 开发
+    context_any:
+      - 路线图
+      - roadmap
+      - 按路线图
+      - 后续任务
+      - 下一个任务
+      - 持续开发
   - intent_id: commit-task-results
     canonical_phrase: 提交当前任务成果
     mapped_command: python scripts/task_ops.py commit-task-results

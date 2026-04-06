@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timedelta
+import io
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import time
+import traceback
 
 from governance_lib import (
     collect_active_execution_errors,
@@ -24,7 +28,13 @@ from governance_lib import (
     task_map,
     worktree_map,
 )
-from orchestration_runtime import record_session_event, runtime_status_for_task
+from orchestration_runtime import (
+    load_orchestration_runtime,
+    load_execution_runtime_entry,
+    record_session_event,
+    runtime_status_for_task,
+    update_execution_runtime_entry,
+)
 from task_coordination_lease import coordination_thread_id, current_session_id
 
 
@@ -40,6 +50,8 @@ METRIC_KEYS = (
 
 
 def run_step(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    if os.environ.get("AX9_INLINE_GOVERNANCE_SCRIPTS") == "1" and args:
+        return _run_step_inline(root, Path(args[0]), *args[1:])
     return subprocess.run(
         [sys.executable, *args],
         cwd=root,
@@ -48,6 +60,42 @@ def run_step(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         encoding="utf-8",
         errors="replace",
     )
+
+
+def _run_step_inline(root: Path, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    command = [sys.executable, str(script), *args]
+    stdout_buffer = io.StringIO()
+    stderr_buffer = io.StringIO()
+    previous_argv = sys.argv[:]
+    previous_cwd = Path.cwd()
+    previous_sys_path = sys.path[:]
+    exit_code = 0
+    try:
+        os.chdir(root)
+        sys.argv = [str(script), *args]
+        script_dir = str(script.parent)
+        if script_dir not in sys.path:
+            sys.path.insert(0, script_dir)
+        with redirect_stdout(stdout_buffer), redirect_stderr(stderr_buffer):
+            try:
+                runpy.run_path(str(script), run_name="__main__")
+            except SystemExit as exc:
+                code = exc.code
+                if code is None:
+                    exit_code = 0
+                elif isinstance(code, int):
+                    exit_code = code
+                else:
+                    exit_code = 1
+                    print(code, file=sys.stderr)
+    except Exception:
+        exit_code = 1
+        traceback.print_exc(file=stderr_buffer)
+    finally:
+        os.chdir(previous_cwd)
+        sys.argv = previous_argv
+        sys.path[:] = previous_sys_path
+    return subprocess.CompletedProcess(command, exit_code, stdout_buffer.getvalue(), stderr_buffer.getvalue())
 
 
 def task_ops(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -149,13 +197,10 @@ def _load_execution_entry(root: Path, task_id: str) -> tuple[dict[str, object], 
     entry = worktree_map(worktrees).get(task_id)
     if entry is None:
         raise GovernanceError(f"missing execution worktree entry: {task_id}")
-    _ensure_execution_runtime_defaults(entry)
-    return worktrees, entry
-
-
-def _write_worktree_registry(root: Path, worktrees: dict[str, object]) -> None:
-    worktrees["updated_at"] = iso_now()
-    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    merged_entry = dict(entry)
+    merged_entry.update(load_execution_runtime_entry(root, task_id))
+    _ensure_execution_runtime_defaults(merged_entry)
+    return worktrees, merged_entry
 
 
 def _update_execution_runtime(
@@ -168,7 +213,7 @@ def _update_execution_runtime(
     last_heartbeat_at: str | None = None,
     last_result: str | None = None,
 ) -> dict[str, object]:
-    worktrees, entry = _load_execution_entry(root, task_id)
+    _, entry = _load_execution_entry(root, task_id)
     if lane_session_id is not None:
         entry["lane_session_id"] = lane_session_id
     if executor_status is not None:
@@ -179,8 +224,15 @@ def _update_execution_runtime(
         entry["last_heartbeat_at"] = last_heartbeat_at
     if last_result is not None:
         entry["last_result"] = last_result
-    _write_worktree_registry(root, worktrees)
-    return entry
+    return update_execution_runtime_entry(
+        root,
+        task_id,
+        lane_session_id=entry.get("lane_session_id"),
+        executor_status=entry.get("executor_status"),
+        started_at=entry.get("started_at"),
+        last_heartbeat_at=entry.get("last_heartbeat_at"),
+        last_result=entry.get("last_result"),
+    )
 
 
 def _parse_iso(value: object) -> datetime | None:
@@ -382,19 +434,21 @@ def _dispatchable_lane_targets(
     running_or_launching = 0
     dispatchable: list[tuple[dict[str, object], dict[str, object]]] = []
     for entry in entries:
-        _ensure_execution_runtime_defaults(entry)
+        merged_entry = dict(entry)
+        merged_entry.update(load_execution_runtime_entry(root, str(entry["task_id"])))
+        _ensure_execution_runtime_defaults(merged_entry)
         task = tasks_by_id.get(str(entry["task_id"]))
         if task is None or task.get("task_kind") != "execution":
             continue
         if task.get("status") in {"done", "blocked", "review"}:
             continue
-        executor_status = str(entry.get("executor_status") or "prepared")
+        executor_status = str(merged_entry.get("executor_status") or "prepared")
         if executor_status in {"running", "launching"}:
             running_or_launching += 1
             continue
         if executor_status in {"completed", "blocked"}:
             continue
-        dispatchable.append((task, entry))
+        dispatchable.append((task, merged_entry))
     return dispatchable, running_or_launching
 
 
@@ -417,29 +471,31 @@ def _run_lane_launcher(
         last_result="dispatch_requested",
     )
     try:
-        launched = subprocess.run(
-            [
-                sys.executable,
-                str(LAUNCHER_SCRIPT),
-                "--repo-root",
-                str(root),
-                "--task-id",
-                str(task["task_id"]),
-                "--worktree-path",
-                str(entry["path"]),
-                "--lane-session-id",
-                lane_session_id,
-                "--heartbeat-interval-seconds",
-                str(heartbeat_interval),
-                "--max-runtime-seconds",
-                str(max_runtime),
-            ],
-            cwd=root,
-            text=True,
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
+        launcher_args = (
+            "--repo-root",
+            str(root),
+            "--task-id",
+            str(task["task_id"]),
+            "--worktree-path",
+            str(entry["path"]),
+            "--lane-session-id",
+            lane_session_id,
+            "--heartbeat-interval-seconds",
+            str(heartbeat_interval),
+            "--max-runtime-seconds",
+            str(max_runtime),
         )
+        if os.environ.get("AX9_INLINE_LANE_LAUNCHER") == "1":
+            launched = _run_step_inline(root, LAUNCHER_SCRIPT, *launcher_args)
+        else:
+            launched = subprocess.run(
+                [sys.executable, str(LAUNCHER_SCRIPT), *launcher_args],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+            )
     except OSError as error:
         _update_execution_runtime(
             root,
@@ -511,14 +567,16 @@ def _monitor_lane_heartbeats(root: Path, current_task: dict[str, object]) -> int
     exit_code = 0
 
     for entry in _parent_execution_entries(worktrees, current_task["current_task_id"]):
-        _ensure_execution_runtime_defaults(entry)
+        merged_entry = dict(entry)
+        merged_entry.update(load_execution_runtime_entry(root, str(entry["task_id"])))
+        _ensure_execution_runtime_defaults(merged_entry)
         task_id = str(entry["task_id"])
         task = tasks_by_id.get(task_id)
         if task is None or task.get("status") in {"done", "blocked"}:
             continue
-        if entry.get("executor_status") not in {"launching", "running"}:
+        if merged_entry.get("executor_status") not in {"launching", "running"}:
             continue
-        reference = _parse_iso(entry.get("last_heartbeat_at")) or _parse_iso(entry.get("started_at"))
+        reference = _parse_iso(merged_entry.get("last_heartbeat_at")) or _parse_iso(merged_entry.get("started_at"))
         if reference is None:
             continue
         if now - reference <= timedelta(seconds=timeout_seconds):
@@ -705,10 +763,15 @@ def main() -> int:
         cycle = 0
         while True:
             cycle += 1
+            print(f"[CYCLE] automation-runner cycle={cycle}")
             result = coordinator_cycle(root, worktree_root, args.prepare_worktrees, args.continue_roadmap)
             if result != 0:
+                runtime = load_orchestration_runtime(root)
+                stop_reason = runtime.get("runtime", {}).get("stall_reason") or "cycle failed"
+                print(f"[STOP] automation-runner loop stopped cycle={cycle} reason={stop_reason}")
                 return result
             if args.cycles and cycle >= args.cycles:
+                print(f"[STOP] automation-runner loop stopped cycle={cycle} reason=cycle limit reached")
                 return 0
             time.sleep(args.interval_seconds)
     except GovernanceError as error:

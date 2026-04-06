@@ -1,10 +1,19 @@
 task_id: TASK-GOV-017
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+summary_status: done
+last_handoff_at: '2026-04-06T09:23:00+08:00'
+completed_items:
+- Implemented dirty-state classification and checkpoint strategy reporting for `continue-current`,
+  review closeout, and roadmap continuation.
+- Moved heartbeat, source observation, and runner tick data into `.codex/local/COORDINATION_RUNTIME.yaml`
+  while preserving tracked ledgers for formal decisions.
+- Added the explicit continuous roadmap continuation intent and loop stop-reason reporting
+  without changing the legacy single-cycle phrase.
+- Fixed stale explicit successor handling, lease wording, checkpoint-scope diagnostics,
+  and execution worktree runtime mirroring regressions.
+- Reduced governance suite runtime from `4m02s` to `2m54s` and automation suite runtime
+  from `2m39s` to `1m47s`.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py
@@ -22,4 +31,7 @@ candidate_test_paths:
 - tests/governance/
 - tests/automation/
 resume_notes:
-- Formal handoff has not been recorded yet.
+- Final scoped implementation and full validation are complete.
+- Current worktree remains on `feat/TASK-GOV-017-continuous-autonomy-clean-runtime`;
+  no successor activation was performed.
+- Task closed.

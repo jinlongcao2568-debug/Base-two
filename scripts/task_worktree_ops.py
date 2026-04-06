@@ -24,6 +24,7 @@ from governance_lib import (
     task_map,
     worktree_map,
 )
+from orchestration_runtime import update_execution_runtime_entry
 from task_rendering import find_task
 
 
@@ -123,6 +124,15 @@ def cmd_worktree_create(args: argparse.Namespace) -> int:
     worker_owner = args.worker_owner or choose_worker_owner(worktrees.get("entries", []), task_policy)
     write_execution_context(destination, task, worker_owner)
     upsert_execution_entry(worktrees, task, destination, worker_owner)
+    update_execution_runtime_entry(
+        root,
+        task["task_id"],
+        lane_session_id=None,
+        executor_status="prepared",
+        started_at=None,
+        last_heartbeat_at=None,
+        last_result=None,
+    )
     worktrees["updated_at"] = iso_now()
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)

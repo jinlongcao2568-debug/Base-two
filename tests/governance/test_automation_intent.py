@@ -195,7 +195,7 @@ def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: P
     assert any("no successor" in blocker for blocker in payload["blockers"])
 
 
-def test_preflight_continue_roadmap_blocks_unmet_dependency(tmp_path: Path) -> None:
+def test_preflight_continue_roadmap_reclassifies_stale_dependency_pointer_into_successor_ambiguity(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _create_successor(repo)
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
@@ -238,7 +238,7 @@ def test_preflight_continue_roadmap_blocks_unmet_dependency(tmp_path: Path) -> N
     code, payload = _preflight(repo, "按路线图继续推进")
     assert code == 0
     assert payload["status"] == "blocked"
-    assert any("dependency not satisfied" in blocker for blocker in payload["blockers"])
+    assert any("successor landscape is not unique" in blocker for blocker in payload["blockers"])
 
 
 def test_preflight_continue_roadmap_blocks_incomplete_successor_boundary(tmp_path: Path) -> None:
