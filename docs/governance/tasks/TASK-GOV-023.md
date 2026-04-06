@@ -5,7 +5,7 @@
 - `task_id`: `TASK-GOV-023`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `queued`
+- `status`: `paused`
 - `stage`: `governance-slow-test-layering-v1`
 - `branch`: `feat/TASK-GOV-023-slow-test-layering`
 - `size_class`: `standard`
@@ -16,7 +16,6 @@
 - `lane_index`: `3`
 - `parallelism_plan_id`: `plan-TASK-GOV-020-3`
 - `review_bundle_status`: `not_applicable`
-
 ## Primary Goals
 
 - Separate the slow governance / automation regression work into an isolated lane with its own helper and automation-suite scope.
@@ -88,17 +87,16 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
-- `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `blocking_state`: `blocked`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `resume_required`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `paused`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
@@ -111,5 +109,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-023-slow-test-layering`
-- `updated_at`: `2026-04-06T15:29:51+08:00`
+- `updated_at`: `2026-04-06T15:50:36+08:00`
 <!-- generated:task-meta:end -->

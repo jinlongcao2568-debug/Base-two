@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-020`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-parallel-repair-bundle-v1`
 - `branch`: `feat/TASK-GOV-020-governance-repair-parent`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `parallel_parent`
 - `lane_count`: `3`
 - `lane_index`: `null`
@@ -20,21 +20,21 @@
 ## Primary Goals
 
 - Coordinate three disjoint child lanes under one governed repair bundle: continuation semantics, authority-alignment regression sync, and slow-test layering.
-- Keep the repair auditable by making the parent responsible only for orchestration, split integrity, and final aggregate validation.
-- Preserve the repository in explicit idle state during drafting; no implementation or activation happens in this task-package step.
+- Keep the repair auditable by making the parent responsible only for orchestration, split integrity, child-worktree preparation, and final aggregate validation.
+- Keep the parent limited to governance coordination artifacts while the three child lanes own implementation in isolated worktrees.
 
 ## Explicitly Not Doing
 
-- Do not activate `TASK-GOV-020` or any child task automatically.
-- Do not implement governance script or test changes in this drafting step.
+- Do not implement governance script or test changes in the parent coordination worktree.
+- Do not merge child-lane code or auto-close the bundle before all three lanes finish and aggregate validation passes.
 - Do not bundle Python environment contract cleanup or subprocess portability cleanup into this repair bundle.
 - Do not modify `src/`, `docs/contracts/`, `db/migrations/`, or `tests/integration/`.
 
 ## Task Intake
 
-- `primary_objective`: split the governance repair into one parent task and three execution lanes with disjoint write scopes.
-- `not_doing`: activation, implementation, environment-contract hardening, and subprocess portability remain outside this drafting step.
-- `stage_scope`: governance coordination and task-package topology only; no business-stage logic changes.
+- `primary_objective`: execute the parent coordination lane for the already-split governance repair bundle and prepare three isolated child worktrees.
+- `not_doing`: child-lane implementation, environment-contract hardening, and subprocess portability remain outside this parent coordination step.
+- `stage_scope`: governance coordination and control-plane alignment only; no business-stage logic changes.
 - `impact_modules`:
   - `docs/governance/tasks/TASK-GOV-020.md`
   - `docs/governance/runlogs/TASK-GOV-020-RUNLOG.md`
@@ -58,8 +58,9 @@
 
 - `TASK-GOV-020` is a `parallel_parent` package with `lane_count: 3` and a shared `parallelism_plan_id`.
 - `TASK-GOV-021/022/023` exist as execution child packages with disjoint planned write and test scopes.
-- Parent handoff, task file, and runlog describe the child topology and aggregate verification gates.
-- No change is made to `CURRENT_TASK.yaml`; the repo remains idle until explicit activation.
+- The parent task is explicitly activated in `CURRENT_TASK.yaml` and `DEVELOPMENT_ROADMAP.md`.
+- Three child execution worktrees are prepared under the parent with baseline checks recorded in the control plane.
+- Parent handoff, task file, and runlog describe the active child topology and aggregate verification gates.
 
 ## Rollback Plan
 
@@ -103,22 +104,21 @@
 - `tests/automation/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `parallel_parent`
 - `lane_count`: `3`
 - `lane_index`: `null`
@@ -127,5 +127,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, scripts/, tests/governance/, tests/automation/`
 - `branch`: `feat/TASK-GOV-020-governance-repair-parent`
-- `updated_at`: `2026-04-06T15:29:51+08:00`
+- `updated_at`: `2026-04-06T15:47:07+08:00`
 <!-- generated:task-meta:end -->

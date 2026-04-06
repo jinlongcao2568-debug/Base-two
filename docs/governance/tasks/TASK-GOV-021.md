@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-021`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `queued`
+- `status`: `blocked`
 - `stage`: `governance-state-machine-idle-semantics-v1`
 - `branch`: `feat/TASK-GOV-021-idle-continuation-gates`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `blocked`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
@@ -92,22 +92,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `blocked`
 - `closeout_state`: `not_ready`
-- `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `blocking_state`: `blocked`
+- `completed_scope`: `active_progress`
+- `remaining_scope`: `blocked_work_remaining`
+- `next_gate`: `blocking_resolution`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `blocked`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `blocked`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
@@ -115,5 +114,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-021-idle-continuation-gates`
-- `updated_at`: `2026-04-06T15:29:51+08:00`
+- `updated_at`: `2026-04-06T15:48:01+08:00`
 <!-- generated:task-meta:end -->

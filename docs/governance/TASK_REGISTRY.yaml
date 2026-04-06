@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T15:36:54+08:00'
+updated_at: '2026-04-06T15:50:36+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -1626,7 +1626,7 @@ tasks:
   closed_at: '2026-04-06T14:51:53+08:00'
 - task_id: TASK-GOV-020
   title: 治理并行修复父任务：状态机、权威对齐与慢测试分层
-  status: queued
+  status: doing
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -1634,9 +1634,9 @@ tasks:
   branch: feat/TASK-GOV-020-governance-repair-parent
   size_class: heavy
   automation_mode: manual
-  worker_state: idle
+  worker_state: running
   blocked_reason: null
-  last_reported_at: '2026-04-06T15:29:51+08:00'
+  last_reported_at: '2026-04-06T15:47:07+08:00'
   topology: parallel_parent
   allowed_dirs:
   - docs/governance/
@@ -1661,8 +1661,10 @@ tasks:
   - python scripts/task_ops.py split-check TASK-GOV-020
   - python scripts/check_repo.py
   - python scripts/check_authority_alignment.py
-  - pytest tests/governance/test_check_repo.py tests/governance/test_task_continuation.py tests/governance/test_authority_alignment.py -q
-  - pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py -q
+  - pytest tests/governance/test_check_repo.py tests/governance/test_task_continuation.py
+    tests/governance/test_authority_alignment.py -q
+  - pytest tests/automation/test_automation_runner.py tests/automation/test_high_throughput_runner.py
+    -q
   task_file: docs/governance/tasks/TASK-GOV-020.md
   runlog_file: docs/governance/runlogs/TASK-GOV-020-RUNLOG.md
   lane_count: 3
@@ -1671,11 +1673,11 @@ tasks:
   review_bundle_status: not_applicable
   successor_state: immediate
   created_at: '2026-04-06T15:15:46+08:00'
-  activated_at: null
+  activated_at: '2026-04-06T15:47:07+08:00'
   closed_at: null
 - task_id: TASK-GOV-021
   title: idle / continuation 语义与 repo gate 对齐
-  status: queued
+  status: blocked
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1683,9 +1685,9 @@ tasks:
   branch: feat/TASK-GOV-021-idle-continuation-gates
   size_class: standard
   automation_mode: manual
-  worker_state: idle
+  worker_state: blocked
   blocked_reason: null
-  last_reported_at: '2026-04-06T15:29:51+08:00'
+  last_reported_at: '2026-04-06T15:48:01+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1709,7 +1711,8 @@ tasks:
   required_tests:
   - python scripts/check_hygiene.py
   - python scripts/check_repo.py
-  - pytest tests/governance/test_check_repo.py tests/governance/test_task_continuation.py -q
+  - pytest tests/governance/test_check_repo.py tests/governance/test_task_continuation.py
+    -q
   task_file: docs/governance/tasks/TASK-GOV-021.md
   runlog_file: docs/governance/runlogs/TASK-GOV-021-RUNLOG.md
   lane_count: 3
@@ -1722,7 +1725,7 @@ tasks:
   closed_at: null
 - task_id: TASK-GOV-022
   title: authority alignment 失败面与回归对齐
-  status: queued
+  status: blocked
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1730,9 +1733,9 @@ tasks:
   branch: feat/TASK-GOV-022-authority-alignment-sync
   size_class: standard
   automation_mode: manual
-  worker_state: idle
+  worker_state: blocked
   blocked_reason: null
-  last_reported_at: '2026-04-06T15:29:51+08:00'
+  last_reported_at: '2026-04-06T15:48:01+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1764,7 +1767,7 @@ tasks:
   closed_at: null
 - task_id: TASK-GOV-023
   title: governance / automation 慢测试分层与降耗
-  status: queued
+  status: paused
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1773,8 +1776,8 @@ tasks:
   size_class: standard
   automation_mode: manual
   worker_state: idle
-  blocked_reason: null
-  last_reported_at: '2026-04-06T15:29:51+08:00'
+  blocked_reason: 'child_prepare_failed: python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"'
+  last_reported_at: '2026-04-06T15:50:36+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
