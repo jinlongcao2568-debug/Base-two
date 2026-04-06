@@ -392,7 +392,7 @@ def run_repo_checks(root, registry: dict[str, Any], tasks_by_id: dict[str, dict[
             current_payload=active_task,
             current_task=None,
         )
-        if readiness["status"] != "ready":
+        if readiness["status"] not in {"ready", "no_successor"}:
             blockers = readiness.get("blockers") or ["idle control plane is not continuation-ready"]
             raise GovernanceError(blockers[0])
         active_errors = collect_active_execution_errors(tasks_by_id, worktrees, task_policy)
