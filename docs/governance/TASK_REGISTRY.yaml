@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T15:50:36+08:00'
+updated_at: '2026-04-06T16:32:06+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -1677,7 +1677,7 @@ tasks:
   closed_at: null
 - task_id: TASK-GOV-021
   title: idle / continuation 语义与 repo gate 对齐
-  status: blocked
+  status: done
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1685,9 +1685,9 @@ tasks:
   branch: feat/TASK-GOV-021-idle-continuation-gates
   size_class: standard
   automation_mode: manual
-  worker_state: blocked
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-06T15:48:01+08:00'
+  last_reported_at: '2026-04-06T16:32:06+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1718,14 +1718,14 @@ tasks:
   lane_count: 3
   lane_index: 1
   parallelism_plan_id: plan-TASK-GOV-020-3
-  review_bundle_status: not_applicable
+  review_bundle_status: passed
   successor_state: null
   created_at: '2026-04-06T15:28:13+08:00'
-  activated_at: null
-  closed_at: null
+  activated_at: '2026-04-06T16:07:28+08:00'
+  closed_at: '2026-04-06T16:27:26+08:00'
 - task_id: TASK-GOV-022
   title: authority alignment 失败面与回归对齐
-  status: blocked
+  status: doing
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1733,9 +1733,9 @@ tasks:
   branch: feat/TASK-GOV-022-authority-alignment-sync
   size_class: standard
   automation_mode: manual
-  worker_state: blocked
+  worker_state: running
   blocked_reason: null
-  last_reported_at: '2026-04-06T15:48:01+08:00'
+  last_reported_at: '2026-04-06T16:07:37+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1763,11 +1763,11 @@ tasks:
   review_bundle_status: not_applicable
   successor_state: null
   created_at: '2026-04-06T15:28:13+08:00'
-  activated_at: null
+  activated_at: '2026-04-06T16:07:37+08:00'
   closed_at: null
 - task_id: TASK-GOV-023
   title: governance / automation 慢测试分层与降耗
-  status: paused
+  status: doing
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1775,9 +1775,9 @@ tasks:
   branch: feat/TASK-GOV-023-slow-test-layering
   size_class: standard
   automation_mode: manual
-  worker_state: idle
-  blocked_reason: 'child_prepare_failed: python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"'
-  last_reported_at: '2026-04-06T15:50:36+08:00'
+  worker_state: running
+  blocked_reason: null
+  last_reported_at: '2026-04-06T16:07:44+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1806,5 +1806,5 @@ tasks:
   review_bundle_status: not_applicable
   successor_state: null
   created_at: '2026-04-06T15:29:51+08:00'
-  activated_at: null
+  activated_at: '2026-04-06T16:07:44+08:00'
   closed_at: null
