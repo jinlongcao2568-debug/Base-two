@@ -5,17 +5,17 @@
 - `task_id`: `TASK-GOV-021`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `blocked`
+- `status`: `done`
 - `stage`: `governance-state-machine-idle-semantics-v1`
 - `branch`: `feat/TASK-GOV-021-idle-continuation-gates`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `blocked`
+- `worker_state`: `completed`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-020-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `passed`
 ## Primary Goals
 
 - Align continuation readiness and repo-gate behavior for the legal `idle + no_successor` path.
@@ -92,27 +92,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `blocked`
-- `closeout_state`: `not_ready`
-- `blocking_state`: `blocked`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `blocked_work_remaining`
-- `next_gate`: `blocking_resolution`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
+- `blocking_state`: `clear`
+- `completed_scope`: `complete`
+- `remaining_scope`: `none`
+- `next_gate`: `none`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `blocked`
+- `status`: `done`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `blocked`
+- `worker_state`: `completed`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-020-3`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `passed`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-021-idle-continuation-gates`
-- `updated_at`: `2026-04-06T15:48:01+08:00`
+- `updated_at`: `2026-04-06T16:32:06+08:00`
 <!-- generated:task-meta:end -->

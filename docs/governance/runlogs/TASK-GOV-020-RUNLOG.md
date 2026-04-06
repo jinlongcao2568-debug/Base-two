@@ -18,7 +18,7 @@
 - `2026-04-06T15:46:35+08:00`: checkpointed the split bundle on branch `feat/TASK-GOV-020-governance-repair-parent`
 - `2026-04-06T15:47:07+08:00`: activated `TASK-GOV-020` as the live coordination task
 - `2026-04-06T15:47:26+08:00`: initial child prepare attempt failed because child worktrees inherited a stale `DEVELOPMENT_ROADMAP.md`
-
+- `2026-04-06T16:27:26+08:00`: waiting on child review bundles `TASK-GOV-022, TASK-GOV-023`
 ## Test Log
 
 - `python scripts/check_hygiene.py`: pass
