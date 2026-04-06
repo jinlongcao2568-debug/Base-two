@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T16:32:06+08:00'
+updated_at: '2026-04-06T17:11:05+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -1626,7 +1626,7 @@ tasks:
   closed_at: '2026-04-06T14:51:53+08:00'
 - task_id: TASK-GOV-020
   title: 治理并行修复父任务：状态机、权威对齐与慢测试分层
-  status: doing
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -1634,9 +1634,9 @@ tasks:
   branch: feat/TASK-GOV-020-governance-repair-parent
   size_class: heavy
   automation_mode: manual
-  worker_state: running
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-06T15:47:07+08:00'
+  last_reported_at: '2026-04-06T17:11:05+08:00'
   topology: parallel_parent
   allowed_dirs:
   - docs/governance/
@@ -1674,7 +1674,7 @@ tasks:
   successor_state: immediate
   created_at: '2026-04-06T15:15:46+08:00'
   activated_at: '2026-04-06T15:47:07+08:00'
-  closed_at: null
+  closed_at: '2026-04-06T17:11:05+08:00'
 - task_id: TASK-GOV-021
   title: idle / continuation 语义与 repo gate 对齐
   status: done
@@ -1725,7 +1725,7 @@ tasks:
   closed_at: '2026-04-06T16:27:26+08:00'
 - task_id: TASK-GOV-022
   title: authority alignment 失败面与回归对齐
-  status: doing
+  status: done
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1733,9 +1733,9 @@ tasks:
   branch: feat/TASK-GOV-022-authority-alignment-sync
   size_class: standard
   automation_mode: manual
-  worker_state: running
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-06T16:07:37+08:00'
+  last_reported_at: '2026-04-06T16:59:28+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1760,14 +1760,14 @@ tasks:
   lane_count: 3
   lane_index: 2
   parallelism_plan_id: plan-TASK-GOV-020-3
-  review_bundle_status: not_applicable
+  review_bundle_status: passed
   successor_state: null
   created_at: '2026-04-06T15:28:13+08:00'
   activated_at: '2026-04-06T16:07:37+08:00'
-  closed_at: null
+  closed_at: '2026-04-06T16:59:28+08:00'
 - task_id: TASK-GOV-023
   title: governance / automation 慢测试分层与降耗
-  status: doing
+  status: done
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: TASK-GOV-020
@@ -1775,9 +1775,9 @@ tasks:
   branch: feat/TASK-GOV-023-slow-test-layering
   size_class: standard
   automation_mode: manual
-  worker_state: running
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-06T16:07:44+08:00'
+  last_reported_at: '2026-04-06T17:01:30+08:00'
   topology: single_task
   allowed_dirs:
   - docs/governance/
@@ -1803,8 +1803,8 @@ tasks:
   lane_count: 3
   lane_index: 3
   parallelism_plan_id: plan-TASK-GOV-020-3
-  review_bundle_status: not_applicable
+  review_bundle_status: passed
   successor_state: null
   created_at: '2026-04-06T15:29:51+08:00'
   activated_at: '2026-04-06T16:07:44+08:00'
-  closed_at: null
+  closed_at: '2026-04-06T17:01:30+08:00'

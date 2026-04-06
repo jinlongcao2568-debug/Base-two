@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T16:32:06+08:00'
+updated_at: '2026-04-06T17:11:05+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -256,7 +256,7 @@ entries:
   parent_task_id: null
   branch: feat/TASK-GOV-020-governance-repair-parent
   path: D:/Base One/Base-two/AX9
-  status: active
+  status: closed
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null
@@ -266,18 +266,19 @@ entries:
   parent_task_id: TASK-GOV-020
   branch: feat/TASK-GOV-023-slow-test-layering
   path: D:/Base One/Base-two/AX9.worktrees/TASK-GOV-023
-  status: active
-  cleanup_state: pending
+  status: closed
+  cleanup_state: done
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: worker-03
   lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
-  executor_status: running
+  executor_status: completed
   started_at: '2026-04-06T16:07:44+08:00'
-  last_heartbeat_at: '2026-04-06T16:07:44+08:00'
-  last_result: worker-start
+  last_heartbeat_at: '2026-04-06T16:58:20+08:00'
+  last_result: Reduced slow governance/automation test setup churn and aligned runner
+    expectations with the legal no-successor path.
   workflow_state:
-    phase: plan_ready
+    phase: child_finished
     prepared_at: '2026-04-06T15:58:50+08:00'
     parent_branch: feat/TASK-GOV-020-governance-repair-parent
     baseline_checks:
@@ -373,17 +374,19 @@ entries:
       - spec_review
       - quality_review
       spec_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: Slow-test lane stays inside helpers/automation scope and reduces
+          setup churn without touching continuation or authority code.
+        recorded_at: '2026-04-06T16:58:01+08:00'
       quality_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: The targeted automation suites pass after the helper clone optimization
+          and the updated no-successor runner expectations.
+        recorded_at: '2026-04-06T16:58:09+08:00'
     finish:
-      status: pending
-      recorded_at: null
-      merged_into_parent_at: null
+      status: completed
+      recorded_at: '2026-04-06T17:01:30+08:00'
+      merged_into_parent_at: '2026-04-06T17:01:30+08:00'
 - task_id: TASK-GOV-021
   work_mode: execution
   parent_task_id: TASK-GOV-020
@@ -515,18 +518,19 @@ entries:
   parent_task_id: TASK-GOV-020
   branch: feat/TASK-GOV-022-authority-alignment-sync
   path: D:/Base One/Base-two/AX9.worktrees/TASK-GOV-022
-  status: active
-  cleanup_state: pending
+  status: closed
+  cleanup_state: done
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: worker-02
   lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
-  executor_status: running
+  executor_status: completed
   started_at: '2026-04-06T16:07:37+08:00'
-  last_heartbeat_at: '2026-04-06T16:07:37+08:00'
-  last_result: worker-start
+  last_heartbeat_at: '2026-04-06T16:57:52+08:00'
+  last_result: Aligned authority-alignment regression with the live stale-roadmap
+    failure surface.
   workflow_state:
-    phase: plan_ready
+    phase: child_finished
     prepared_at: '2026-04-06T15:58:40+08:00'
     parent_branch: feat/TASK-GOV-020-governance-repair-parent
     baseline_checks:
@@ -606,14 +610,16 @@ entries:
       - spec_review
       - quality_review
       spec_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: Authority-alignment regression now matches the live stale-roadmap
+          failure surface and stays inside the lane scope.
+        recorded_at: '2026-04-06T16:57:33+08:00'
       quality_review:
-        status: pending
-        summary: null
-        recorded_at: null
+        status: passed
+        summary: check_authority_alignment and the scoped regression both pass in
+          the refreshed child execution context.
+        recorded_at: '2026-04-06T16:57:40+08:00'
     finish:
-      status: pending
-      recorded_at: null
-      merged_into_parent_at: null
+      status: completed
+      recorded_at: '2026-04-06T16:59:28+08:00'
+      merged_into_parent_at: '2026-04-06T16:59:28+08:00'
