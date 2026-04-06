@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-local-multi-agent-platformization-v1
+current_task_id: TASK-GOV-025
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -12,7 +12,7 @@ priority_order:
 business_automation_enabled: true
 business_automation_scope: stage1_to_stage9
 parallel_strategy: dependency_aware_disjoint_writes
-max_parallel_workers: 4
+max_parallel_workers: 20
 spec_source_policy: baseline_contracts_task_package
 business_gap_priority:
 - bootstrap_required
@@ -35,7 +35,7 @@ automation_foundation: stale_successor_inputs_under_correction
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-025`: `治理本地并发平台化父任务：lease closeout mirror runner` is the live coordination task for `governance-local-multi-agent-platformization-v1`.
 ## Recently Closed
 
 - `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.

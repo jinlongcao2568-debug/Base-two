@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-026`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-local-multi-agent-platformization-v1`
 - `branch`: `feat/TASK-GOV-026-lease-closeout-closure`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
@@ -66,28 +66,27 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_task`
 - `lane_count`: `3`
 - `lane_index`: `1`
 - `parallelism_plan_id`: `plan-TASK-GOV-025-3`
 - `review_bundle_status`: `not_applicable`
-- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, tests/automation/, scripts/child_execution_flow.py, scripts/task_worktree_ops.py, scripts/governance_repo_checks.py, scripts/task_handoff.py`
+- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-026-lease-closeout-closure`
-- `updated_at`: `2026-04-06T19:46:52+08:00`
+- `updated_at`: `2026-04-06T19:58:50+08:00`
 <!-- generated:task-meta:end -->

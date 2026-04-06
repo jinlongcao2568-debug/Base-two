@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-06T17:49:41+08:00'
+updated_at: '2026-04-06T20:00:40+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -633,3 +633,298 @@ entries:
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: coordinator
+- task_id: TASK-GOV-025
+  work_mode: coordination
+  parent_task_id: null
+  branch: feat/TASK-GOV-025-local-multi-agent-platformization
+  path: D:/Base One/Base-two/AX9
+  status: active
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-027
+  work_mode: execution
+  parent_task_id: TASK-GOV-025
+  branch: feat/TASK-GOV-027-child-closeout-mirror
+  path: D:/Base One/Base-two/AX9.worktrees/TASK-GOV-027
+  status: active
+  cleanup_state: pending
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: worker-02
+  lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
+  executor_status: running
+  started_at: '2026-04-06T20:00:40+08:00'
+  last_heartbeat_at: '2026-04-06T20:00:40+08:00'
+  last_result: worker-start
+  workflow_state:
+    phase: plan_ready
+    prepared_at: '2026-04-06T19:55:11+08:00'
+    parent_branch: feat/TASK-GOV-025-local-multi-agent-platformization
+    baseline_checks:
+      status: passed
+      commands:
+      - python "D:/Base One/Base-two/AX9/scripts/check_repo.py"
+      - python "D:/Base One/Base-two/AX9/scripts/check_hygiene.py"
+      - python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"
+      last_run_at: '2026-04-06T19:55:11+08:00'
+      results:
+      - command: python "D:/Base One/Base-two/AX9/scripts/check_repo.py"
+        passed: true
+        output: '[OK] governance checks passed'
+      - command: python "D:/Base One/Base-two/AX9/scripts/check_hygiene.py"
+        passed: true
+        output: '[WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\scripts\child_execution_flow.py:68
+          function default_child_workflow_state has 52 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\scripts\child_execution_flow.py:122
+          function ensure_child_workflow_state has 73 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\scripts\child_execution_flow.py:
+          likely multiple responsibilities (24 public symbols)
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\scripts\task_worktree_ops.py:157
+          function cmd_prepare_child_execution has 60 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\tests\governance\test_task_ops.py:
+          file length 697 exceeds warning threshold 500
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\tests\governance\test_task_ops.py:180
+          function test_split_check_detects_single_writer_root_conflict has 54 logical
+          lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\tests\governance\test_task_ops.py:521
+          function test_worktree_create_and_release_round_trip has 54 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\tests\governance\test_task_ops.py:579
+          function test_worker_heartbeat_updates_execution_runtime_without_runlog_noise
+          has 54 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-027\tests\governance\test_task_ops.py:
+          likely multiple responsibilities (20 public symbols)
+
+          [OK] hygiene checks passed'
+      - command: python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"
+        passed: true
+        output: '关键对象状态
+
+          - project_base: 对齐
+
+          - rule_hit: 对齐
+
+          - evidence: 对齐
+
+          - review_request: 对齐
+
+          - report_record: 对齐
+
+          - project_fact: 对齐
+
+
+          [OK] 权威性: 100
+
+          [OK] 一致性: 100
+
+          [OK] 完整度: 100
+
+          [OK] 专业化: 100
+
+          [OK] 单一真源程度: 100
+
+          [OK] 产品层: 100
+
+          [OK] 结构层: 100
+
+          [OK] 开发控制层: 100
+
+          [OK] 质量层: 100
+
+          [OK] 自动化层: 100
+
+          [OK] 综合评分: 100
+
+
+          结论: PASS'
+    design_confirmation:
+      status: passed
+      summary: Make governed child execution self-healing when mirrored governance
+        files or missing worktree paths would otherwise leave false blocked states.
+      recorded_at: '2026-04-06T19:57:31+08:00'
+    execution_plan:
+      status: ready
+      artifact_path: .codex/local/EXECUTION_PLAN.yaml
+      recorded_at: '2026-04-06T19:57:31+08:00'
+    implementation:
+      kind: code
+      test_first_status: pending
+      recorded_at: '2026-04-06T19:57:31+08:00'
+      commands: []
+    review:
+      sequence:
+      - spec_review
+      - quality_review
+      spec_review:
+        status: pending
+        summary: null
+        recorded_at: null
+      quality_review:
+        status: pending
+        summary: null
+        recorded_at: null
+    finish:
+      status: pending
+      recorded_at: null
+      merged_into_parent_at: null
+- task_id: TASK-GOV-026
+  work_mode: execution
+  parent_task_id: TASK-GOV-025
+  branch: feat/TASK-GOV-026-lease-closeout-closure
+  path: D:/Base One/Base-two/AX9.worktrees/TASK-GOV-026
+  status: active
+  cleanup_state: pending
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: worker-01
+  lane_session_id: 019d616e-a090-7610-8147-0938c1df0717
+  executor_status: running
+  started_at: '2026-04-06T19:58:50+08:00'
+  last_heartbeat_at: '2026-04-06T19:58:50+08:00'
+  last_result: worker-start
+  workflow_state:
+    phase: plan_ready
+    prepared_at: '2026-04-06T19:56:57+08:00'
+    parent_branch: feat/TASK-GOV-025-local-multi-agent-platformization
+    baseline_checks:
+      status: passed
+      commands:
+      - python "D:/Base One/Base-two/AX9/scripts/check_repo.py"
+      - python "D:/Base One/Base-two/AX9/scripts/check_hygiene.py"
+      - python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"
+      last_run_at: '2026-04-06T19:56:57+08:00'
+      results:
+      - command: python "D:/Base One/Base-two/AX9/scripts/check_repo.py"
+        passed: true
+        output: '[OK] governance checks passed'
+      - command: python "D:/Base One/Base-two/AX9/scripts/check_hygiene.py"
+        passed: true
+        output: '[WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_continuation_ops.py:683
+          function _advance_continue_roadmap has 52 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_continuation_ops.py:1072
+          function assess_continuation_readiness has 66 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_continuation_ops.py:1142
+          function cmd_continue_current has 54 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_lifecycle_ops.py:56
+          function cmd_new has 57 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_lifecycle_ops.py:211
+          function cmd_close has 72 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_lifecycle_ops.py:359
+          function cmd_reconcile_ledgers has 69 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_lifecycle_ops.py:
+          likely multiple responsibilities (10 public symbols)
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_worker_ops.py:224
+          function cmd_worker_start has 64 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_worker_ops.py:290
+          function cmd_worker_report has 63 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_worker_ops.py:355
+          function cmd_worker_blocked has 57 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_worker_ops.py:414
+          function cmd_worker_finish has 62 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_worker_ops.py:935
+          function cmd_auto_close_children has 55 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\scripts\task_worker_ops.py:
+          likely multiple responsibilities (11 public symbols)
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\tests\governance\test_task_continuation.py:
+          file length 690 exceeds warning threshold 500
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\tests\governance\test_task_continuation.py:72
+          function _prepare_review_ready_parallel_parent has 67 logical lines
+
+          [WARN] D:\Base One\Base-two\AX9.worktrees\TASK-GOV-026\tests\governance\test_task_continuation.py:
+          likely multiple responsibilities (26 public symbols)
+
+          [OK] hygiene checks passed'
+      - command: python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"
+        passed: true
+        output: '关键对象状态
+
+          - project_base: 对齐
+
+          - rule_hit: 对齐
+
+          - evidence: 对齐
+
+          - review_request: 对齐
+
+          - report_record: 对齐
+
+          - project_fact: 对齐
+
+
+          [OK] 权威性: 100
+
+          [OK] 一致性: 100
+
+          [OK] 完整度: 100
+
+          [OK] 专业化: 100
+
+          [OK] 单一真源程度: 100
+
+          [OK] 产品层: 100
+
+          [OK] 结构层: 100
+
+          [OK] 开发控制层: 100
+
+          [OK] 质量层: 100
+
+          [OK] 自动化层: 100
+
+          [OK] 综合评分: 100
+
+
+          结论: PASS'
+    design_confirmation:
+      status: passed
+      summary: Unify lease resolution and closeout-ready automatic takeover across
+        close, continue-current, continue-roadmap, worker-finish, and auto-close-children.
+      recorded_at: '2026-04-06T19:57:30+08:00'
+    execution_plan:
+      status: ready
+      artifact_path: .codex/local/EXECUTION_PLAN.yaml
+      recorded_at: '2026-04-06T19:57:30+08:00'
+    implementation:
+      kind: code
+      test_first_status: pending
+      recorded_at: '2026-04-06T19:57:30+08:00'
+      commands: []
+    review:
+      sequence:
+      - spec_review
+      - quality_review
+      spec_review:
+        status: pending
+        summary: null
+        recorded_at: null
+      quality_review:
+        status: pending
+        summary: null
+        recorded_at: null
+    finish:
+      status: pending
+      recorded_at: null
+      merged_into_parent_at: null
