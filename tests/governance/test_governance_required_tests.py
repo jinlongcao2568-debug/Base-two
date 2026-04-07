@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from .fixture_payloads import FIXTURE_CAPABILITY_STATUS_OVERRIDES, capability_map_payload, module_map_payload
 from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[2] / "scripts"
@@ -118,3 +119,80 @@ def test_task_new_uses_path_triggered_governance_required_tests_when_not_explici
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert task["required_tests"] == _profile_tests(repo, "governance_fast")
+
+
+def test_live_governance_capability_descriptions_use_targeted_regressions(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
+    governance_capability = next(
+        item for item in capability_map["capabilities"] if item["capability_id"] == "governance_control_plane"
+    )
+
+    assert governance_capability["tests"][:3] == [
+        "python scripts/check_repo.py",
+        "python scripts/check_hygiene.py src docs tests",
+        "python scripts/check_authority_alignment.py",
+    ]
+    assert "pytest tests/governance -q" not in governance_capability["tests"]
+    assert "pytest tests/automation -q" not in governance_capability["tests"]
+
+
+def test_live_governance_module_baseline_uses_repo_hygiene_only(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    module_map = read_yaml(repo / "docs/governance/MODULE_MAP.yaml")
+    governance_module = next(item for item in module_map["modules"] if item["module_id"] == "governance_control_plane")
+
+    assert governance_module["required_tests"] == [
+        "python scripts/check_repo.py",
+        "python scripts/check_hygiene.py src docs tests",
+    ]
+
+
+def test_fixture_payloads_follow_live_capability_and_module_maps() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    live_capability_map = read_yaml(repo_root / "docs/governance/CAPABILITY_MAP.yaml")
+    fixture_capability_map = capability_map_payload()
+
+    for capability in live_capability_map["capabilities"]:
+        override = FIXTURE_CAPABILITY_STATUS_OVERRIDES.get(capability["capability_id"])
+        if override is not None:
+            capability["status"] = override
+
+    assert fixture_capability_map == live_capability_map
+    assert module_map_payload() == read_yaml(repo_root / "docs/governance/MODULE_MAP.yaml")
+
+
+def test_business_parallel_parent_blueprint_uses_targeted_governance_and_runner_tests(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    task_policy = read_yaml(repo / "docs/governance/TASK_POLICY.yaml")
+    blueprint = next(
+        item
+        for item in task_policy["task_blueprints"]
+        if item["blueprint_id"] == "business_parallel_parent_stage1_to_stage6"
+    )
+
+    assert blueprint["required_tests"] == [
+        "python scripts/check_authority_alignment.py",
+        "python scripts/validate_contracts.py",
+        "python scripts/check_repo.py",
+        "python scripts/check_hygiene.py src docs tests",
+        "pytest tests/governance/test_task_continuation.py -q",
+        "pytest tests/automation/test_automation_runner.py -q",
+        "pytest tests/contracts -q",
+        "pytest tests/integration -q",
+    ]
+
+
+def test_size_class_preflight_hygiene_commands_use_scoped_args(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    matrix = read_yaml(repo / "docs/governance/TEST_MATRIX.yaml")
+
+    assert matrix["size_class_gates"]["micro"]["preflight"] == [
+        "python scripts/check_repo.py",
+        "python scripts/check_hygiene.py src docs tests",
+    ]
+    assert matrix["size_class_gates"]["standard"]["preflight"][:2] == [
+        "python scripts/check_repo.py",
+        "python scripts/check_hygiene.py src docs tests",
+    ]
+    assert "python scripts/check_hygiene.py src docs tests" in matrix["size_class_gates"]["heavy"]["preflight"]

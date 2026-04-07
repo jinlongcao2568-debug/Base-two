@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-04T17:10:00+08:00'
+updated_at: '2026-04-07T10:40:00+08:00'
 modules:
 - module_id: stage1_orchestration
   owner_stage: stage1
@@ -303,5 +303,5 @@ modules:
   - tests/governance/
   - tests/automation/
   required_tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests

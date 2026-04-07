@@ -57,278 +57,40 @@ def roadmap_text() -> str:
     )
 
 
-def _capability(
-    capability_id: str,
-    status: str,
-    source_of_truth: list[str],
-    scripts: list[str],
-    tests: list[str],
-) -> dict[str, Any]:
-    return {
-        "capability_id": capability_id,
-        "status": status,
-        "source_of_truth": source_of_truth,
-        "scripts": scripts,
-        "tests": tests,
-    }
+def _load_canonical_yaml(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        return copy.deepcopy(yaml.safe_load(handle) or {})
 
 
-def _governance_capability_entries() -> list[dict[str, Any]]:
-    return [*_governance_control_capabilities(), *_governance_prompt_capabilities()]
-
-
-def _governance_control_capabilities() -> list[dict[str, Any]]:
-    return [
-        _capability(
-            "governance_control_plane",
-            "implemented",
-            [
-                "docs/governance/CURRENT_TASK.yaml",
-                "docs/governance/TASK_REGISTRY.yaml",
-                "docs/governance/WORKTREE_REGISTRY.yaml",
-            ],
-            ["scripts/task_ops.py", "scripts/automation_runner.py"],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-        _capability(
-            "closeout_autopilot_v2",
-            "implemented",
-            [
-                "docs/governance/CURRENT_TASK.yaml",
-                "docs/governance/TASK_REGISTRY.yaml",
-                "docs/governance/WORKTREE_REGISTRY.yaml",
-                "docs/governance/runlogs/",
-            ],
-            [
-                "scripts/task_closeout.py",
-                "scripts/task_continuation_ops.py",
-                "scripts/automation_runner.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-        _capability(
-            "git_publish_on_demand_v1",
-            "implemented",
-            [
-                "docs/governance/GIT_PUBLISH_POLICY.yaml",
-                "docs/governance/AUTOMATION_INTENTS.yaml",
-                "docs/governance/runlogs/",
-            ],
-            [
-                "scripts/task_publish_ops.py",
-                "scripts/task_runtime_ops.py",
-                "scripts/automation_intent.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-        _capability(
-            "roadmap_autopilot_continuation",
-            "not_implemented",
-            [
-                "docs/governance/DEVELOPMENT_ROADMAP.md",
-                "docs/governance/TASK_POLICY.yaml",
-                "docs/governance/CAPABILITY_MAP.yaml",
-            ],
-            [
-                "scripts/automation_intent.py",
-                "scripts/task_ops.py",
-                "scripts/task_continuation_ops.py",
-                "scripts/automation_runner.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-    ]
-
-
-def _governance_prompt_capabilities() -> list[dict[str, Any]]:
-    return [
-        _capability(
-            "dynamic_parallel_execution_control",
-            "not_implemented",
-            [
-                "docs/governance/TASK_POLICY.yaml",
-                "docs/governance/TASK_REGISTRY.yaml",
-                "docs/governance/WORKTREE_REGISTRY.yaml",
-            ],
-            [
-                "scripts/governance_rules.py",
-                "scripts/task_worktree_ops.py",
-                "scripts/business_autopilot.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-        _capability(
-            "parallel_closeout_pipeline_v1",
-            "not_implemented",
-            [
-                "docs/governance/TASK_REGISTRY.yaml",
-                "docs/governance/WORKTREE_REGISTRY.yaml",
-                "docs/governance/CURRENT_TASK.yaml",
-            ],
-            [
-                "scripts/task_worker_ops.py",
-                "scripts/task_continuation_ops.py",
-                "scripts/automation_runner.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-        _capability(
-            "runtime_prompt_profiles",
-            "not_implemented",
-            [
-                "docs/governance/PROMPT_MODULE_CATALOG.yaml",
-                "docs/governance/prompt_modules/",
-                "docs/governance/runtime_prompts/",
-            ],
-            ["scripts/render_runtime_prompts.py"],
-            ["pytest tests/governance -q"],
-        ),
-        _capability(
-            "high_throughput_runner_v1",
-            "not_implemented",
-            [
-                "docs/governance/DEVELOPMENT_ROADMAP.md",
-                "docs/governance/AUTOMATION_OPERATING_MODEL.md",
-                "docs/governance/TASK_POLICY.yaml",
-                "docs/governance/WORKTREE_REGISTRY.yaml",
-            ],
-            [
-                "scripts/automation_runner.py",
-                "scripts/task_worktree_ops.py",
-                "scripts/task_worker_ops.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-    ]
-
-
-def _business_capability_entries() -> list[dict[str, Any]]:
-    return [
-        _capability(
-            "stage1_to_stage6_business_automation",
-            "not_implemented",
-            [
-                "docs/governance/DEVELOPMENT_ROADMAP.md",
-                "docs/governance/TASK_POLICY.yaml",
-                "docs/governance/MODULE_MAP.yaml",
-                "docs/governance/TEST_MATRIX.yaml",
-            ],
-            [
-                "scripts/business_autopilot.py",
-                "scripts/task_continuation_ops.py",
-                "scripts/task_worker_ops.py",
-                "scripts/automation_runner.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-        _capability(
-            "stage7_to_stage9_business_automation",
-            "not_established",
-            [
-                "docs/governance/DEVELOPMENT_ROADMAP.md",
-                "docs/governance/TASK_POLICY.yaml",
-                "docs/governance/MODULE_MAP.yaml",
-            ],
-            [
-                "scripts/business_autopilot.py",
-                "scripts/task_continuation_ops.py",
-                "scripts/automation_runner.py",
-            ],
-            ["pytest tests/governance -q", "pytest tests/automation -q"],
-        ),
-    ]
+_CANONICAL_CAPABILITY_MAP_PATH = Path(__file__).resolve().parents[2] / "docs/governance/CAPABILITY_MAP.yaml"
+_CANONICAL_MODULE_MAP_PATH = Path(__file__).resolve().parents[2] / "docs/governance/MODULE_MAP.yaml"
+_CANONICAL_TEST_MATRIX_PATH = Path(__file__).resolve().parents[2] / "docs/governance/TEST_MATRIX.yaml"
+FIXTURE_CAPABILITY_STATUS_OVERRIDES = {
+    "roadmap_autopilot_continuation": "not_implemented",
+    "dynamic_parallel_execution_control": "not_implemented",
+    "parallel_closeout_pipeline_v1": "not_implemented",
+    "runtime_prompt_profiles": "not_implemented",
+    "high_throughput_runner_v1": "not_implemented",
+    "stage1_to_stage6_business_automation": "not_implemented",
+    "stage7_to_stage9_business_automation": "not_established",
+}
 
 
 def capability_map_payload() -> dict[str, Any]:
-    return {
-        "version": "1.0",
-        "updated_at": "2026-04-05T12:30:00+08:00",
-        "authority_source": "docs/product/AUTHORITY_SPEC.md",
-        "capabilities": [*_governance_capability_entries(), *_business_capability_entries()],
-    }
-
-def _stage_module(
-    module_id: str,
-    owner_stage: str,
-    inputs: list[str],
-    outputs: list[str],
-    depends_on: list[str],
-    allowed_dirs: list[str],
-    integration_points: list[str],
-    required_tests: list[str],
-) -> dict[str, Any]:
-    return {
-        "module_id": module_id,
-        "owner_stage": owner_stage,
-        "inputs": inputs,
-        "outputs": outputs,
-        "depends_on": depends_on,
-        "allowed_dirs": allowed_dirs,
-        "reserved_paths": [
-            "docs/governance/",
-            "tests/integration/",
-            "docs/governance/INTERFACE_CATALOG.yaml",
-        ],
-        "integration_points": integration_points,
-        "required_tests": required_tests,
-    }
-
-
-def _core_stage_modules() -> list[dict[str, Any]]:
-    return [
-        _stage_module("stage1_orchestration", "stage1", ["source scheduling requests"], ["ingestion jobs"], [], ["src/stage1_orchestration/", "tests/stage1/"], ["stage2_ingestion"], ["pytest tests/stage1 -q"]),
-        _stage_module("stage2_ingestion", "stage2", ["ingestion jobs"], ["raw source payloads"], ["stage1_orchestration"], ["src/stage2_ingestion/", "tests/stage2/"], ["stage3_parsing"], ["pytest tests/stage2 -q"]),
-        _stage_module("stage3_parsing", "stage3", ["raw source payloads"], ["project_base"], ["stage2_ingestion"], ["src/stage3_parsing/", "tests/stage3/"], ["stage4_validation"], ["pytest tests/stage3 -q"]),
-        _stage_module("stage4_validation", "stage4", ["project_base"], ["rule_hit", "evidence", "review_request"], ["stage3_parsing"], ["src/stage4_validation/", "tests/stage4/"], ["stage5_reporting", "stage6_facts"], ["pytest tests/stage4 -q"]),
-        _stage_module("stage5_reporting", "stage5", ["validated findings"], ["report_record"], ["stage4_validation"], ["src/stage5_reporting/", "tests/stage5/"], ["stage6_facts"], ["pytest tests/stage5 -q"]),
-        _stage_module("stage6_facts", "stage6", ["validated findings", "report artifacts"], ["project_fact"], ["stage4_validation", "stage5_reporting"], ["src/stage6_facts/", "tests/stage6/"], ["stage7_sales", "stage8_contact", "stage9_delivery"], ["pytest tests/stage6 -q"]),
-    ]
-
-
-def _downstream_stage_modules() -> list[dict[str, Any]]:
-    return [
-        _stage_module("stage7_sales", "stage7", ["project_fact"], ["sales_context"], ["stage6_facts"], ["src/stage7_sales/", "tests/stage7/"], ["tests/integration/"], ["pytest tests/stage7 -q"]),
-        _stage_module("stage8_contact", "stage8", ["project_fact"], ["contact_context"], ["stage6_facts"], ["src/stage8_contact/", "tests/stage8/"], ["tests/integration/"], ["pytest tests/stage8 -q"]),
-        _stage_module("stage9_delivery", "stage9", ["project_fact", "downstream contexts"], ["delivery_payloads"], ["stage6_facts", "stage7_sales", "stage8_contact"], ["src/stage9_delivery/", "tests/stage9/"], ["tests/integration/"], ["pytest tests/stage9 -q"]),
-    ]
-
-
-def _governance_control_module() -> dict[str, Any]:
-    return {
-        "module_id": "governance_control_plane",
-        "owner_stage": "governance",
-        "inputs": ["CURRENT_TASK"],
-        "outputs": ["task updates"],
-        "depends_on": [],
-        "allowed_dirs": ["docs/governance/", "tests/governance/"],
-        "reserved_paths": ["src/stage6_facts/"],
-        "integration_points": ["tests/governance/"],
-        "required_tests": ["pytest tests/base -q"],
-    }
+    payload = _load_canonical_yaml(_CANONICAL_CAPABILITY_MAP_PATH)
+    for capability in payload.get("capabilities", []):
+        override = FIXTURE_CAPABILITY_STATUS_OVERRIDES.get(capability.get("capability_id"))
+        if override is not None:
+            capability["status"] = override
+    return payload
 
 
 def module_map_payload() -> dict[str, Any]:
-    return {
-        "version": "1.0",
-        "updated_at": "2026-04-04T00:00:00+08:00",
-        "modules": [*_core_stage_modules(), *_downstream_stage_modules(), _governance_control_module()],
-    }
-
-
-def _matrix_entry(*required_tests: str) -> dict[str, Any]:
-    return {
-        "micro": {"required_tests": [required_tests[0]]},
-        "standard": {"required_tests": list(required_tests[:2]) if len(required_tests) > 1 else [required_tests[0]]},
-        "heavy": {"required_tests": list(required_tests)},
-    }
-
-
-_CANONICAL_TEST_MATRIX_PATH = Path(__file__).resolve().parents[2] / "docs/governance/TEST_MATRIX.yaml"
+    return _load_canonical_yaml(_CANONICAL_MODULE_MAP_PATH)
 
 
 def test_matrix_payload() -> dict[str, Any]:
-    with _CANONICAL_TEST_MATRIX_PATH.open("r", encoding="utf-8") as handle:
-        return copy.deepcopy(yaml.safe_load(handle) or {})
+    return _load_canonical_yaml(_CANONICAL_TEST_MATRIX_PATH)
 
 
 def base_allowed_dirs() -> list[str]:

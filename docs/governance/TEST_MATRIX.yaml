@@ -1,10 +1,10 @@
 version: '1.1'
-updated_at: '2026-04-04T23:20:00+08:00'
+updated_at: '2026-04-07T10:40:00+08:00'
 size_class_gates:
   micro:
     preflight:
       - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
+      - python scripts/check_hygiene.py src docs tests
     worker:
       - module unit tests
     closeout:
@@ -12,7 +12,7 @@ size_class_gates:
   standard:
     preflight:
       - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
+      - python scripts/check_hygiene.py src docs tests
       - python scripts/validate_contracts.py
     worker:
       - module unit tests
@@ -24,7 +24,7 @@ size_class_gates:
     preflight:
       - python scripts/check_authority_alignment.py
       - python scripts/check_repo.py
-      - python scripts/check_hygiene.py
+      - python scripts/check_hygiene.py src docs tests
       - python scripts/validate_contracts.py
       - python scripts/task_ops.py decide-topology TASK-ID
     worker:

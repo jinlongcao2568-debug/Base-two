@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-06T13:18:45+08:00'
+updated_at: '2026-04-07T10:40:00+08:00'
 authority_source: docs/product/AUTHORITY_SPEC.md
 capabilities:
 - capability_id: governance_control_plane
@@ -17,8 +17,17 @@ capabilities:
   - scripts/task_continuation_ops.py
   - scripts/automation_runner.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - python scripts/check_authority_alignment.py
+  - pytest tests/governance/test_check_repo.py -q
+  - pytest tests/governance/test_task_continuation.py -q
+  - pytest tests/governance/test_parallel_closeout_pipeline.py -q
+  - pytest tests/governance/test_task_publish_ops.py -q
+  - pytest tests/governance/test_automation_intent.py -q
+  - pytest tests/automation/test_automation_runner.py -q
+  - pytest tests/automation/test_high_throughput_runner.py -q
+  - pytest tests/automation/test_orchestration_runtime_runner.py -q
 - capability_id: handoff_recovery_v1
   status: implemented
   source_of_truth:
@@ -32,8 +41,10 @@ capabilities:
   - scripts/automation_intent.py
   - scripts/task_lifecycle_ops.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_handoff_recovery.py -q
+  - pytest tests/governance/test_coordination_lease.py -q
 - capability_id: coordination_single_writer_v1
   status: implemented
   source_of_truth:
@@ -49,8 +60,11 @@ capabilities:
   - scripts/automation_intent.py
   - scripts/task_runtime_ops.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_coordination_lease.py -q
+  - pytest tests/governance/test_task_continuation.py -q
+  - pytest tests/governance/test_orchestration_runtime.py -q
 - capability_id: doc_driven_coordination_planner_v1
   status: implemented
   source_of_truth:
@@ -62,8 +76,9 @@ capabilities:
   - scripts/task_coordination_planner.py
   - scripts/task_runtime_ops.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_coordination_planner.py -q
 - capability_id: git_publish_on_demand_v1
   status: implemented
   source_of_truth:
@@ -75,8 +90,10 @@ capabilities:
   - scripts/task_runtime_ops.py
   - scripts/automation_intent.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_task_publish_ops.py -q
+  - pytest tests/governance/test_automation_intent.py -q
 - capability_id: roadmap_autopilot_continuation
   status: implemented
   source_of_truth:
@@ -88,8 +105,11 @@ capabilities:
   - scripts/task_continuation_ops.py
   - scripts/automation_runner.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_task_continuation.py -q
+  - pytest tests/governance/test_automation_intent.py -q
+  - pytest tests/automation/test_automation_runner.py -q
 - capability_id: closeout_autopilot_v2
   status: implemented
   source_of_truth:
@@ -102,8 +122,10 @@ capabilities:
   - scripts/task_ops.py
   - scripts/automation_intent.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_task_continuation.py -q
+  - pytest tests/governance/test_parallel_closeout_pipeline.py -q
 - capability_id: dynamic_parallel_execution_control
   status: implemented
   source_of_truth:
@@ -119,8 +141,13 @@ capabilities:
   - scripts/business_autopilot.py
   - scripts/automation_runner.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - python scripts/check_authority_alignment.py
+  - pytest tests/governance/test_governance_required_tests.py -q
+  - pytest tests/governance/test_parallel_closeout_pipeline.py -q
+  - pytest tests/automation/test_automation_runner.py -q
+  - pytest tests/automation/test_high_throughput_runner.py -q
 - capability_id: parallel_closeout_pipeline_v1
   status: implemented
   source_of_truth:
@@ -132,8 +159,10 @@ capabilities:
   - scripts/task_continuation_ops.py
   - scripts/automation_runner.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_parallel_closeout_pipeline.py -q
+  - pytest tests/automation/test_automation_runner.py -q
 - capability_id: runtime_prompt_profiles
   status: implemented
   source_of_truth:
@@ -143,7 +172,7 @@ capabilities:
   scripts:
   - scripts/render_runtime_prompts.py
   tests:
-  - pytest tests/governance -q
+  - pytest tests/governance/test_runtime_prompts.py -q
 - capability_id: high_throughput_runner_v1
   status: implemented
   source_of_truth:
@@ -156,8 +185,13 @@ capabilities:
   - scripts/task_worktree_ops.py
   - scripts/task_worker_ops.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/automation/test_automation_runner.py -q
+  - pytest tests/automation/test_high_throughput_runner.py -q
+  - pytest tests/automation/test_orchestration_runtime_runner.py -q
+  - pytest tests/automation/test_task_gov_017_runtime.py -q
+  - pytest tests/automation/test_task_gov_018_runtime.py -q
 - capability_id: stage1_to_stage6_business_automation
   status: implemented
   source_of_truth:
@@ -171,8 +205,20 @@ capabilities:
   - scripts/task_worker_ops.py
   - scripts/automation_runner.py
   tests:
-  - pytest tests/governance -q
-  - pytest tests/automation -q
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - python scripts/check_authority_alignment.py
+  - python scripts/validate_contracts.py
+  - pytest tests/contracts -q
+  - pytest tests/integration -q
+  - pytest tests/stage1 -q
+  - pytest tests/stage2 -q
+  - pytest tests/stage3 -q
+  - pytest tests/stage4 -q
+  - pytest tests/stage5 -q
+  - pytest tests/stage6 -q
+  - pytest tests/governance/test_task_continuation.py -q
+  - pytest tests/automation/test_automation_runner.py -q
 - capability_id: contracts_registry_validation
   status: implemented
   source_of_truth:
@@ -242,14 +288,13 @@ capabilities:
   - scripts/run_minimal_runtime_chain.py
   tests:
   - python scripts/check_repo.py
-  - python scripts/check_hygiene.py
+  - python scripts/check_hygiene.py src docs tests
   - python scripts/check_authority_alignment.py
   - python scripts/validate_contracts.py
-  - pytest tests/governance -q
-  - pytest tests/automation -q
   - pytest tests/contracts -q
   - pytest tests/integration -q
   - pytest tests/stage7 -q
   - pytest tests/stage8 -q
   - pytest tests/stage9 -q
-  - pytest -q
+  - pytest tests/governance/test_task_continuation.py -q
+  - pytest tests/automation/test_automation_runner.py -q

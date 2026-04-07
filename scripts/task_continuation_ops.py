@@ -289,8 +289,11 @@ def _default_autopilot_capability() -> dict[str, Any]:
             "scripts/automation_runner.py",
         ],
         "tests": [
-            "pytest tests/governance -q",
-            "pytest tests/automation -q",
+            "python scripts/check_repo.py",
+            "python scripts/check_hygiene.py src docs tests",
+            "pytest tests/governance/test_task_continuation.py -q",
+            "pytest tests/governance/test_automation_intent.py -q",
+            "pytest tests/automation/test_automation_runner.py -q",
         ],
     }
 

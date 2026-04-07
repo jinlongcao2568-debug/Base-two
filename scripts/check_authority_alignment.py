@@ -499,6 +499,18 @@ def _evaluate_structure_layer(root: Path) -> list[str]:
     for module_id in ("stage3_parsing", "stage4_validation", "stage6_facts", "governance_control_plane"):
         if module_id not in module_ids:
             errors.append(f"MODULE_MAP missing module: {module_id}")
+    governance_module = next(
+        (item for item in module_map.get("modules", []) if item.get("module_id") == "governance_control_plane"),
+        None,
+    )
+    if governance_module is not None:
+        required_tests = governance_module.get("required_tests") or []
+        for command in ("python scripts/check_repo.py", "python scripts/check_hygiene.py src docs tests"):
+            if command not in required_tests:
+                errors.append(f"governance_control_plane module missing required test: {command}")
+        for command in ("pytest tests/governance -q", "pytest tests/automation -q"):
+            if command in required_tests:
+                errors.append(f"governance_control_plane module still lists full-suite gate: {command}")
 
     capability_ids = {item.get("capability_id") for item in capability_map.get("capabilities", [])}
     for capability_id in (
@@ -591,9 +603,18 @@ def _evaluate_automation_layer(root: Path) -> list[str]:
             errors.append("governance_control_plane capability must list scripts/check_authority_alignment.py")
         if "scripts/task_continuation_ops.py" not in scripts:
             errors.append("governance_control_plane capability must list scripts/task_continuation_ops.py")
-        for command in ("pytest tests/governance -q", "pytest tests/automation -q"):
+        for command in (
+            "python scripts/check_repo.py",
+            "python scripts/check_hygiene.py src docs tests",
+            "python scripts/check_authority_alignment.py",
+            "pytest tests/governance/test_task_continuation.py -q",
+            "pytest tests/automation/test_automation_runner.py -q",
+        ):
             if command not in tests:
                 errors.append(f"governance_control_plane capability missing test command: {command}")
+        for command in ("pytest tests/governance -q", "pytest tests/automation -q"):
+            if command in tests:
+                errors.append(f"governance_control_plane capability still lists full-suite gate: {command}")
     return errors
 
 
