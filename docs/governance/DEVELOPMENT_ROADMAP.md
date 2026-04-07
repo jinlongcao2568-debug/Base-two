@@ -38,6 +38,7 @@ automation_foundation: targeted_governance_test_triggers_live
 - no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
+- `TASK-GOV-037`: blocked idle/no-successor roadmap continuation with a deterministic governance error instead of a ready/no-op mismatch.
 - `TASK-GOV-035`: separated live governance surfaces from historical audit artifacts and search inputs.
 - `TASK-GOV-034`: narrowed governance test triggering so ordinary governance edits no longer default to the full governance and automation suites.
 - `TASK-GOV-024`: closed the governed closeout/lease/runtime-contract bundle.
@@ -45,24 +46,24 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Phase Goal
 
-- Make new-task activation a single governed operation instead of a manual multi-ledger sequence.
-- Provide an explicit ledger derivation command for drift repair without weakening the live-vs-historical boundary.
-- Preserve closed task files as historical evidence while allowing task-file repair under governed constraints.
+- Repair the idle/no-successor continuation path so roadmap automation no longer reports `ready` while `continue-roadmap` cannot advance.
+- Keep missing-successor generation inside governed task lifecycle and planner surfaces.
+- Preserve closed and absorbed task artifacts as historical evidence; do not use them as current successor sources.
 
 ## Internal Gates
 
-1. `phase_1_activate_ledger_command_task`
-   - align CURRENT_TASK, roadmap, registry, worktree entry, task file, runlog, and handoff with `TASK-GOV-036`
-   - keep the task scoped to governance docs, task lifecycle scripts, and governance regressions only
-2. `phase_2_queue_and_activate`
-   - add a command that creates or repairs a queued coordination task and activates it with branch and ledger sync
-   - preserve clean-worktree branch-switch safety
-3. `phase_3_derive_ledgers`
-   - add explicit source selection for current-task and task-file derivation
-   - prevent closed historical task files from overwriting unrelated live current-task state
+1. `phase_1_reproduce_idle_no_successor_gap`
+   - confirm `automation_intent.py preflight --utterance "持续按路线图开发"` and `continue-roadmap` disagree on whether work can advance
+   - keep the task scoped to governance docs, task lifecycle scripts, automation routing, and targeted regressions only
+2. `phase_2_repair_continuation_decision`
+   - make idle/no-successor continuation either generate/activate a governed successor or return a deterministic blocker
+   - prevent absorbed or historical task artifacts from becoming the current successor source
+3. `phase_3_align_intent_and_runner`
+   - align automation intent preflight/execute and the one-shot runner with the repaired continuation decision
+   - avoid broadening default governance or automation test gates
 4. `phase_4_regression_evidence`
-   - prove the new commands repair expected drift and reject unsafe historical/live overwrites
-   - keep the validation set targeted to lifecycle command behavior
+   - prove the repaired path no longer has a `ready`/`no successor` mismatch
+   - prove historical absorbed tasks remain ignored for current successor selection
 
 ## Explicitly Out Of Scope
 
@@ -73,9 +74,9 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Exit Criteria
 
-- `queue-and-activate` creates or repairs coordination-task activation without leaving half-synced ledgers.
-- `derive-ledgers` repairs current-task and task-file drift with dry-run by default and guarded write behavior.
-- Governance regressions cover current-task derivation, task-file derivation, closed historical safety, and live-task conflict blocking.
+- `continue-roadmap` from idle/no-successor no longer silently stops when roadmap policy allows missing-task creation.
+- Automation intent preflight and execution no longer report a continuation path as `ready` unless the mapped runner can advance or the blocker is explicit.
+- Targeted governance/automation regressions cover the mismatch and the historical/absorbed-task safety boundary.
 
 ## Historical Artifact Classes
 

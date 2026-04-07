@@ -662,6 +662,8 @@ def _handle_no_successor_continue_roadmap(
     current_payload: dict[str, Any],
     current_task: dict[str, Any] | None,
 ) -> int:
+    if current_task is None and is_idle_current_payload(current_payload):
+        raise GovernanceError("no successor is available for continue-roadmap from idle control plane")
     closeout_result = _maybe_close_without_successor(
         root,
         registry,
@@ -1039,6 +1041,8 @@ def _preview_continuation_successor(
         if message == "no successor is available for continue-roadmap":
             readiness["status"] = "no_successor"
             readiness["recommended_action"] = "stay idle until a valid successor is available"
+            if is_idle_current_payload(current_payload):
+                blockers.append("no successor is available for continue-roadmap from idle control plane")
             return
         if "successor landscape is not unique" in message:
             readiness["status"] = "ambiguous"
@@ -1222,6 +1226,8 @@ def cmd_continue_roadmap(args: argparse.Namespace) -> int:
         current_task=current_task,
     )
     if readiness["status"] == "no_successor":
+        if readiness.get("blockers"):
+            raise GovernanceError("; ".join(readiness["blockers"]))
         return _handle_no_successor_continue_roadmap(
             root,
             registry,

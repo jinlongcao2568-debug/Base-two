@@ -206,7 +206,7 @@ def test_preflight_continue_roadmap_accepts_recoverable_predecessor(tmp_path: Pa
     assert "TASK-NEXT-001" in payload["explanation"]
 
 
-def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: Path) -> None:
+def test_preflight_continue_roadmap_allows_review_closeout_when_successor_is_missing(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
     for capability in capability_map["capabilities"]:
@@ -219,6 +219,23 @@ def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: P
     assert code == 0
     assert payload["status"] == "ready"
     assert payload["intent_id"] == "continue-roadmap"
+
+
+def test_preflight_continue_roadmap_blocks_idle_without_successor(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
+    for capability in capability_map["capabilities"]:
+        if capability["capability_id"] == "roadmap_autopilot_continuation":
+            capability["status"] = "implemented"
+    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
+    close_live_task_to_idle(repo, commit_after_close=True)
+
+    code, payload = _preflight(repo, "按路线图继续推进")
+
+    assert code == 0
+    assert payload["status"] == "blocked"
+    assert payload["intent_id"] == "continue-roadmap"
+    assert any("no successor is available" in blocker for blocker in payload["blockers"])
 
 
 def test_preflight_continue_roadmap_reclassifies_stale_dependency_pointer_into_successor_ambiguity(tmp_path: Path) -> None:

@@ -396,7 +396,7 @@ def test_runner_continue_roadmap_fails_without_successor_from_idle(tmp_path: Pat
 
     result = run_runner(repo, "once", "--continue-roadmap")
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
-    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.returncode == 1
     assert current_task["current_task_id"] is None
     assert current_task["status"] == "idle"
     assert "no successor is available" in result.stdout
