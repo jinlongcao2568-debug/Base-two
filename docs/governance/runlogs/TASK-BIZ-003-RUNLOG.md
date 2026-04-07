@@ -3,7 +3,7 @@
 ## Task Status
 
 - `task_id`: `TASK-BIZ-003`
-- `status`: `queued`
+- `status`: `paused`
 - `stage`: `business-stage7-9-smoke-v1`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
 - `worker_state`: `idle`
@@ -29,17 +29,17 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `next_gate`: `resume_required`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-BIZ-003`
-- `status`: `queued`
+- `status`: `paused`
 - `stage`: `business-stage7-9-smoke-v1`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
 - `worker_state`: `idle`

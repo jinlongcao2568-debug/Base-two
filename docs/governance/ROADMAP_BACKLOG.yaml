@@ -1,0 +1,554 @@
+version: '0.1'
+updated_at: '2026-04-07T19:32:31+08:00'
+authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
+schema_source: docs/governance/ROADMAP_BACKLOG_SCHEMA.yaml
+status: draft
+
+defaults:
+  claim_policy: &default_claim_policy
+    one_window_one_candidate: true
+    conflict_policy: choose_next_safe_candidate
+    scheduler_lock_required: true
+  parallel_claim_policy: &parallel_claim_policy
+    one_window_one_candidate: true
+    conflict_policy: require_disjoint_child_slice
+    scheduler_lock_required: true
+  single_writer_claim_policy: &single_writer_claim_policy
+    one_window_one_candidate: true
+    conflict_policy: strict_single_writer
+    scheduler_lock_required: true
+  takeover_policy: &default_takeover_policy
+    stale_after_minutes_source: docs/governance/HANDOFF_POLICY.yaml
+    clean_worktree_takeover: allow
+    scoped_dirty_checkpoint: allow_before_takeover
+    out_of_scope_dirty_policy: block_for_human_decision
+    remote_divergence_policy: block
+
+scheduler_policy:
+  entrypoint: claim-next
+  natural_language_intent: [持续按路线图开发]
+  candidate_refresh_mode: locked_refresh_before_claim
+  max_initial_parallel_windows: 4
+  single_writer_roots:
+  - db/migrations/
+  - src/stage6_facts/
+  - src/stage7_sales/
+  - src/stage8_contact/
+  - src/stage9_delivery/
+
+stages:
+- stage: stage1
+  module_id: stage1_orchestration
+  depends_on: []
+  unlocks: [stage2]
+  contract_gate: stage1-core-contract
+  integration_gate: stage1-integration-gate
+- stage: stage2
+  module_id: stage2_ingestion
+  depends_on: [stage1]
+  unlocks: [stage3]
+  contract_gate: stage2-core-contract
+  integration_gate: stage2-integration-gate
+- stage: stage3
+  module_id: stage3_parsing
+  depends_on: [stage2]
+  unlocks: [stage4]
+  contract_gate: stage3-core-contract
+  integration_gate: stage3-integration-gate
+- stage: stage4
+  module_id: stage4_validation
+  depends_on: [stage3]
+  unlocks: [stage5, stage6]
+  contract_gate: stage4-core-contract
+  integration_gate: stage4-integration-gate
+- stage: stage5
+  module_id: stage5_reporting
+  depends_on: [stage4]
+  unlocks: [stage6]
+  contract_gate: stage5-core-contract
+  integration_gate: stage5-integration-gate
+- stage: stage6
+  module_id: stage6_facts
+  depends_on: [stage4, stage5]
+  unlocks: [stage7, stage8, domain_consumers]
+  contract_gate: stage6-fact-surface-gate
+  integration_gate: stage6-fact-surface-gate
+- stage: stage7
+  module_id: stage7_sales
+  depends_on: [stage6]
+  unlocks: [stage9]
+  contract_gate: stage7-core-contract
+  integration_gate: stage7-integration-gate
+- stage: stage8
+  module_id: stage8_contact
+  depends_on: [stage6]
+  unlocks: [stage9]
+  contract_gate: stage8-core-contract
+  integration_gate: stage8-integration-gate
+- stage: stage9
+  module_id: stage9_delivery
+  depends_on: [stage6, stage7, stage8]
+  unlocks: []
+  contract_gate: stage9-final-delivery-gate
+  integration_gate: stage9-final-delivery-gate
+
+lane_blueprints:
+- blueprint_id: stage_core_contract
+  lane_type: core_contract
+  parallel_policy: single_writer
+  purpose: Freeze stage input, output, fixture, branch, and path boundary before child lanes.
+- blueprint_id: stage_internal_parallel
+  lane_type: stage_internal_parallel
+  parallel_policy: disjoint_paths_required
+  purpose: Split same-stage work by source family, parser family, rule topic, formatter, fixture, or guard.
+- blueprint_id: downstream_fixture_preview
+  lane_type: downstream_fixture_preview
+  parallel_policy: disjoint_paths_required
+  purpose: Allow downstream skeleton or test work only against frozen upstream fixtures.
+- blueprint_id: integration_gate
+  lane_type: integration_gate
+  parallel_policy: single_writer
+  purpose: Merge child outputs and unlock downstream contract work.
+- blueprint_id: fact_surface_gate
+  lane_type: fact_surface_gate
+  parallel_policy: strict_single_writer
+  purpose: Protect the stage6 project_fact surface.
+
+candidates:
+- candidate_id: stage1-core-contract
+  title: Stage1 orchestration contract and fixture boundary
+  stage: stage1
+  module_id: stage1_orchestration
+  lane_type: core_contract
+  status: planned
+  priority: 100
+  depends_on: []
+  unlocks: [stage1-source-family-lanes, stage1-integration-gate]
+  allowed_dirs: [src/stage1_orchestration/, tests/stage1/]
+  reserved_paths: [src/stage2_ingestion/, src/stage6_facts/]
+  planned_write_paths: [src/stage1_orchestration/, tests/stage1/]
+  planned_test_paths: [tests/stage1/]
+  required_tests: [pytest tests/stage1 -q]
+  branch_template: codex/{task_id}-stage1-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage1-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage1-source-family-lanes
+  title: Stage1 source-family orchestration lanes
+  stage: stage1
+  module_id: stage1_orchestration
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 110
+  depends_on: [stage1-core-contract]
+  unlocks: [stage1-integration-gate]
+  allowed_dirs: [src/stage1_orchestration/, tests/stage1/]
+  reserved_paths: [src/stage2_ingestion/, src/stage6_facts/]
+  planned_write_paths: [src/stage1_orchestration/, tests/stage1/]
+  planned_test_paths: [tests/stage1/]
+  required_tests: [pytest tests/stage1 -q]
+  branch_template: codex/{task_id}-stage1-source-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage1-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage1-integration-gate
+  title: Stage1 orchestration integration gate
+  stage: stage1
+  module_id: stage1_orchestration
+  lane_type: integration_gate
+  status: waiting
+  priority: 190
+  depends_on: [stage1-core-contract, stage1-source-family-lanes]
+  unlocks: [stage2-core-contract]
+  allowed_dirs: [src/stage1_orchestration/, tests/stage1/]
+  reserved_paths: [src/stage2_ingestion/, src/stage6_facts/]
+  planned_write_paths: [src/stage1_orchestration/, tests/stage1/]
+  planned_test_paths: [tests/stage1/]
+  required_tests: [pytest tests/stage1 -q]
+  branch_template: codex/{task_id}-stage1-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage1-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage2-core-contract
+  title: Stage2 ingestion contract and raw payload fixture boundary
+  stage: stage2
+  module_id: stage2_ingestion
+  lane_type: core_contract
+  status: waiting
+  priority: 200
+  depends_on: [stage1-integration-gate]
+  unlocks: [stage2-source-family-lanes, stage2-integration-gate]
+  allowed_dirs: [src/stage2_ingestion/, tests/stage2/]
+  reserved_paths: [src/stage1_orchestration/, src/stage3_parsing/, src/stage6_facts/]
+  planned_write_paths: [src/stage2_ingestion/, tests/stage2/]
+  planned_test_paths: [tests/stage2/]
+  required_tests: [pytest tests/stage2 -q]
+  branch_template: codex/{task_id}-stage2-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage2-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage2-source-family-lanes
+  title: Stage2 source-family ingestion lanes
+  stage: stage2
+  module_id: stage2_ingestion
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 210
+  depends_on: [stage2-core-contract]
+  unlocks: [stage2-integration-gate]
+  allowed_dirs: [src/stage2_ingestion/, tests/stage2/]
+  reserved_paths: [src/stage1_orchestration/, src/stage3_parsing/, src/stage6_facts/]
+  planned_write_paths: [src/stage2_ingestion/, tests/stage2/]
+  planned_test_paths: [tests/stage2/]
+  required_tests: [pytest tests/stage2 -q]
+  branch_template: codex/{task_id}-stage2-source-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage2-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage2-integration-gate
+  title: Stage2 ingestion integration gate
+  stage: stage2
+  module_id: stage2_ingestion
+  lane_type: integration_gate
+  status: waiting
+  priority: 290
+  depends_on: [stage2-core-contract, stage2-source-family-lanes]
+  unlocks: [stage3-core-contract]
+  allowed_dirs: [src/stage2_ingestion/, tests/stage2/]
+  reserved_paths: [src/stage1_orchestration/, src/stage3_parsing/, src/stage6_facts/]
+  planned_write_paths: [src/stage2_ingestion/, tests/stage2/]
+  planned_test_paths: [tests/stage2/]
+  required_tests: [pytest tests/stage2 -q]
+  branch_template: codex/{task_id}-stage2-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage2-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage3-core-contract
+  title: Stage3 parsing contract and normalized record boundary
+  stage: stage3
+  module_id: stage3_parsing
+  lane_type: core_contract
+  status: waiting
+  priority: 300
+  depends_on: [stage2-integration-gate]
+  unlocks: [stage3-parser-family-lanes, stage3-integration-gate]
+  allowed_dirs: [src/stage3_parsing/, tests/stage3/]
+  reserved_paths: [src/stage2_ingestion/, src/stage4_validation/, src/stage6_facts/]
+  planned_write_paths: [src/stage3_parsing/, tests/stage3/]
+  planned_test_paths: [tests/stage3/]
+  required_tests: [pytest tests/stage3 -q]
+  branch_template: codex/{task_id}-stage3-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage3-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage3-parser-family-lanes
+  title: Stage3 parser-family lanes
+  stage: stage3
+  module_id: stage3_parsing
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 310
+  depends_on: [stage3-core-contract]
+  unlocks: [stage3-integration-gate]
+  allowed_dirs: [src/stage3_parsing/, tests/stage3/]
+  reserved_paths: [src/stage2_ingestion/, src/stage4_validation/, src/stage6_facts/]
+  planned_write_paths: [src/stage3_parsing/, tests/stage3/]
+  planned_test_paths: [tests/stage3/]
+  required_tests: [pytest tests/stage3 -q]
+  branch_template: codex/{task_id}-stage3-parser-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage3-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage3-integration-gate
+  title: Stage3 parsing integration gate
+  stage: stage3
+  module_id: stage3_parsing
+  lane_type: integration_gate
+  status: waiting
+  priority: 390
+  depends_on: [stage3-core-contract, stage3-parser-family-lanes]
+  unlocks: [stage4-core-contract]
+  allowed_dirs: [src/stage3_parsing/, tests/stage3/]
+  reserved_paths: [src/stage2_ingestion/, src/stage4_validation/, src/stage6_facts/]
+  planned_write_paths: [src/stage3_parsing/, tests/stage3/]
+  planned_test_paths: [tests/stage3/]
+  required_tests: [pytest tests/stage3 -q]
+  branch_template: codex/{task_id}-stage3-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage3-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage4-core-contract
+  title: Stage4 validation rule-hit contract and topic boundary
+  stage: stage4
+  module_id: stage4_validation
+  lane_type: core_contract
+  status: waiting
+  priority: 400
+  depends_on: [stage3-integration-gate]
+  unlocks: [stage4-rule-topic-lanes, stage4-integration-gate]
+  allowed_dirs: [src/stage4_validation/, tests/stage4/]
+  reserved_paths: [src/stage3_parsing/, src/stage5_reporting/, src/stage6_facts/]
+  planned_write_paths: [src/stage4_validation/, tests/stage4/]
+  planned_test_paths: [tests/stage4/]
+  required_tests: [pytest tests/stage4 -q]
+  branch_template: codex/{task_id}-stage4-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage4-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage4-rule-topic-lanes
+  title: Stage4 rule-topic validation lanes
+  stage: stage4
+  module_id: stage4_validation
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 410
+  depends_on: [stage4-core-contract]
+  unlocks: [stage4-integration-gate]
+  allowed_dirs: [src/stage4_validation/, tests/stage4/]
+  reserved_paths: [src/stage3_parsing/, src/stage5_reporting/, src/stage6_facts/]
+  planned_write_paths: [src/stage4_validation/, tests/stage4/]
+  planned_test_paths: [tests/stage4/]
+  required_tests: [pytest tests/stage4 -q]
+  branch_template: codex/{task_id}-stage4-rule-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage4-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage4-integration-gate
+  title: Stage4 validation integration gate
+  stage: stage4
+  module_id: stage4_validation
+  lane_type: integration_gate
+  status: waiting
+  priority: 490
+  depends_on: [stage4-core-contract, stage4-rule-topic-lanes]
+  unlocks: [stage5-core-contract, stage6-fact-surface-gate]
+  allowed_dirs: [src/stage4_validation/, tests/stage4/]
+  reserved_paths: [src/stage3_parsing/, src/stage5_reporting/, src/stage6_facts/]
+  planned_write_paths: [src/stage4_validation/, tests/stage4/]
+  planned_test_paths: [tests/stage4/]
+  required_tests: [pytest tests/stage4 -q]
+  branch_template: codex/{task_id}-stage4-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage4-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage5-core-contract
+  title: Stage5 reporting artifact contract and snapshot boundary
+  stage: stage5
+  module_id: stage5_reporting
+  lane_type: core_contract
+  status: waiting
+  priority: 500
+  depends_on: [stage4-integration-gate]
+  unlocks: [stage5-formatter-lanes, stage5-integration-gate]
+  allowed_dirs: [src/stage5_reporting/, tests/stage5/]
+  reserved_paths: [src/stage4_validation/, src/stage6_facts/]
+  planned_write_paths: [src/stage5_reporting/, tests/stage5/]
+  planned_test_paths: [tests/stage5/]
+  required_tests: [pytest tests/stage5 -q]
+  branch_template: codex/{task_id}-stage5-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage5-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage5-formatter-lanes
+  title: Stage5 formatter and report snapshot lanes
+  stage: stage5
+  module_id: stage5_reporting
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 510
+  depends_on: [stage5-core-contract]
+  unlocks: [stage5-integration-gate]
+  allowed_dirs: [src/stage5_reporting/, tests/stage5/]
+  reserved_paths: [src/stage4_validation/, src/stage6_facts/]
+  planned_write_paths: [src/stage5_reporting/, tests/stage5/]
+  planned_test_paths: [tests/stage5/]
+  required_tests: [pytest tests/stage5 -q]
+  branch_template: codex/{task_id}-stage5-formatter-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage5-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage5-integration-gate
+  title: Stage5 reporting integration gate
+  stage: stage5
+  module_id: stage5_reporting
+  lane_type: integration_gate
+  status: waiting
+  priority: 590
+  depends_on: [stage5-core-contract, stage5-formatter-lanes]
+  unlocks: [stage6-fact-surface-gate]
+  allowed_dirs: [src/stage5_reporting/, tests/stage5/]
+  reserved_paths: [src/stage4_validation/, src/stage6_facts/]
+  planned_write_paths: [src/stage5_reporting/, tests/stage5/]
+  planned_test_paths: [tests/stage5/]
+  required_tests: [pytest tests/stage5 -q]
+  branch_template: codex/{task_id}-stage5-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage5-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage6-fact-surface-gate
+  title: Stage6 project_fact single-writer fact surface gate
+  stage: stage6
+  module_id: stage6_facts
+  lane_type: fact_surface_gate
+  status: waiting
+  priority: 600
+  depends_on: [stage4-integration-gate, stage5-integration-gate]
+  unlocks: [stage7-core-contract, stage8-core-contract]
+  allowed_dirs: [src/stage6_facts/, tests/stage6/]
+  reserved_paths: [src/stage7_sales/, src/stage8_contact/, src/stage9_delivery/]
+  planned_write_paths: [src/stage6_facts/, tests/stage6/]
+  planned_test_paths: [tests/stage6/]
+  required_tests: [pytest tests/stage6 -q]
+  branch_template: codex/{task_id}-stage6-fact-surface
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage6-fact-surface-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage7-core-contract
+  title: Stage7 sales context contract
+  stage: stage7
+  module_id: stage7_sales
+  lane_type: core_contract
+  status: waiting
+  priority: 700
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: [stage7-sales-parallel-lanes, stage7-integration-gate]
+  allowed_dirs: [src/stage7_sales/, tests/stage7/]
+  reserved_paths: [src/stage6_facts/, src/stage8_contact/, src/stage9_delivery/]
+  planned_write_paths: [src/stage7_sales/, tests/stage7/]
+  planned_test_paths: [tests/stage7/]
+  required_tests: [pytest tests/stage7 -q]
+  branch_template: codex/{task_id}-stage7-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage7-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage7-sales-parallel-lanes
+  title: Stage7 sales-context parallel lanes
+  stage: stage7
+  module_id: stage7_sales
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 720
+  depends_on: [stage7-core-contract]
+  unlocks: [stage7-integration-gate]
+  allowed_dirs: [src/stage7_sales/, tests/stage7/]
+  reserved_paths: [src/stage6_facts/, src/stage8_contact/, src/stage9_delivery/]
+  planned_write_paths: [src/stage7_sales/, tests/stage7/]
+  planned_test_paths: [tests/stage7/]
+  required_tests: [pytest tests/stage7 -q]
+  branch_template: codex/{task_id}-stage7-sales-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage7-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage7-integration-gate
+  title: Stage7 sales-context integration gate
+  stage: stage7
+  module_id: stage7_sales
+  lane_type: integration_gate
+  status: waiting
+  priority: 790
+  depends_on: [stage7-core-contract, stage7-sales-parallel-lanes]
+  unlocks: [stage9-final-delivery-gate]
+  allowed_dirs: [src/stage7_sales/, tests/stage7/]
+  reserved_paths: [src/stage6_facts/, src/stage8_contact/, src/stage9_delivery/]
+  planned_write_paths: [src/stage7_sales/, tests/stage7/]
+  planned_test_paths: [tests/stage7/]
+  required_tests: [pytest tests/stage7 -q]
+  branch_template: codex/{task_id}-stage7-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage7-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage8-core-contract
+  title: Stage8 contact context contract
+  stage: stage8
+  module_id: stage8_contact
+  lane_type: core_contract
+  status: waiting
+  priority: 710
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: [stage8-contact-parallel-lanes, stage8-integration-gate]
+  allowed_dirs: [src/stage8_contact/, tests/stage8/]
+  reserved_paths: [src/stage6_facts/, src/stage7_sales/, src/stage9_delivery/]
+  planned_write_paths: [src/stage8_contact/, tests/stage8/]
+  planned_test_paths: [tests/stage8/]
+  required_tests: [pytest tests/stage8 -q]
+  branch_template: codex/{task_id}-stage8-core-contract
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage8-integration-gate
+  claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage8-contact-parallel-lanes
+  title: Stage8 contact-context parallel lanes
+  stage: stage8
+  module_id: stage8_contact
+  lane_type: stage_internal_parallel
+  status: waiting
+  priority: 730
+  depends_on: [stage8-core-contract]
+  unlocks: [stage8-integration-gate]
+  allowed_dirs: [src/stage8_contact/, tests/stage8/]
+  reserved_paths: [src/stage6_facts/, src/stage7_sales/, src/stage9_delivery/]
+  planned_write_paths: [src/stage8_contact/, tests/stage8/]
+  planned_test_paths: [tests/stage8/]
+  required_tests: [pytest tests/stage8 -q]
+  branch_template: codex/{task_id}-stage8-contact-lane
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage8-integration-gate
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage8-integration-gate
+  title: Stage8 contact-context integration gate
+  stage: stage8
+  module_id: stage8_contact
+  lane_type: integration_gate
+  status: waiting
+  priority: 795
+  depends_on: [stage8-core-contract, stage8-contact-parallel-lanes]
+  unlocks: [stage9-final-delivery-gate]
+  allowed_dirs: [src/stage8_contact/, tests/stage8/]
+  reserved_paths: [src/stage6_facts/, src/stage7_sales/, src/stage9_delivery/]
+  planned_write_paths: [src/stage8_contact/, tests/stage8/]
+  planned_test_paths: [tests/stage8/]
+  required_tests: [pytest tests/stage8 -q]
+  branch_template: codex/{task_id}-stage8-integration-gate
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage8-integration-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage9-final-delivery-gate
+  title: Stage9 final customer-visible delivery gate
+  stage: stage9
+  module_id: stage9_delivery
+  lane_type: integration_gate
+  status: waiting
+  priority: 900
+  depends_on: [stage6-fact-surface-gate, stage7-integration-gate, stage8-integration-gate]
+  unlocks: []
+  allowed_dirs: [src/stage9_delivery/, tests/stage9/, docs/contracts/]
+  reserved_paths: [src/stage6_facts/, db/migrations/]
+  planned_write_paths: [src/stage9_delivery/, tests/stage9/]
+  planned_test_paths: [tests/stage9/]
+  required_tests: [pytest tests/stage9 -q, pytest tests/contracts -q]
+  branch_template: codex/{task_id}-stage9-final-delivery
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage9-final-delivery-gate
+  claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy

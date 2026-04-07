@@ -1,0 +1,175 @@
+version: '1.0'
+updated_at: '2026-04-07T19:32:31+08:00'
+authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
+status: draft
+
+lane_types:
+  core_contract:
+    description: Freeze a stage input/output contract, fixture shape, and path boundary.
+    parallel_policy: single_writer
+  stage_internal_parallel:
+    description: Implement a disjoint same-stage source, parser, rule, formatter, fixture, or guard slice.
+    parallel_policy: disjoint_paths_required
+  downstream_fixture_preview:
+    description: Prepare downstream skeletons or tests against frozen upstream fixtures.
+    parallel_policy: disjoint_paths_required
+    restrictions:
+    - cannot_modify_upstream_contract
+    - cannot_modify_fact_surface
+  integration_gate:
+    description: Merge child outputs and run contract/integration gates before unlocking downstream work.
+    parallel_policy: single_writer
+  fact_surface_gate:
+    description: Update or validate the stage6 project_fact surface.
+    parallel_policy: strict_single_writer
+
+candidate_status_values:
+- planned
+- ready
+- waiting
+- claimed
+- running
+- stale
+- resumable
+- blocked
+- review
+- done
+- closed
+
+required_top_level_fields:
+- version
+- updated_at
+- authority_source
+- scheduler_policy
+- stages
+- candidates
+
+required_candidate_fields:
+- candidate_id
+- title
+- stage
+- module_id
+- lane_type
+- status
+- priority
+- depends_on
+- unlocks
+- allowed_dirs
+- reserved_paths
+- planned_write_paths
+- planned_test_paths
+- required_tests
+- branch_template
+- worktree_template
+- integration_gate
+- claim_policy
+- takeover_policy
+
+candidate_field_rules:
+  candidate_id:
+    type: string
+    requirement: unique, stable, lowercase recommended
+  title:
+    type: string
+    requirement: human-readable task title
+  stage:
+    type: string
+    requirement: must map to a stage or governance phase
+  module_id:
+    type: string
+    requirement: must match MODULE_MAP module_id when business-facing
+  lane_type:
+    type: enum
+    values:
+    - core_contract
+    - stage_internal_parallel
+    - downstream_fixture_preview
+    - integration_gate
+    - fact_surface_gate
+  status:
+    type: enum
+    values:
+    - planned
+    - ready
+    - waiting
+    - claimed
+    - running
+    - stale
+    - resumable
+    - blocked
+    - review
+    - done
+    - closed
+  priority:
+    type: integer
+    requirement: lower number is higher priority
+  depends_on:
+    type: list
+    requirement: candidate ids or task ids that must be completed before claim
+  unlocks:
+    type: list
+    requirement: candidate ids that become eligible after completion
+  allowed_dirs:
+    type: list
+    requirement: directories or files allowed by the task package
+  reserved_paths:
+    type: list
+    requirement: directories or files this task must not touch
+  planned_write_paths:
+    type: list
+    requirement: used for write-path lock and dirty-state checks
+  planned_test_paths:
+    type: list
+    requirement: used for test scope and conflict analysis
+  required_tests:
+    type: list
+    requirement: commands that must be recorded before closeout or publish
+  branch_template:
+    type: string
+    requirement: must expand to one branch per task
+  worktree_template:
+    type: string
+    requirement: must expand outside the coordination worktree for execution tasks
+  integration_gate:
+    type: string_or_null
+    requirement: candidate id of the stage or delivery gate
+  claim_policy:
+    type: map
+    required_fields:
+    - one_window_one_candidate
+    - conflict_policy
+    - scheduler_lock_required
+  takeover_policy:
+    type: map
+    required_fields:
+    - stale_after_minutes_source
+    - clean_worktree_takeover
+    - scoped_dirty_checkpoint
+    - out_of_scope_dirty_policy
+
+hard_gate_rules:
+- dependency_gate
+- active_claim_gate
+- write_path_overlap_gate
+- reserved_path_gate
+- single_writer_root_gate
+- branch_lock_gate
+- worktree_lock_gate
+- dirty_state_gate
+- remote_divergence_gate
+- required_tests_gate
+- integration_gate
+
+default_claim_policy:
+  one_window_one_candidate: true
+  conflict_policy: choose_next_safe_candidate
+  scheduler_lock_required: true
+  historical_or_absorbed_tasks_selectable: false
+
+default_takeover_policy:
+  stale_after_minutes_source: docs/governance/HANDOFF_POLICY.yaml
+  clean_worktree_takeover: allow
+  scoped_dirty_checkpoint: allow_before_takeover
+  out_of_scope_dirty_policy: block_for_human_decision
+  remote_divergence_policy: block
+

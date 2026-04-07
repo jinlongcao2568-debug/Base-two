@@ -5,7 +5,7 @@
 - `task_id`: `TASK-BIZ-003`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `paused`
 - `stage`: `business-stage7-9-smoke-v1`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
 - `size_class`: `heavy`
@@ -58,16 +58,16 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `next_gate`: `resume_required`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `paused`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
@@ -81,5 +81,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/stage6_facts/, db/migrations/`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
-- `updated_at`: `2026-04-06T14:12:09+08:00`
+- `updated_at`: `2026-04-07T19:32:31+08:00`
 <!-- generated:task-meta:end -->
