@@ -1,9 +1,12 @@
 task_id: TASK-GOV-031
 summary_status: review
-last_handoff_at: '2026-04-07T09:07:30+08:00'
+last_handoff_at: '2026-04-07T09:24:12+08:00'
 completed_items:
 - Normalized the authority baseline to current single-source mode and removed prior-version carry-over wording requested by the user.
 - Generated a fresh V1.5-aligned development / Codex manual in docs/baseline.
+- Expanded the dev manual with a concrete V1.5 sync order, direct backlog, layered alignment template, and authority review rubric.
+- Expanded the dev manual again with authority-to-repo mapping, V1.5 closeout gates, and a quick-reference appendix.
+- Hardened the dev manual with a fixed current baseline inventory, stricter legacy isolation, and canonical machine-readable asset paths.
 remaining_items:
 - Complete the remaining scoped implementation for this task.
 next_step: Rewrite the V1.5 authority baseline as the sole current source and draft the aligned V1.5 dev manual.

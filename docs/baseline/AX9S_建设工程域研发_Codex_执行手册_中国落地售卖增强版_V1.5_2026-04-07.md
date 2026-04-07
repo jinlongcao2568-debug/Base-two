@@ -68,6 +68,24 @@
 3. 若确需引用旧文档，只能作为归档材料，不得作为现行执行依据；
 4. 未在 V1.5 中保留的旧口径，不得通过旧执行手册、旧注释或旧任务备注复活。
 
+### 2.4 旧版文档隔离规则
+
+为避免旧版材料误入当前执行链，默认执行以下规则：
+
+1. 当前执行链只允许引用现行 V1.5 基线文件；
+2. 新任务、手册、专项说明、PR 描述、测试说明不得把旧版文档作为当前执行依据引用；
+3. 若旧版文件重新进入 `docs/baseline/`，必须先显式标记为 archive 或移出当前基线路径，才能继续作为仓库材料保留；
+4. 未完成归档隔离的旧版文件，不得在任何自动检查、人工审阅或任务说明中作为当前依据使用。
+
+### 2.5 当前基线文件清单
+
+当前建设工程域现行基线文件固定为：
+
+1. `docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md`
+2. `docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.5_2026-04-07.md`
+
+除上述两份文件外，`docs/baseline/` 中不应再存在其他现行基线文件。
+
 ## 3. 开工前固定动作
 
 开始任何任务前，必须先确认以下信息：
@@ -202,6 +220,134 @@
 2. 若当前仅完成基线制定，不得宣称仓库已完全按该基线落地；
 3. 若变更具有破坏性，必须在文档中保留实施风险提示。
 
+### 6.4 当前 V1.5 基线的推荐同步顺序
+
+当权威文档先于代码与契约落地时，必须按以下顺序推进，不得无序穿插：
+
+1. 先固定权威文档与开发手册；
+2. 再同步治理台账与任务边界；
+3. 再同步 `INTERFACE_CATALOG`、`SCHEMA_REGISTRY` 等总索引；
+4. 再同步 field semantics、schema、example；
+5. 再同步客户交付白名单 / 黑名单、字段策略字典、对象级交付矩阵、覆盖登记；
+6. 最后同步实现、fixture、tests 与发布门禁。
+
+若前一层尚未收敛，禁止直接跳到后一层。
+
+### 6.5 当前 V1.5 基线的直接待同步项
+
+以当前 V1.5 基线为准，后续任务至少应补齐以下机器可读资产：
+
+1. `docs/governance/INTERFACE_CATALOG.yaml`
+   - 新增或确认：
+   - `GET /projects/{id}/tender-design-risk`
+   - `GET /projects/{id}/post-award-changes`
+   - `GET /projects/{id}/bundle-risk`
+2. `docs/governance/SCHEMA_REGISTRY.md`
+   - 新增或确认：
+   - `coverage_sellable_state`
+   - `delivery_risk_state`
+   - `manual_override_status`
+   - 七类 profile 对象
+3. `docs/contracts/field_semantics/`
+   - 新增或确认七类 profile 对象的字段语义文件
+   - 补齐 `project_fact` 中治理侧消费字段的字段语义
+4. `docs/contracts/schemas/`
+   - 更新 `stage4_rule_hit.schema.json`
+   - 更新 `stage4_review_request.schema.json`
+   - 更新 `stage6_project_fact.schema.json`
+   - 必要时新增七类 profile 对象 schema
+5. `docs/contracts/examples/`
+   - 更新 `rule_hit.example.json`
+   - 更新 `review_request.example.json`
+   - 更新 `project_fact.example.json`
+   - 必要时新增七类 profile 对象 example
+6. 交付与覆盖治理资产
+   - `customer_delivery_field_whitelist.yaml`
+   - `customer_delivery_field_blacklist.yaml`
+   - `field_policy_dictionary.yaml`
+   - `delivery_object_matrix.yaml`
+   - `coverage_governance_registry.yaml`
+   - `region_coverage_registry.yaml`
+   - `sources_registry.yaml`
+
+若上述资产未完成同步，必须在任务输出中明确标注“未完成项”，不得表述为“仓库已全面对齐 V1.5”。
+
+### 6.6 权威章节到仓库资产硬映射
+
+为避免“知道制度但不知道要改什么文件”，当前基线按下列映射强制执行：
+
+1. 权威文档第 3 章“覆盖成熟度、地区可售与可售治理”
+   - 主同步目标：
+   - `docs/contracts/region_coverage_registry.yaml`
+   - `docs/contracts/sources_registry.yaml`
+   - `docs/contracts/coverage_governance_registry.yaml`
+2. 权威文档第 5 章“九阶段总体基线与成立标准”
+   - 主同步目标：
+   - 任务包中的所属阶段
+   - 任务包中的允许修改目录
+   - 对应 stage 测试目录
+3. 权威文档第 6 章“正式对象与字段字典”
+   - 主同步目标：
+   - `docs/governance/SCHEMA_REGISTRY.md`
+   - `docs/contracts/field_semantics/`
+   - `docs/contracts/schemas/`
+   - `docs/contracts/examples/`
+4. 权威文档第 7 章“正式规则专题”
+   - 主同步目标：
+   - 权威文档规则码总表
+   - `stage4_rule_hit` 契约
+   - `stage4_review_request` 契约
+   - fixture / tests / 回归样本说明
+5. 权威文档第 8 章“页面与接口消费原则”
+   - 主同步目标：
+   - `docs/governance/INTERFACE_CATALOG.yaml`
+   - 页面消费说明
+   - 调用方影响说明
+6. 权威文档第 9 章“客户交付、字段控制与外发治理”
+   - 主同步目标：
+   - 客户交付白名单 / 黑名单
+   - `docs/contracts/field_policy_dictionary.yaml`
+   - `docs/contracts/delivery_object_matrix.yaml`
+   - 外发审计与导出门禁
+7. 权威文档第 10 章“角色、权限与审计留痕”
+   - 主同步目标：
+   - 权限矩阵
+   - 审计事件清单
+   - 高限制字段访问日志要求
+8. 权威文档第 11 章“测试验收、发布准入与治理反馈”
+   - 主同步目标：
+   - `docs/governance/TEST_MATRIX.yaml`
+   - 任务包 required tests
+   - 发布前附加检查
+9. 权威文档第 12 章“迁移兼容与变更治理”
+   - 主同步目标：
+   - 迁移任务包
+   - rollback 说明
+   - 例外台账
+   - 兼容窗口说明
+
+### 6.7 当前关键治理资产的规范路径与审批责任
+
+以下资产在当前基线下视为规范位置；如仓库尚未创建，后续任务必须优先补齐，禁止再使用其他“等价位置”自由发挥：
+
+1. `docs/contracts/coverage_governance_registry.yaml`
+   - 业务审批：产品 / 治理 owner
+   - 技术审批：tech owner
+2. `docs/contracts/field_policy_dictionary.yaml`
+   - 业务审批：交付 / 合规 owner
+   - 技术审批：tech owner
+3. `docs/contracts/delivery_object_matrix.yaml`
+   - 业务审批：产品 / 交付 owner
+   - 技术审批：tech owner
+4. `docs/governance/INTERFACE_CATALOG.yaml`
+   - 业务审批：产品 owner
+   - 技术审批：接口 owner
+5. `docs/governance/SCHEMA_REGISTRY.md`
+   - 业务审批：领域 owner
+   - 技术审批：schema owner
+
+若任务影响上述资产但未明确 owner、审批人与同步位置，不得进入实现。
+
 ## 7. 接口、字段、交付与可售治理联动
 
 ### 7.1 接口变更
@@ -275,6 +421,48 @@
 - 字段策略字典是否需要更新；
 - 对象级交付矩阵是否需要更新；
 - 对外免责声明、演示口径和售卖边界是否仍一致。
+
+### 8.4 V1.5 对齐任务的最低测试要求
+
+凡是“对齐 V1.5 基线”的任务，除本任务自身范围内测试外，至少应按层次声明以下校验：
+
+1. 文档层
+   - 文档结构完整性检查
+   - 交叉引用一致性检查
+   - 权威文档与开发手册职责边界检查
+2. 契约层
+   - `INTERFACE_CATALOG` 与权威接口清单一致
+   - `SCHEMA_REGISTRY` 与正式字段 / 对象一致
+   - field semantics、schema、example 三者一致
+3. 治理层
+   - 客户交付白名单 / 黑名单与权威文档边界一致
+   - 字段策略字典与对象级交付矩阵具备正式承接位置
+   - 覆盖登记与可售状态口径具备正式承接位置
+4. 实现层
+   - 新规则码具备 fixture、tests、回归样本说明
+   - 新治理字段具备 stage6 汇总、消费与阻断验证
+   - 新接口具备契约与调用方影响说明
+
+未声明测试层次的 V1.5 对齐任务，不应视为专业化任务包。
+
+### 8.5 V1.5 对齐任务的关账门槛
+
+凡是“V1.5 对齐”任务，默认只有在以下条件满足时才建议关账：
+
+1. 当前任务范围内的文档、契约、代码或治理资产已经全部写完；
+2. required tests 已在 runlog 中登记结果；
+3. 任务输出已经明确：
+   - 已完成项
+   - 未完成项
+   - 后续待同步资产
+4. 若仍有未同步资产，已明确这些资产属于后续任务，而不是本任务遗漏；
+5. 若仍有后续待同步资产，已为这些资产建立或显式预留后续任务编号；
+6. 若未建立后续任务编号，不得以“后续再做”作为关账理由；
+7. `CURRENT_TASK`、`TASK_REGISTRY`、`WORKTREE_REGISTRY`、task 文件、runlog、handoff 没有漂移；
+8. 若任务仅完成文档层，不得把状态写成“全仓完成对齐”；
+9. 若任务影响客户可见口径、规则边界、正式字段或正式接口，必须明确是否已触发下游同步任务。
+
+不满足上述条件时，必须保持 `doing` 或 `review`，不得为了形式化关账而提前结束。
 
 ## 9. 例外、热修与临时兼容
 
@@ -391,6 +579,109 @@ release_gate_checklist:
   delivery_object_matrix_update_required: false
   disclaimer_update_required: false
   exception_required: false
+```
+
+### 附录 D：V1.5 对齐分层任务模板
+
+```text
+alignment_task_layers:
+  L0_authority_docs:
+    scope:
+      - docs/baseline/
+    goal:
+      - 固定权威文档
+      - 固定开发手册
+  L1_governance_indexes:
+    scope:
+      - docs/governance/INTERFACE_CATALOG.yaml
+      - docs/governance/SCHEMA_REGISTRY.md
+    goal:
+      - 固定总索引
+  L2_contract_assets:
+    scope:
+      - docs/contracts/field_semantics/
+      - docs/contracts/schemas/
+      - docs/contracts/examples/
+    goal:
+      - 固定对象、字段、schema、example
+  L3_delivery_and_coverage:
+    scope:
+      - docs/contracts/customer_delivery_field_whitelist.yaml
+      - docs/contracts/customer_delivery_field_blacklist.yaml
+      - docs/contracts/field_policy_dictionary.yaml
+      - docs/contracts/delivery_object_matrix.yaml
+      - docs/contracts/coverage_governance_registry.yaml
+      - docs/contracts/region_coverage_registry.yaml
+      - docs/contracts/sources_registry.yaml
+    goal:
+      - 固定交付与可售治理
+  L4_code_and_tests:
+    scope:
+      - src/
+      - tests/
+    goal:
+      - 固定实现、fixture、tests、门禁
+```
+
+### 附录 E：V1.5 权威一致性审校尺子
+
+```text
+authority_review_rubric:
+  single_source:
+    question: 是否存在旧版口径回流为现行依据
+  boundary_clarity:
+    question: 权威文档与开发手册是否各守其责
+  sync_order:
+    question: 是否明确了从文档到契约再到实现的顺序
+  machine_readable_readiness:
+    question: 是否明确了需要同步的机器可读资产
+  customer_visible_governance:
+    question: 是否明确了客户交付、字段控制、覆盖治理、审计的落点
+  execution_usability:
+    question: 工程师或 Codex 是否能据此直接拆下一批任务
+```
+
+### 附录 F：权威章节到仓库资产速查表
+
+```text
+authority_to_repo_quickmap:
+  chapter_3_coverage_governance:
+    - docs/contracts/region_coverage_registry.yaml
+    - docs/contracts/sources_registry.yaml
+    - docs/contracts/coverage_governance_registry.yaml
+  chapter_5_stage_baseline:
+    - task_package_stage
+    - allowed_dirs
+    - stage_tests
+  chapter_6_objects_and_fields:
+    - SCHEMA_REGISTRY
+    - field_semantics
+    - schemas
+    - examples
+  chapter_7_rule_topics:
+    - 权威文档附录规则码总表
+    - docs/contracts/schemas/stage4_rule_hit.schema.json
+    - docs/contracts/schemas/stage4_review_request.schema.json
+    - fixtures_and_regressions
+  chapter_8_page_api_consumption:
+    - docs/governance/INTERFACE_CATALOG.yaml
+    - page_consumer_notes
+  chapter_9_delivery_governance:
+    - docs/contracts/customer_delivery_field_whitelist.yaml
+    - docs/contracts/customer_delivery_field_blacklist.yaml
+    - docs/contracts/field_policy_dictionary.yaml
+    - docs/contracts/delivery_object_matrix.yaml
+  chapter_10_roles_audit:
+    - permission_matrix
+    - audit_event_catalog
+  chapter_11_testing_release:
+    - docs/governance/TEST_MATRIX.yaml
+    - required_tests
+    - release_gate_checklist
+  chapter_12_migration_change:
+    - migration_task_package
+    - rollback_notes
+    - exceptions_registry
 ```
 
 ## 13. 生效结论

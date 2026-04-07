@@ -104,5 +104,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/, scripts/, README.md`
 - `branch`: `feat/TASK-GOV-031-v15-authority-dev-manual`
-- `updated_at`: `2026-04-07T09:11:03+08:00`
+- `updated_at`: `2026-04-07T09:24:12+08:00`
 <!-- generated:task-meta:end -->

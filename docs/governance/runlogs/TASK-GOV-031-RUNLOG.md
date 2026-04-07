@@ -16,6 +16,9 @@
 - `2026-04-07T09:04:20+08:00`: task package created
 - `2026-04-07T09:05:42+08:00`: task manually activated after ledger sync fallback; baseline rewrite and dev-manual generation started
 - `2026-04-07T09:11:03+08:00`: authority baseline normalized to V1.5 single-source mode and a fresh V1.5-aligned dev manual was generated
+- `2026-04-07T09:15:26+08:00`: dev manual expanded with V1.5 sync order, direct backlog, layered alignment template, and authority review rubric
+- `2026-04-07T09:18:35+08:00`: dev manual further expanded with authority-to-repo mapping, V1.5 closeout gates, and quick-reference appendix
+- `2026-04-07T09:24:12+08:00`: dev manual hardened with baseline inventory, stricter archive isolation, hard sync gating, and normalized canonical asset paths
 
 ## Test Log
 
