@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-07T21:16:44+08:00'
+updated_at: '2026-04-07T21:20:15+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -743,3 +743,59 @@ entries:
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: coordinator
+- task_id: TASK-RM-STAGE1-CORE-CONTRACT
+  work_mode: execution
+  parent_task_id: null
+  branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
+  path: D:/Base One/Base-two/AX9.worktrees/worker-01
+  status: active
+  cleanup_state: pending
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: worker-01
+  lane_session_id: null
+  executor_status: prepared
+  started_at: null
+  last_heartbeat_at: null
+  last_result: null
+  workflow_state:
+    phase: preparing
+    prepared_at: null
+    parent_branch: codex/TASK-GOV-044-roadmap-worktree-pool-dispatch
+    baseline_checks:
+      status: pending
+      commands:
+      - python "D:/Base One/Base-two/AX9/scripts/check_repo.py"
+      - python "D:/Base One/Base-two/AX9/scripts/check_hygiene.py"
+      - python "D:/Base One/Base-two/AX9/scripts/check_authority_alignment.py"
+      last_run_at: null
+      results: []
+    design_confirmation:
+      status: pending
+      summary: null
+      recorded_at: null
+    execution_plan:
+      status: pending
+      artifact_path: .codex/local/EXECUTION_PLAN.yaml
+      recorded_at: null
+    implementation:
+      kind: unknown
+      test_first_status: pending
+      recorded_at: null
+      commands: []
+    review:
+      sequence:
+      - spec_review
+      - quality_review
+      spec_review:
+        status: pending
+        summary: null
+        recorded_at: null
+      quality_review:
+        status: pending
+        summary: null
+        recorded_at: null
+    finish:
+      status: pending
+      recorded_at: null
+      merged_into_parent_at: null
