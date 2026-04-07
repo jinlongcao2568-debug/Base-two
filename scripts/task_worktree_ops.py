@@ -38,6 +38,42 @@ from orchestration_runtime import update_execution_runtime_entry
 from task_rendering import find_task
 
 
+WORKTREE_POOL_FILE = Path("docs/governance/WORKTREE_POOL.yaml")
+
+
+def _load_worktree_pool(root: Path) -> dict:
+    path = root / WORKTREE_POOL_FILE
+    if not path.exists():
+        return {"version": "0.1", "slots": []}
+    from governance_runtime import load_yaml
+
+    payload = load_yaml(path) or {}
+    payload.setdefault("slots", [])
+    return payload
+
+
+def _write_worktree_pool(root: Path, pool: dict) -> None:
+    pool["updated_at"] = iso_now()
+    dump_yaml(root / WORKTREE_POOL_FILE, pool)
+
+
+def _release_pool_slot_for_path(root: Path, destination: Path, *, now: str) -> None:
+    pool = _load_worktree_pool(root)
+    updated = False
+    for slot in pool.get("slots", []):
+        slot_path = Path(str(slot.get("path") or "")).resolve() if slot.get("path") else None
+        if slot_path != destination:
+            continue
+        slot["status"] = "idle"
+        slot["current_task_id"] = None
+        slot["branch"] = None
+        slot["last_released_at"] = now
+        updated = True
+        break
+    if updated:
+        _write_worktree_pool(root, pool)
+
+
 def _reset_execution_runtime(entry: dict, worker_owner: str) -> None:
     entry["worker_owner"] = worker_owner
     entry["lane_session_id"] = None
@@ -238,6 +274,7 @@ def cmd_worktree_release(args: argparse.Namespace) -> int:
         git(root, "worktree", "remove", str(destination))
         if destination.exists():
             safe_rmtree(destination)
+    _release_pool_slot_for_path(root, destination, now=iso_now())
     entry["status"] = "closed"
     entry["cleanup_state"] = "done"
     entry["last_cleanup_error"] = None

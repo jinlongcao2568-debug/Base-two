@@ -31,6 +31,7 @@ from task_worktree_ops import cmd_worktree_create
 
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
 LOCK_FILE = Path(".codex/local/roadmap_candidates/scheduler.lock")
+WORKTREE_POOL_FILE = Path("docs/governance/WORKTREE_POOL.yaml")
 CLAIMABLE_STATUSES = {"ready", "resumable", "stale"}
 ACTIVE_TASK_STATUSES = {"doing", "review"}
 ACTIVE_WORKTREE_STATUSES = {"active", "paused"}
@@ -96,6 +97,20 @@ def _load_claims(root: Path) -> dict[str, Any]:
     return payload
 
 
+def _load_worktree_pool(root: Path) -> dict[str, Any]:
+    path = root / WORKTREE_POOL_FILE
+    if not path.exists():
+        return {"version": "0.1", "slots": []}
+    payload = load_yaml(path) or {}
+    payload.setdefault("slots", [])
+    return payload
+
+
+def _write_worktree_pool(root: Path, pool: dict[str, Any]) -> None:
+    pool["updated_at"] = iso_now()
+    dump_yaml(root / WORKTREE_POOL_FILE, pool)
+
+
 def _stale_after_minutes(root: Path) -> int:
     policy = load_yaml(root / "docs/governance/HANDOFF_POLICY.yaml") or {}
     return int(policy.get("stale_after_minutes") or 30)
@@ -108,6 +123,10 @@ def _write_claims(root: Path, claims: dict[str, Any]) -> None:
 
 def _claim_by_candidate(claims: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {claim["candidate_id"]: claim for claim in claims.get("claims", [])}
+
+
+def _pool_slot_by_id(pool: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {slot["slot_id"]: slot for slot in pool.get("slots", [])}
 
 
 def _active_registry_tasks(root: Path) -> list[dict[str, Any]]:
@@ -350,6 +369,7 @@ def _record_claim(claims: dict[str, Any], candidate: dict[str, Any], *, args: ar
         "expires_at": _iso(expires_at),
         "candidate_branch": candidate.get("candidate_branch"),
         "candidate_worktree": candidate.get("candidate_worktree"),
+        "pool_slot_id": candidate.get("pool_slot_id"),
         "planned_write_paths": list(candidate.get("planned_write_paths") or []),
     }
     existing = [claim for claim in claims.get("claims", []) if claim.get("candidate_id") != candidate["candidate_id"]]
@@ -398,6 +418,11 @@ def _build_execution_task(candidate: dict[str, Any], *, now: str) -> dict[str, A
 def _candidate_worktree_path(root: Path, candidate: dict[str, Any], worktree_root: str | None) -> Path:
     if worktree_root:
         return (Path(worktree_root) / candidate["task_id_hint"]).resolve()
+    if candidate.get("pool_slot_path"):
+        raw_path = Path(str(candidate["pool_slot_path"]))
+        if raw_path.is_absolute():
+            return raw_path.resolve()
+        return (root / raw_path).resolve()
     raw_path = Path(str(candidate["candidate_worktree"]))
     if raw_path.is_absolute():
         return raw_path.resolve()
@@ -418,6 +443,8 @@ def _update_claim_after_promotion(
         claim["promoted_at"] = now
         claim["formal_task_id"] = candidate["task_id_hint"]
         claim["candidate_worktree"] = str(destination).replace("\\", "/")
+        if candidate.get("pool_slot_id"):
+            claim["pool_slot_id"] = candidate["pool_slot_id"]
         return
 
 
@@ -438,7 +465,65 @@ def _update_claim_after_takeover(
         claim["claimed_at"] = _iso(now)
         claim["expires_at"] = _iso(now + timedelta(minutes=lease_minutes))
         claim["candidate_worktree"] = str(destination).replace("\\", "/")
+        if candidate.get("pool_slot_id"):
+            claim["pool_slot_id"] = candidate["pool_slot_id"]
         return
+
+
+def _assign_pool_slot(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> dict[str, Any] | None:
+    if args.worktree_root:
+        return None
+    pool = _load_worktree_pool(root)
+    slots = list(pool.get("slots", []))
+    if not slots:
+        raise GovernanceError(f"worktree pool is missing or empty: {WORKTREE_POOL_FILE}")
+    preferred = args.worker_owner
+    selected = None
+    if preferred:
+        selected = next((slot for slot in slots if slot.get("slot_id") == preferred), None)
+        if selected is None:
+            raise GovernanceError(f"requested pool slot is undefined: {preferred}")
+        if selected.get("status") != "idle":
+            raise GovernanceError(f"requested pool slot is not idle: {preferred}")
+    else:
+        selected = next((slot for slot in slots if slot.get("status") == "idle"), None)
+        if selected is None:
+            raise GovernanceError("no idle worktree pool slot is available")
+    selected["status"] = "assigned"
+    selected["current_task_id"] = candidate["task_id_hint"]
+    selected["branch"] = candidate["candidate_branch"]
+    selected["last_claimed_at"] = _iso(now)
+    _write_worktree_pool(root, pool)
+    return selected
+
+
+def _sync_pool_slot_active(root: Path, slot_id: str | None, *, destination: Path, task_id: str, branch: str, now: datetime) -> None:
+    if not slot_id:
+        return
+    pool = _load_worktree_pool(root)
+    slot = _pool_slot_by_id(pool).get(slot_id)
+    if slot is None:
+        raise GovernanceError(f"assigned worktree pool slot missing: {slot_id}")
+    slot["status"] = "active"
+    slot["current_task_id"] = task_id
+    slot["branch"] = branch
+    slot["path"] = str(destination).replace("\\", "/")
+    slot["last_claimed_at"] = _iso(now)
+    _write_worktree_pool(root, pool)
+
+
+def _release_pool_slot(root: Path, slot_id: str | None, *, now: datetime) -> None:
+    if not slot_id:
+        return
+    pool = _load_worktree_pool(root)
+    slot = _pool_slot_by_id(pool).get(slot_id)
+    if slot is None:
+        return
+    slot["status"] = "idle"
+    slot["current_task_id"] = None
+    slot["branch"] = None
+    slot["last_released_at"] = _iso(now)
+    _write_worktree_pool(root, pool)
 
 
 def _stale_claim_for_candidate(root: Path, candidate: dict[str, Any], claims: dict[str, Any], now: datetime) -> dict[str, Any] | None:
@@ -458,6 +543,14 @@ def _takeover_stale_claim(root: Path, candidate: dict[str, Any], claim: dict[str
     destination = Path(str(claim.get("candidate_worktree") or "")).resolve()
     if not destination.exists():
         cmd_worktree_create(argparse.Namespace(task_id=formal_task_id, path=str(destination), worker_owner=args.worker_owner))
+    _sync_pool_slot_active(
+        root,
+        claim.get("pool_slot_id"),
+        destination=destination,
+        task_id=formal_task_id,
+        branch=claim.get("candidate_branch") or candidate["candidate_branch"],
+        now=now,
+    )
     return destination
 
 
@@ -474,8 +567,17 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
     update_runlog_file(root, task)
     ensure_handoff_file(root, task)
 
+    pool_slot = _assign_pool_slot(root, candidate, args, now)
+    if pool_slot is not None:
+        candidate["pool_slot_id"] = pool_slot["slot_id"]
+        candidate["pool_slot_path"] = pool_slot["path"]
     destination = _candidate_worktree_path(root, candidate, args.worktree_root)
-    cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
+    try:
+        cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
+    except Exception:
+        _release_pool_slot(root, candidate.get("pool_slot_id"), now=now)
+        raise
+    _sync_pool_slot_active(root, candidate.get("pool_slot_id"), destination=destination, task_id=task["task_id"], branch=task["branch"], now=now)
     return destination
 
 
