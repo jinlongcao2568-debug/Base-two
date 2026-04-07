@@ -1,0 +1,30 @@
+task_id: TASK-GOV-035
+summary_status: done
+last_handoff_at: '2026-04-07T16:10:28+08:00'
+completed_items:
+- Added the live governance boundary document and classified historical artifacts
+  as audit-only evidence.
+- Aligned governance README, operator manual, and prompt-module guidance with the
+  new live-vs-historical boundary.
+- Extended authority alignment and governance regressions to fail when the boundary
+  drifts.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py src docs tests
+- python scripts/check_authority_alignment.py
+- pytest tests/governance/test_check_repo.py -q
+- pytest tests/governance/test_task_continuation.py -q
+- pytest tests/governance/test_authority_alignment.py -q
+- pytest tests/governance/test_governance_required_tests.py -q
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+- scripts/check_authority_alignment.py
+- tests/governance/
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Implementation and targeted validation are complete; only closeout decision remains.
+- Task closed.

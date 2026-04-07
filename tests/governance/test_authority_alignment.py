@@ -136,3 +136,13 @@ def test_authority_alignment_fails_when_roadmap_is_stale_after_activation(tmp_pa
     assert "roadmap current_phase conflicts with CURRENT_TASK.yaml" in result.stdout
     assert "roadmap body does not mention the live current task" in result.stdout
     assert "综合评分: 96" in result.stdout
+
+
+def test_authority_alignment_fails_when_live_boundary_doc_is_missing(tmp_path: Path) -> None:
+    repo = init_alignment_repo(tmp_path)
+    (repo / "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md").unlink()
+
+    result = run_alignment(repo)
+
+    assert result.returncode == 1
+    assert "missing required file: docs/governance/LIVE_GOVERNANCE_BOUNDARY.md" in result.stdout

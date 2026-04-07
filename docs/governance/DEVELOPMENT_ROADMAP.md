@@ -28,7 +28,7 @@ stage_establishment:
   stage7: deferred_manual
   stage8: deferred_manual
   stage9: deferred_manual
-automation_foundation: stale_successor_inputs_under_correction
+automation_foundation: targeted_governance_test_triggers_live
 ---
 
 # AX9S Development Roadmap
@@ -38,60 +38,57 @@ automation_foundation: stale_successor_inputs_under_correction
 - no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
-- `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.
-- `TASK-GOV-017`: closed the continuity-aware successor recovery and clean-runtime control-plane split.
-- `TASK-GOV-016`: closed the local multi-agent dispatch foundation.
+- `TASK-GOV-034`: narrowed governance test triggering so ordinary governance edits no longer default to the full governance and automation suites.
+- `TASK-GOV-024`: closed the governed closeout/lease/runtime-contract bundle.
+- `TASK-GOV-019`: corrected stale successor inputs and absorbed-backlog filtering.
 
 ## Current Phase Goal
 
-- Clear stale roadmap successor inputs left behind after `TASK-GOV-018` closeout.
-- Keep `continue-roadmap` and generated successor recommendation available when a valid direction exists.
-- Permanently exclude absorbed backlog from planner and continuation successor landscapes.
-- Ensure the system returns `no successor` when no valid successor remains instead of reviving stale tasks.
+- Establish an explicit boundary between live governance surfaces and historical audit artifacts.
+- Prevent closed task files, runlogs, handoffs, and registry history from being mistaken for the current default governance test gate.
+- Preserve historical evidence exactly as recorded while redirecting operator and prompt search behavior toward the live governance surfaces first.
 
 ## Internal Gates
 
-1. `phase_1_rebaseline_live_task`
-   - keep `TASK-GOV-019` as the only live current task
-   - align roadmap, task package, and runlog with the scoped correction objective
-2. `phase_2_clear_stale_roadmap_inputs`
-   - remove the stale explicit pointer to `TASK-GOV-018`
-   - neutralize stale `stage_establishment` values so they no longer imply a successor round
-3. `phase_3_filter_absorbed_backlog`
-   - exclude `TASK-BIZ-001/002/003`, `TASK-SOAK-001`, and `TASK-GRAD-001` from planner candidates
-   - exclude absorbed tasks from explicit successor validation and uniqueness checks
-4. `phase_4_clean_local_candidate_cache`
-   - clear `.codex/local/coordination_candidates/` of absorbed backlog artifacts
-   - keep only still-valid recommendation outputs
-5. `phase_5_regression_evidence`
-   - prove absorbed backlog does not re-enter `plan-coordination`
-   - prove stale absorbed explicit pointers do not block valid fallback successors
+1. `phase_1_activate_boundary_task`
+   - align CURRENT_TASK, roadmap, registry, worktree entry, task file, runlog, and handoff with `TASK-GOV-035`
+   - keep the task scoped to governance docs, authority checks, and governance regressions only
+2. `phase_2_define_live_governance_surfaces`
+   - add a live boundary document that names the canonical operator and prompt sources
+   - explicitly classify closed tasks, runlogs, handoffs, and registry history as audit artifacts
+3. `phase_3_align_operator_and_prompt_guidance`
+   - point operator guidance and prompt governance at the live surfaces first
+   - forbid treating historical required_tests records as current default gates
+4. `phase_4_regression_evidence`
+   - prove authority and governance checks fail if the live boundary is missing or the live-vs-historical distinction drifts
+   - keep the validation set targeted; do not reintroduce full governance or automation suites as default gates
 
 ## Explicitly Out Of Scope
 
-- Do not remove `continue-roadmap`, `plan-coordination`, or generated successor capability.
-- Do not create a replacement sibling task for governance, business automation, soak, or graduation.
-- Do not rewrite `src/stage6_facts/` or create a second fact layer.
-- Do not reopen absorbed backlog as top-level successor candidates.
-- Do not auto-switch to an ambiguous or dependency-blocked successor.
+- Do not rewrite or delete historical task files, runlogs, handoffs, or registry rows.
+- Do not touch `src/`, `docs/contracts/`, `db/migrations/`, or stage/contract/integration suites.
+- Do not change the test bundles defined in `TEST_MATRIX.yaml` or weaken release-grade protections.
+- Do not introduce a second governance source of truth outside the existing live control-plane documents.
 
 ## Exit Criteria
 
-- `next_recommended_task_id` is empty or points to a live, non-absorbed, immediate successor.
-- `stage_establishment` no longer causes stale business successor generation.
-- Absorbed backlog is excluded from planner candidates, continuation fallback, and uniqueness checks.
-- Local candidate cache no longer contains absorbed backlog artifacts.
-- Governance and automation regression tests cover the corrected behavior.
+- Live governance guidance names the canonical live surfaces and classifies historical artifacts as audit-only evidence.
+- Operator and prompt guidance no longer leave room to infer current default gates from historical task/runlog/handoff/registry records.
+- Authority and governance regressions cover the new boundary behavior without requiring the full governance or automation suites.
 
-## Absorbed Backlog
+## Historical Artifact Classes
 
-- `TASK-BIZ-001`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
-- `TASK-BIZ-002`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
-- `TASK-BIZ-003`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
-- `TASK-SOAK-001`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
-- `TASK-GRAD-001`: absorbed by `TASK-GOV-018`; must stay out of successor selection.
+- closed task files under `docs/governance/tasks/`
+- closed runlogs under `docs/governance/runlogs/`
+- handoff snapshots under `docs/governance/handoffs/`
+- historical rows in `docs/governance/TASK_REGISTRY.yaml`
 
-## Next Candidate
+## Search Boundary
 
-- No valid successor is currently declared.
-- `continue-roadmap` may still recommend a future successor when the roadmap, candidate cache, and capability state become valid again.
+- Search and prompt loading must start from live governance surfaces:
+  - `docs/product/AUTHORITY_SPEC.md`
+  - `docs/governance/OPERATOR_MANUAL.md`
+  - `docs/governance/CURRENT_TASK.yaml`
+  - the live current task file and runlog
+  - the live governance maps and policies (`MODULE_MAP`, `CAPABILITY_MAP`, `TASK_POLICY`, `TEST_MATRIX`)
+- Historical artifacts remain searchable for audit and recovery, but they are not the current default gate or prompt source.

@@ -18,6 +18,8 @@ Conflict rule:
   - worktree and coordination ownership
 - `DEVELOPMENT_ROADMAP.md`
   - live phase and current-task roadmap context
+- `LIVE_GOVERNANCE_BOUNDARY.md`
+  - live-vs-historical governance search boundary and default-gate interpretation rules
 - `AUTOMATION_INTENTS.yaml`
   - natural-language intent routing policy for governed continuation entrypoints in `docs/governance/AUTOMATION_INTENTS.yaml`
 - `GIT_PUBLISH_POLICY.yaml`
@@ -81,5 +83,7 @@ Conflict rule:
 - Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
 - `stage7-stage9` remain downstream-only stages and now require both dependency satisfaction and `stage7_to_stage9_business_automation=implemented` before automation may generate them.
 - Prompt source of truth now lives under `docs/governance/prompt_modules/`; root-level scratch notes are not live prompt inputs.
+- `docs/governance/LIVE_GOVERNANCE_BOUNDARY.md` defines the search boundary between live governance surfaces and historical audit artifacts.
+- Historical artifacts remain searchable for audit and recovery, but they do not override the current default gate recorded by live governance surfaces.
 - Generated runtime prompts now live under `docs/governance/runtime_prompts/`; they are derived artifacts, not a second prompt authority.
 - App-level custom instructions are not part of the governance control plane and should stay empty unless they are only carrying language or output-style preferences.

@@ -11,9 +11,10 @@ Conflict rule:
 
 1. `docs/product/AUTHORITY_SPEC.md`
 2. `docs/governance/OPERATOR_MANUAL.md`
-3. `docs/governance/CURRENT_TASK.yaml`
-4. the current task file
-5. the current task runlog
+3. `docs/governance/LIVE_GOVERNANCE_BOUNDARY.md`
+4. `docs/governance/CURRENT_TASK.yaml`
+5. the current task file
+6. the current task runlog
 
 ## Start Rules
 
@@ -36,6 +37,14 @@ Conflict rule:
   - `full_governance_release`: policy-core and release-grade gate changes
 - Only `full_governance_release` should require full `tests/governance -q` and `tests/automation -q` by default.
 - To benefit from selective governance test triggering, governance tasks should prefer precise file-level `planned_write_paths` over only broad directory roots.
+
+## Live vs Historical Governance Sources
+
+- `docs/governance/LIVE_GOVERNANCE_BOUNDARY.md` is the live boundary for operator and prompt search.
+- Historical task files, runlogs, handoffs, and registry rows are audit artifacts.
+- `docs/governance/TASK_REGISTRY.yaml` remains a live ledger, but closed rows and their `required_tests` are still historical evidence.
+- Do not derive the current default gate from historical `required_tests` records.
+- If historical artifacts conflict with the live governance surfaces, the live governance surfaces win for current execution.
 
 ## Required Output Before Implementation
 
@@ -77,6 +86,7 @@ Conflict rule:
 ## Prompt Governance
 
 - The prompt source of truth is `docs/governance/PROMPT_MODULE_CATALOG.yaml` and `docs/governance/prompt_modules/`.
+- Historical task files, runlogs, handoffs, and registry rows are audit artifacts, not live prompt inputs.
 - Generated runtime custom instructions live in `docs/governance/runtime_prompts/` and must stay derived from the governance catalog.
 - Runtime prompt outputs remain derived artifacts and must not replace the governance source files.
 

@@ -148,6 +148,21 @@ def test_live_governance_module_baseline_uses_repo_hygiene_only(tmp_path: Path) 
     ]
 
 
+def test_live_governance_docs_define_historical_artifact_boundary() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    boundary = (repo_root / "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md").read_text(encoding="utf-8")
+    governance_readme = (repo_root / "docs/governance/README.md").read_text(encoding="utf-8")
+    operator_manual = (repo_root / "docs/governance/OPERATOR_MANUAL.md").read_text(encoding="utf-8")
+    prompt_readme = (repo_root / "docs/governance/prompt_modules/README.md").read_text(encoding="utf-8")
+
+    assert "`docs/governance/CURRENT_TASK.yaml` remains the only live execution entry." in boundary
+    assert "Historical artifacts remain searchable for audit and recovery, but they are not the current default gate or prompt source." in boundary
+    assert "Historical task files, runlogs, handoffs, and registry rows must not redefine the current default governance gate." in boundary
+    assert "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md" in governance_readme
+    assert "Historical task files, runlogs, handoffs, and registry rows are audit artifacts." in operator_manual
+    assert "Historical task files, runlogs, handoffs, and registry rows are audit artifacts, not live prompt inputs." in prompt_readme
+
+
 def test_fixture_payloads_follow_live_capability_and_module_maps() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     live_capability_map = read_yaml(repo_root / "docs/governance/CAPABILITY_MAP.yaml")

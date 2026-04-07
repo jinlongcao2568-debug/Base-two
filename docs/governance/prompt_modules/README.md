@@ -28,4 +28,5 @@ Use these modules as composable inputs. Do not paste the entire historical memo 
 
 - Prompt modules are live governance artifacts.
 - Root-level scratch notes are not a live prompt source.
+- Historical task files, runlogs, handoffs, and registry rows are audit artifacts, not live prompt inputs.
 - If a module conflicts with `docs/product/AUTHORITY_SPEC.md` or `docs/governance/OPERATOR_MANUAL.md`, the formal governance documents win.

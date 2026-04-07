@@ -31,6 +31,7 @@ from validate_contracts import (
 
 AUTHORITY_SPEC = "docs/product/AUTHORITY_SPEC.md"
 OPERATOR_MANUAL = "docs/governance/OPERATOR_MANUAL.md"
+LIVE_BOUNDARY_FILE = "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md"
 CURRENT_TASK_FILE = "docs/governance/CURRENT_TASK.yaml"
 
 REQUIRED_PRODUCT_FILES = [
@@ -53,6 +54,7 @@ REQUIRED_GOVERNANCE_FILES = [
     "docs/governance/SCHEMA_REGISTRY.md",
     "docs/governance/INTERFACE_CATALOG.yaml",
     "docs/governance/OPERATOR_MANUAL.md",
+    "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md",
 ]
 REQUIRED_AUTOMATION_SCRIPTS = [
     "scripts/automation_intent.py",
@@ -276,7 +278,7 @@ def _evaluate_authority(
     return errors
 
 
-def _append_consistency_doc_checks(readme: str, governance_readme: str, errors: list[str]) -> None:
+def _append_consistency_doc_checks(readme: str, governance_readme: str, live_boundary: str, errors: list[str]) -> None:
     _require_snippets(
         readme,
         [
@@ -292,12 +294,24 @@ def _append_consistency_doc_checks(readme: str, governance_readme: str, errors: 
         governance_readme,
         [
             "CURRENT_TASK.yaml` remains the only live execution entry.",
+            "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md",
             "docs/product/AUTHORITY_SPEC.md",
             "docs/governance/OPERATOR_MANUAL.md",
             "docs/governance/AUTOMATION_INTENTS.yaml",
             "docs/governance/PROMPT_MODULE_CATALOG.yaml",
         ],
         "docs/governance/README.md",
+        errors,
+    )
+    _require_snippets(
+        live_boundary,
+        [
+            "`docs/governance/CURRENT_TASK.yaml` remains the only live execution entry.",
+            "Historical artifacts remain searchable for audit and recovery, but they are not the current default gate or prompt source.",
+            "Historical task files, runlogs, handoffs, and registry rows must not redefine the current default governance gate.",
+            "`docs/governance/TASK_REGISTRY.yaml` is a live ledger for task existence and state, but closed task rows and their `required_tests` remain historical audit evidence.",
+        ],
+        LIVE_BOUNDARY_FILE,
         errors,
     )
     _reject_legacy_words(readme, "README.md", errors)
@@ -344,13 +358,14 @@ def _evaluate_consistency(root: Path, live_task_errors: list[str]) -> list[str]:
     errors = list(live_task_errors)
     readme = _load_text(root, "README.md", errors)
     governance_readme = _load_text(root, "docs/governance/README.md", errors)
+    live_boundary = _load_text(root, LIVE_BOUNDARY_FILE, errors)
     roadmap_frontmatter, roadmap_body = read_roadmap(root)
     current_task = load_current_task(root)
     capability_map = _load_yaml_file(root, "docs/governance/CAPABILITY_MAP.yaml", errors)
     task_policy = _load_yaml_file(root, "docs/governance/TASK_POLICY.yaml", errors)
     interface_catalog = _load_yaml_file(root, "docs/governance/INTERFACE_CATALOG.yaml", errors)
 
-    _append_consistency_doc_checks(readme, governance_readme, errors)
+    _append_consistency_doc_checks(readme, governance_readme, live_boundary, errors)
     _append_current_task_consistency(current_task, roadmap_frontmatter, roadmap_body, errors)
     _append_authority_source_consistency(capability_map, task_policy, interface_catalog, errors)
     return errors
@@ -541,6 +556,9 @@ def _evaluate_development_control_layer(root: Path, live_task_errors: list[str])
     _require_snippets(
         operator_manual,
         [
+            "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md",
+            "Historical task files, runlogs, handoffs, and registry rows are audit artifacts.",
+            "Do not derive the current default gate from historical `required_tests` records.",
             "Use `python scripts/task_ops.py can-close` before closing.",
             "Do not leave the live current task in `done`",
             "Do not modify files outside the current task's `allowed_dirs`.",

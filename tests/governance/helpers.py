@@ -376,6 +376,7 @@ def _prompt_module_files() -> dict[str, str]:
             "# Prompt Modules\n\n"
             "This directory is the governed prompt source of truth for AX9 automation roles.\n\n"
             "Root-level scratch notes are not a live prompt source.\n"
+            "Historical task files, runlogs, handoffs, and registry rows are audit artifacts, not live prompt inputs.\n"
         ),
         "boundary_first.md": "# Boundary First\n\n- State forbidden actions before desired actions.\n",
         "reporting_discipline.md": "# Reporting Discipline\n\n- Report facts before interpretation.\n",
@@ -608,6 +609,16 @@ def init_structure(repo: Path) -> None:
 def write_governance_files(repo: Path) -> None:
     task = base_task_payload()
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
+    (repo / "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md").write_text(
+        (
+            "# Live Governance Boundary\n\n"
+            "`docs/governance/CURRENT_TASK.yaml` remains the only live execution entry.\n\n"
+            "Historical artifacts remain searchable for audit and recovery, but they are not the current default gate or prompt source.\n\n"
+            "- Closed task files, runlogs, handoffs, and registry rows must not redefine the current default governance gate.\n"
+            "- `docs/governance/TASK_REGISTRY.yaml` is a live ledger for task existence and state, but closed task rows and their `required_tests` remain historical audit evidence.\n"
+        ),
+        encoding="utf-8",
+    )
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
     _write_automation_intents_catalog(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
     _write_git_publish_policy(repo / "docs/governance/GIT_PUBLISH_POLICY.yaml")
