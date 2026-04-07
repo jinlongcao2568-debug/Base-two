@@ -30,6 +30,7 @@ from governance_lib import (
     load_worktree_registry,
     sync_task_artifacts,
     task_map,
+    task_required_tests_for_matrix,
     effective_successor_state,
     validate_task,
     worktree_map,
@@ -306,6 +307,7 @@ def _mark_capability_in_progress(capability_map: dict[str, Any]) -> None:
 def _build_generated_task(
     registry: dict[str, Any], blueprint: dict[str, Any], current_task_id: str | None
 ) -> dict[str, Any]:
+    root = find_repo_root()
     task_id = _next_auto_task_id(registry.get("tasks", []))
     task = {
         "task_id": task_id,
@@ -339,6 +341,8 @@ def _build_generated_task(
         "depends_on_task_ids": [current_task_id] if current_task_id is not None else [],
         "generated_from_blueprint": blueprint["blueprint_id"],
     }
+    if not task["required_tests"]:
+        task["required_tests"] = task_required_tests_for_matrix(root, task)
     validate_task(task)
     return task
 

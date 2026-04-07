@@ -23,6 +23,20 @@ Conflict rule:
 - Do not bypass stage 6 or introduce a second truth surface.
 - Before implementation, run the task baseline checks that match the active phase.
 
+## Governance Test Trigger Rules
+
+- `pytest tests/governance -q` is a governance-mode regression suite, not a default gate for ordinary business or low-risk governance edits.
+- `pytest tests/automation -q` is an automation-runner regression suite, not a default gate for ordinary business or low-risk governance edits.
+- Governance tasks must resolve tests by path-triggered profile, not by broad governance identity alone.
+- Default governance trigger profiles:
+  - `governance_fast`: ordinary docs, ledgers, and low-risk governance metadata
+  - `governance_workflow`: continuation, lease, handoff, closeout, orchestration workflow
+  - `governance_publish`: publish, preflight, automation intent, release flow
+  - `automation_runner`: runner, dispatch, cleanup pressure, orchestration runtime
+  - `full_governance_release`: policy-core and release-grade gate changes
+- Only `full_governance_release` should require full `tests/governance -q` and `tests/automation -q` by default.
+- To benefit from selective governance test triggering, governance tasks should prefer precise file-level `planned_write_paths` over only broad directory roots.
+
 ## Required Output Before Implementation
 
 - task understanding

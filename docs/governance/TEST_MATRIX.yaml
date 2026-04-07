@@ -8,7 +8,7 @@ size_class_gates:
     worker:
       - module unit tests
     closeout:
-      - pytest tests/governance -q
+      - module-aligned closeout tests only
   standard:
     preflight:
       - python scripts/check_repo.py
@@ -18,9 +18,8 @@ size_class_gates:
       - module unit tests
       - targeted integration smoke tests
     closeout:
-      - pytest tests/governance -q
-      - pytest tests/contracts -q
-      - pytest tests/integration -q
+      - module-aligned closeout tests only
+      - targeted integration smoke tests when required
   heavy:
     preflight:
       - python scripts/check_authority_alignment.py
@@ -32,10 +31,88 @@ size_class_gates:
       - child module unit tests
       - authority-critical integration tests
     closeout:
+      - authority-critical chains
+      - governance release suites when path-triggered
+test_bundles:
+  repo_hygiene:
+    description: Repo and hygiene validation for governed control-plane changes.
+    commands:
+      - python scripts/check_repo.py
+      - python scripts/check_hygiene.py src docs tests
+  authority_alignment:
+    description: Authority alignment validation for governance-core policy changes.
+    commands:
+      - python scripts/check_authority_alignment.py
+  governance_fast_regression:
+    description: Fast governance regression for low-risk docs, ledger, and metadata changes.
+    commands:
+      - pytest tests/governance/test_check_repo.py -q
+      - pytest tests/governance/test_check_hygiene.py -q
+      - pytest tests/governance/test_governance_state_machine.py -q
+  governance_workflow_regression:
+    description: Workflow regression for continuation, lease, handoff, closeout, and orchestration state-machine logic.
+    commands:
+      - pytest tests/governance/test_check_repo.py -q
+      - pytest tests/governance/test_task_continuation.py -q
+      - pytest tests/governance/test_parallel_closeout_pipeline.py -q
+      - pytest tests/governance/test_coordination_lease.py -q
+      - pytest tests/governance/test_handoff_recovery.py -q
+      - pytest tests/governance/test_orchestration_runtime.py -q
+      - pytest tests/governance/test_task_ops.py -q
+  governance_publish_regression:
+    description: Publish, preflight, and automation-intent regression for governance-side release flows.
+    commands:
+      - pytest tests/governance/test_task_publish_ops.py -q
+      - pytest tests/governance/test_automation_intent.py -q
+  automation_runner_regression:
+    description: Runner, lane budget, cleanup pressure, and orchestration runtime regression.
+    commands:
+      - pytest tests/automation/test_automation_runner.py -q
+      - pytest tests/automation/test_high_throughput_runner.py -q
+      - pytest tests/automation/test_orchestration_runtime_runner.py -q
+      - pytest tests/automation/test_task_gov_017_runtime.py -q
+      - pytest tests/automation/test_task_gov_018_runtime.py -q
+  governance_full_suite:
+    description: Full governance release regression suite.
+    commands:
       - pytest tests/governance -q
-      - pytest tests/contracts -q
-      - pytest tests/integration -q
-      - pytest -q
+  automation_full_suite:
+    description: Full automation release regression suite.
+    commands:
+      - pytest tests/automation -q
+governance_test_profiles:
+  governance_fast:
+    description: Fast governance validation for ordinary docs, ledgers, and low-risk governance metadata changes.
+    default_for_unmatched_governance_paths: true
+    allowed_path_prefixes:
+      - docs/governance/
+      - tests/governance/
+      - tests/automation/
+    test_bundles:
+      - repo_hygiene
+      - governance_fast_regression
+  governance_workflow:
+    description: Workflow regression for continuation, lease, handoff, closeout, and orchestration state-machine logic.
+    test_bundles:
+      - repo_hygiene
+      - governance_workflow_regression
+  governance_publish:
+    description: Publish, preflight, and intent-routing regression for governance-side release flows.
+    test_bundles:
+      - repo_hygiene
+      - governance_publish_regression
+  automation_runner:
+    description: Runner, dispatch, lane budget, cleanup pressure, and orchestration runtime regression.
+    test_bundles:
+      - repo_hygiene
+      - automation_runner_regression
+  full_governance_release:
+    description: Full governance and automation release-grade regression for core policy and gate changes.
+    test_bundles:
+      - repo_hygiene
+      - authority_alignment
+      - governance_full_suite
+      - automation_full_suite
 authority_critical_chains:
   stage3_stage4_stage6_minimal:
     description: Stage 3 project_base must be consumed by stage 4 rule_hit and then by the stage 6 project_fact.
@@ -87,9 +164,9 @@ single_machine_practical_matrix:
       - worker-report
       - worker-finish
       - close
-    required_tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
+    test_bundles:
+      - governance_full_suite
+      - automation_full_suite
     failure_signals:
       - CURRENT_TASK lifecycle drift
       - review-ready task cannot close cleanly
@@ -101,8 +178,8 @@ single_machine_practical_matrix:
       - release
       - takeover
       - continue-current recovery
-    required_tests:
-      - pytest tests/governance -q
+    test_bundles:
+      - governance_full_suite
     failure_signals:
       - recovery pack missing required fields
       - stale lease cannot be reclaimed safely
@@ -115,8 +192,8 @@ single_machine_practical_matrix:
       - branch mismatch
       - ledger drift
       - incomplete boundary candidate
-    required_tests:
-      - pytest tests/governance -q
+    test_bundles:
+      - governance_full_suite
     failure_signals:
       - continue-current writes while another session owns the lease
       - continue-roadmap activates through dirty or drifting control-plane state
@@ -128,8 +205,8 @@ single_machine_practical_matrix:
       - cleanup pressure
       - review bundle failure
       - lane conflict
-    required_tests:
-      - pytest tests/automation -q
+    test_bundles:
+      - automation_full_suite
     failure_signals:
       - runner prepares worktrees beyond effective budget
       - lane conflict does not hard-stop the cycle
@@ -145,9 +222,9 @@ single_machine_practical_matrix:
       - plan-coordination
       - promote-candidate
       - automation_runner
-    required_tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
+    test_bundles:
+      - governance_full_suite
+      - automation_full_suite
     failure_signals:
       - runtime file lacks stable blocks
       - session telemetry misses current command or writer state
@@ -157,8 +234,8 @@ single_machine_practical_matrix:
     trigger_conditions:
       - task_ops orchestration-status --format yaml
       - task_ops orchestration-status --format json
-    required_tests:
-      - pytest tests/governance -q
+    test_bundles:
+      - governance_full_suite
     failure_signals:
       - status output omits required top-level sections
       - disabled sources or unsupported workers are not visible
@@ -170,8 +247,8 @@ future_scale_interface_matrix:
     trigger_conditions:
       - task source registry load
       - orchestration-status task_sources output
-    required_tests:
-      - pytest tests/governance -q
+    test_bundles:
+      - governance_full_suite
     failure_signals:
       - external source appears active without explicit enablement
       - unsupported adapter state is hidden from operators
@@ -180,9 +257,9 @@ future_scale_interface_matrix:
     trigger_conditions:
       - worker registry load
       - orchestration-status workers output
-    required_tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
+    test_bundles:
+      - governance_full_suite
+      - automation_full_suite
     failure_signals:
       - local worker disappears from status output
       - worker identity or kind becomes implicit
@@ -191,9 +268,9 @@ future_scale_interface_matrix:
     trigger_conditions:
       - runner pressure evaluation
       - orchestration-status workers output
-    required_tests:
-      - pytest tests/governance -q
-      - pytest tests/automation -q
+    test_bundles:
+      - governance_full_suite
+      - automation_full_suite
     failure_signals:
       - remote worker is silently treated as schedulable
       - unsupported worker does not surface as unsupported_in_v1
@@ -201,34 +278,23 @@ future_scale_interface_matrix:
     description: Disabled external issue sources must remain visible in the runtime status surface.
     trigger_conditions:
       - orchestration-status task_sources output
-    required_tests:
-      - pytest tests/governance -q
+    test_bundles:
+      - governance_full_suite
     failure_signals:
       - disabled source disappears from the registry view
       - external source appears implemented without explicit support
 modules:
   governance_control_plane:
     micro:
-      required_tests:
-        - python scripts/check_repo.py
-        - python scripts/check_hygiene.py
-        - pytest tests/governance -q
+      test_bundles:
+        - repo_hygiene
     standard:
-      required_tests:
-        - python scripts/check_repo.py
-        - python scripts/check_hygiene.py
-        - pytest tests/governance -q
-        - pytest tests/contracts -q
-        - pytest tests/automation -q
+      test_bundles:
+        - repo_hygiene
     heavy:
-      required_tests:
-        - python scripts/check_authority_alignment.py
-        - python scripts/check_repo.py
-        - python scripts/check_hygiene.py
-        - pytest tests/governance -q
-        - pytest tests/contracts -q
-        - pytest tests/automation -q
-        - pytest -q
+      test_bundles:
+        - repo_hygiene
+        - authority_alignment
   stage1_orchestration:
     micro:
       required_tests:

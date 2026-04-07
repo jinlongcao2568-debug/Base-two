@@ -446,6 +446,13 @@ def _clone_template_repo(template_repo: Path, destination: Path) -> None:
     except subprocess.CalledProcessError:
         shutil.copytree(template_repo, destination)
     _configure_test_repo_git_identity(destination)
+    subprocess.run(
+        ["git", "remote", "remove", "origin"],
+        cwd=destination,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
 
 
 def set_idle_control_plane(

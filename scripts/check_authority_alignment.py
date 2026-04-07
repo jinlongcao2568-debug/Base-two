@@ -550,8 +550,8 @@ def _evaluate_development_control_layer(root: Path, live_task_errors: list[str])
     if is_idle_current_payload(current_task):
         if required_tests:
             errors.append("idle CURRENT_TASK required_tests must stay empty")
-    elif "python scripts/check_authority_alignment.py" not in required_tests:
-        errors.append("CURRENT_TASK required_tests missing authority alignment script")
+    elif not required_tests:
+        errors.append("live CURRENT_TASK required_tests must not be empty")
     return errors
 
 

@@ -409,6 +409,11 @@ def test_continue_roadmap_generates_task_auto_002_when_gap_is_open(tmp_path: Pat
     assert result.returncode == 0, result.stdout + result.stderr
     assert current_task["current_task_id"] == "TASK-AUTO-002"
     assert tasks["TASK-AUTO-002"]["status"] == "doing"
+    assert tasks["TASK-AUTO-002"]["required_tests"] == [
+        "python scripts/check_repo.py",
+        "python scripts/check_hygiene.py src docs tests",
+        "python scripts/check_authority_alignment.py",
+    ]
     assert autopilot["status"] == "in_progress"
     assert "next_recommended_task_id: TASK-AUTO-002" in roadmap_text
 

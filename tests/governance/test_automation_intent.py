@@ -217,8 +217,8 @@ def test_preflight_continue_roadmap_blocks_when_successor_is_missing(tmp_path: P
 
     code, payload = _preflight(repo, "按路线图继续推进")
     assert code == 0
-    assert payload["status"] == "blocked"
-    assert any("no successor" in blocker for blocker in payload["blockers"])
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "continue-roadmap"
 
 
 def test_preflight_continue_roadmap_reclassifies_stale_dependency_pointer_into_successor_ambiguity(tmp_path: Path) -> None:

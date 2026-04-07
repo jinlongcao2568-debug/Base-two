@@ -40,6 +40,13 @@ DEFAULT_SINGLE_WRITER_ROOTS = (
     "src/stage9_delivery/",
 )
 
+GOVERNANCE_PROFILE_POLICY_PATH_KEYS = {
+    "full_governance_release": "full_release_only_for",
+    "governance_workflow": "workflow_profile_for",
+    "governance_publish": "publish_profile_for",
+    "automation_runner": "automation_runner_profile_for",
+}
+
 
 def governed_child_scope_paths(task_policy: dict[str, Any] | None = None) -> tuple[str, ...]:
     policy = task_policy or {}
@@ -350,11 +357,91 @@ def missing_required_tests(root: Path, task: dict[str, Any]) -> list[str]:
     return [command for command in task.get("required_tests", []) if command not in runlog_text]
 
 
-def task_required_tests_for_matrix(root: Path, task: dict[str, Any]) -> list[str]:
+def _dedupe_commands(commands: Iterable[str]) -> list[str]:
+    ordered: list[str] = []
+    for command in commands:
+        if command not in ordered:
+            ordered.append(command)
+    return ordered
+
+
+def _task_scope_paths(task: dict[str, Any]) -> list[str]:
+    planned_write_paths = [path for path in (task.get("planned_write_paths") or []) if path]
+    if planned_write_paths:
+        return _dedupe_commands(planned_write_paths)
+    allowed_dirs = [path for path in (task.get("allowed_dirs") or []) if path]
+    return _dedupe_commands(allowed_dirs)
+
+
+def resolve_test_matrix_commands(matrix: dict[str, Any], entry: dict[str, Any]) -> list[str]:
+    bundles = matrix.get("test_bundles", {}) or {}
+    commands: list[str] = []
+    for bundle_name in entry.get("test_bundles") or []:
+        bundle = bundles.get(bundle_name) or {}
+        commands.extend(bundle.get("commands") or bundle.get("required_tests") or [])
+    commands.extend(entry.get("required_tests") or [])
+    return _dedupe_commands(commands)
+
+
+def _governance_profile_rules(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     matrix = load_test_matrix(root)
+    from governance_runtime import load_task_policy
+
+    task_policy = load_task_policy(root)
+    return matrix, task_policy
+
+
+def _governance_profile_match_paths(policy: dict[str, Any], profile_name: str) -> list[str]:
+    key = GOVERNANCE_PROFILE_POLICY_PATH_KEYS.get(profile_name)
+    if key is None:
+        return []
+    return list(policy.get(key) or [])
+
+
+def _governance_triggered_tests(root: Path, task: dict[str, Any]) -> list[str]:
+    matrix, task_policy = _governance_profile_rules(root)
+    profiles = matrix.get("governance_test_profiles", {}) or {}
+    policy = task_policy.get("governance_test_triggering", {}) or {}
+    scope_paths = _task_scope_paths(task)
+    resolution_order = list(policy.get("profile_resolution_order") or profiles.keys())
+    matched_profiles: list[str] = []
+
+    for profile_name in resolution_order:
+        if profile_name == policy.get("docs_only_default_profile", "governance_fast"):
+            continue
+        match_paths = _governance_profile_match_paths(policy, profile_name)
+        if match_paths and any(path_within_declared(path, match_paths) for path in scope_paths):
+            matched_profiles.append(profile_name)
+
+    if "full_governance_release" in matched_profiles:
+        return resolve_test_matrix_commands(matrix, profiles.get("full_governance_release") or {})
+
+    if not matched_profiles:
+        docs_profile = policy.get("docs_only_default_profile", "governance_fast")
+        allowed_prefixes = (profiles.get(docs_profile) or {}).get("allowed_path_prefixes") or []
+        if scope_paths and all(path_within_declared(path, allowed_prefixes) for path in scope_paths):
+            matched_profiles.append(docs_profile)
+
+    if not matched_profiles:
+        fallback_profile = policy.get("fallback_script_profile")
+        if fallback_profile and any(actual_path(path).startswith("scripts/") for path in scope_paths):
+            matched_profiles.append(fallback_profile)
+
+    commands: list[str] = []
+    for profile_name in matched_profiles:
+        commands.extend(resolve_test_matrix_commands(matrix, profiles.get(profile_name) or {}))
+    return _dedupe_commands(commands)
+
+
+def task_required_tests_for_matrix(root: Path, task: dict[str, Any]) -> list[str]:
     module_id = task.get("module_id") or "governance_control_plane"
+    if module_id == "governance_control_plane":
+        triggered = _governance_triggered_tests(root, task)
+        if triggered:
+            return triggered
+    matrix = load_test_matrix(root)
     module_rules = matrix.get("modules", {}).get(module_id, {})
-    return list(module_rules.get(task["size_class"], {}).get("required_tests", []))
+    return resolve_test_matrix_commands(matrix, module_rules.get(task["size_class"], {}) or {})
 
 
 def dynamic_parallelism_policy(task_policy: dict[str, Any] | None = None) -> dict[str, Any]:

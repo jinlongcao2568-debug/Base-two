@@ -36,6 +36,49 @@ automation_modes:
   autonomous:
     description: Automation may prepare and close only when topology, tests, and boundaries
       are fully satisfied.
+governance_test_triggering:
+  mode: path_based
+  explicit_required_tests_precedence: true
+  non_governance_modules_unchanged: true
+  docs_only_default_profile: governance_fast
+  selective_trigger_requires_precise_paths: true
+  profile_resolution_order:
+  - full_governance_release
+  - automation_runner
+  - governance_publish
+  - governance_workflow
+  - governance_fast
+  full_release_only_for:
+  - docs/governance/TEST_MATRIX.yaml
+  - docs/governance/TASK_POLICY.yaml
+  - docs/governance/OPERATOR_MANUAL.md
+  - scripts/governance_rules.py
+  - scripts/governance_lib.py
+  - scripts/check_repo.py
+  - scripts/check_hygiene.py
+  - scripts/check_authority_alignment.py
+  workflow_profile_for:
+  - scripts/task_ops.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_continuation_ops.py
+  - scripts/task_closeout.py
+  - scripts/task_coordination_lease.py
+  - scripts/task_coordination_ops.py
+  - scripts/task_handoff.py
+  - scripts/task_worker_ops.py
+  - scripts/task_orchestration_ops.py
+  - scripts/governance_state_machine.py
+  publish_profile_for:
+  - scripts/task_publish_ops.py
+  - scripts/automation_intent.py
+  - docs/governance/GIT_PUBLISH_POLICY.yaml
+  - docs/governance/AUTOMATION_INTENTS.yaml
+  automation_runner_profile_for:
+  - scripts/automation_runner.py
+  - scripts/task_worktree_ops.py
+  - scripts/local_lane_launcher.py
+  - scripts/orchestration_runtime.py
+  - docs/governance/AUTOMATION_OPERATING_MODEL.md
 stop_conditions:
 - current_task drift across registry, roadmap, task file, runlog, or worktree entry
 - contract validation failure
@@ -55,6 +98,8 @@ closeout_rules:
 - child execution auto-close requires the full review bundle to pass inside the execution
   worktree
 - child execution auto-close may not auto-close the top-level coordination parent
+- governance and automation full-suite tests are not default closeout gates unless
+  the active task resolves to the full_governance_release profile
 child_execution_workflow:
   truth_sources:
     primary:
@@ -192,13 +237,7 @@ task_blueprints:
   planned_test_paths:
   - tests/governance/
   - tests/automation/
-  required_tests:
-  - python scripts/check_authority_alignment.py
-  - python scripts/check_repo.py
-  - python scripts/check_hygiene.py
-  - pytest tests/governance -q
-  - pytest tests/automation -q
-  - pytest -q
+  required_tests: []
   branch_template: feat/{task_id}-roadmap-autopilot-continuation
 - blueprint_id: business_parallel_parent_stage1_to_stage6
   title: Business automation round
