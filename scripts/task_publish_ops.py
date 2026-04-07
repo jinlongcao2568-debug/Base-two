@@ -109,6 +109,19 @@ def _branch_upstream_exists(root: Path) -> bool:
     return result.returncode == 0
 
 
+def _upstream_divergence(root: Path) -> tuple[int, int] | None:
+    if not _branch_upstream_exists(root):
+        return None
+    result = git(root, "rev-list", "--left-right", "--count", "HEAD...@{u}", check=False)
+    if result.returncode != 0:
+        return None
+    parts = result.stdout.strip().split()
+    if len(parts) != 2:
+        return None
+    ahead, behind = (int(part) for part in parts)
+    return ahead, behind
+
+
 def _existing_pr(root: Path, branch: str) -> tuple[bool, str | None]:
     if not _gh_available() or not _gh_authenticated(root):
         return False, None
@@ -254,6 +267,11 @@ def publish_preflight(root: Path, *, action: str, task_id: str | None = None) ->
         blockers.append("no task-scoped changes are available to commit")
     if action in PUSH_ACTIONS and not has_remote_origin:
         blockers.append(f"remote `{remote}` is not configured")
+    if action in PUSH_ACTIONS and has_remote_origin:
+        git(root, "fetch", remote, check=False)
+    divergence = _upstream_divergence(root)
+    if action in PUSH_ACTIONS and divergence is not None and divergence[1] > 0:
+        blockers.append("remote branch has unknown commits")
     if action in PR_ACTIONS:
         if task["branch"] == base_branch:
             blockers.append(f"task branch `{task['branch']}` cannot open a PR against the same base branch")

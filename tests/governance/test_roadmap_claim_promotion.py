@@ -115,9 +115,9 @@ def test_claim_next_promote_blocks_duplicate_existing_candidate_task(tmp_path: P
         "--worktree-root",
         str(worktree_root),
         "--now",
-        "2026-04-07T22:00:00+08:00",
+        "2026-04-07T20:05:00+08:00",
     )
 
     assert first.returncode == 0, first.stdout + first.stderr
     assert second.returncode == 1
-    assert "no safe roadmap candidate" in second.stdout
+    assert "active claim by" in second.stdout

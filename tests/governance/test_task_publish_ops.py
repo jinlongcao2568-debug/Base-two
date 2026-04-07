@@ -213,6 +213,29 @@ def test_push_task_branch_blocks_without_origin_remote(tmp_path: Path) -> None:
     assert "remote `origin` is not configured" in (result.stdout + result.stderr)
 
 
+def test_push_task_branch_blocks_when_remote_branch_has_unknown_commits(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _mark_review_ready(repo)
+    _move_live_task_to_branch(repo, "feat/task-base-push")
+    remote = _add_origin_remote(repo, tmp_path)
+    subprocess.run(["git", "push", "-u", "origin", "feat/task-base-push"], cwd=repo, check=True, capture_output=True, text=True)
+
+    other = tmp_path / "other"
+    subprocess.run(["git", "clone", remote.as_posix(), other.as_posix()], check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Codex"], cwd=other, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "codex@example.com"], cwd=other, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "switch", "feat/task-base-push"], cwd=other, check=True, capture_output=True, text=True)
+    (other / "src/base/module.py").write_text("def base_value():\n    return 9\n", encoding="utf-8")
+    subprocess.run(["git", "add", "src/base/module.py"], cwd=other, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "remote update"], cwd=other, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "push", "origin", "feat/task-base-push"], cwd=other, check=True, capture_output=True, text=True)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "push-task-branch")
+
+    assert result.returncode == 1
+    assert "remote branch has unknown commits" in (result.stdout + result.stderr)
+
+
 def test_create_task_pr_blocks_without_gh(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _mark_review_ready(repo)

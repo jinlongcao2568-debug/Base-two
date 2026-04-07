@@ -8,11 +8,14 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from governance_lib import (
+    EXECUTION_CONTEXT_FILE,
     GovernanceError,
+    actual_path,
     branch_exists,
     configure_utf8_stdio,
     dump_yaml,
     find_repo_root,
+    git,
     iso_now,
     load_task_registry,
     load_worktree_registry,
@@ -20,6 +23,7 @@ from governance_lib import (
     validate_task,
 )
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
+from child_execution_flow import transient_child_paths
 from task_handoff import ensure_handoff_file
 from task_rendering import update_runlog_file, update_task_file
 from task_worktree_ops import cmd_worktree_create
@@ -30,6 +34,7 @@ LOCK_FILE = Path(".codex/local/roadmap_candidates/scheduler.lock")
 CLAIMABLE_STATUSES = {"ready", "resumable", "stale"}
 ACTIVE_TASK_STATUSES = {"doing", "review"}
 ACTIVE_WORKTREE_STATUSES = {"active", "paused"}
+STALE_READY_STATUSES = {"claimed", "promoted", "taken_over"}
 
 
 def _parse_iso(value: str) -> datetime:
@@ -91,6 +96,11 @@ def _load_claims(root: Path) -> dict[str, Any]:
     return payload
 
 
+def _stale_after_minutes(root: Path) -> int:
+    policy = load_yaml(root / "docs/governance/HANDOFF_POLICY.yaml") or {}
+    return int(policy.get("stale_after_minutes") or 30)
+
+
 def _write_claims(root: Path, claims: dict[str, Any]) -> None:
     claims["updated_at"] = iso_now()
     dump_yaml(root / CLAIMS_FILE, claims)
@@ -117,13 +127,110 @@ def _claim_is_fresh(claim: dict[str, Any], now: datetime) -> bool:
     return _parse_iso(str(expires_at)) > now
 
 
-def _single_writer_conflict(candidate: dict[str, Any], active_tasks: list[dict[str, Any]], roots: list[str]) -> bool:
+def _claim_is_stale(root: Path, claim: dict[str, Any], worktree_entry: dict[str, Any] | None, now: datetime) -> bool:
+    if claim.get("status") not in STALE_READY_STATUSES:
+        return False
+    expires_at = claim.get("expires_at")
+    if expires_at and _parse_iso(str(expires_at)) <= now:
+        return True
+    if worktree_entry and worktree_entry.get("last_heartbeat_at"):
+        heartbeat = _parse_iso(str(worktree_entry["last_heartbeat_at"]))
+        if heartbeat + timedelta(minutes=_stale_after_minutes(root)) <= now:
+            return True
+    return False
+
+
+def _worktree_entry_for_claim(active_worktrees: list[dict[str, Any]], claim: dict[str, Any]) -> dict[str, Any] | None:
+    formal_task_id = claim.get("formal_task_id")
+    if formal_task_id:
+        for entry in active_worktrees:
+            if entry.get("task_id") == formal_task_id:
+                return entry
+    claim_path = claim.get("candidate_worktree")
+    if claim_path:
+        for entry in active_worktrees:
+            if entry.get("path") == claim_path:
+                return entry
+    return None
+
+
+def _worktree_dirty_paths(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    status = git(path, "status", "--porcelain", "--untracked-files=all", check=False).stdout.splitlines()
+    dirty_paths: list[str] = []
+    for line in status:
+        if len(line) < 4:
+            continue
+        dirty_paths.append(line[3:].replace("\\", "/"))
+    return dirty_paths
+
+
+def _remote_diverged(path: Path) -> bool:
+    upstream = git(path, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}", check=False)
+    if upstream.returncode != 0:
+        return False
+    counts = git(path, "rev-list", "--left-right", "--count", "HEAD...@{u}", check=False)
+    if counts.returncode != 0:
+        return True
+    parts = counts.stdout.strip().split()
+    if len(parts) != 2:
+        return True
+    ahead, behind = (int(part) for part in parts)
+    return behind > 0
+
+
+def _takeover_blockers(root: Path, candidate: dict[str, Any], claim: dict[str, Any], now: datetime) -> list[str]:
+    blockers: list[str] = []
+    formal_task_id = claim.get("formal_task_id")
+    registry = load_task_registry(root)
+    tasks_by_id = {task["task_id"]: task for task in registry.get("tasks", [])}
+    task = tasks_by_id.get(formal_task_id) if formal_task_id else None
+    if formal_task_id and task is None:
+        blockers.append(f"formal task missing for stale claim: {formal_task_id}")
+        return blockers
+    worktree_path = claim.get("candidate_worktree")
+    if worktree_path:
+        destination = Path(str(worktree_path)).resolve()
+        if destination.exists():
+            dirty_paths = _worktree_dirty_paths(destination)
+            if dirty_paths:
+                transient = set()
+                if task is not None:
+                    transient |= transient_child_paths(task)
+                transient.add(actual_path(str(EXECUTION_CONTEXT_FILE)))
+                effective_dirty = [dirty_path for dirty_path in dirty_paths if dirty_path not in transient]
+                declared = list(task.get("planned_write_paths") or []) if task else list(candidate.get("planned_write_paths") or [])
+                out_of_scope = [
+                    dirty_path
+                    for dirty_path in effective_dirty
+                    if not any(_paths_overlap(dirty_path, declared_path) for declared_path in declared)
+                ]
+                if out_of_scope:
+                    blockers.append(f"stale worktree has out-of-scope dirty paths: {', '.join(out_of_scope)}")
+                elif effective_dirty:
+                    blockers.append("stale worktree is dirty and requires manual checkpoint")
+            if _remote_diverged(destination):
+                blockers.append("remote branch has unknown commits")
+    return blockers
+
+
+def _single_writer_conflict(
+    candidate: dict[str, Any],
+    active_tasks: list[dict[str, Any]],
+    roots: list[str],
+    *,
+    ignore_task_ids: set[str] | None = None,
+) -> bool:
     candidate_paths = list(candidate.get("planned_write_paths") or [])
+    ignored = ignore_task_ids or set()
     for root in roots:
         candidate_hits_root = any(_paths_overlap(path, root) for path in candidate_paths)
         if not candidate_hits_root:
             continue
         for task in active_tasks:
+            if task["task_id"] in ignored:
+                continue
             if any(_paths_overlap(path, root) for path in task.get("planned_write_paths") or []):
                 return True
     return False
@@ -144,28 +251,51 @@ def _candidate_blockers(
         blockers.append(f"status={candidate.get('status')}")
 
     claim = claims_by_candidate.get(candidate["candidate_id"])
-    if claim and _claim_is_fresh(claim, now):
-        blockers.append(f"active claim by {claim.get('window_id')}")
+    worktree_entry = _worktree_entry_for_claim(active_worktrees, claim) if claim else None
+    stale_takeover_task_id = None
+    if claim:
+        if _claim_is_stale(root, claim, worktree_entry, now):
+            stale_takeover_task_id = claim.get("formal_task_id")
+            blockers.extend(_takeover_blockers(root, candidate, claim, now))
+        elif _claim_is_fresh(claim, now):
+            blockers.append(f"active claim by {claim.get('window_id')}")
 
     candidate_paths = list(candidate.get("planned_write_paths") or [])
     for task in active_tasks:
+        if stale_takeover_task_id and task["task_id"] == stale_takeover_task_id:
+            continue
         if _any_path_overlaps(candidate_paths, list(task.get("planned_write_paths") or [])):
             blockers.append(f"write-path overlap with {task['task_id']}")
             break
 
-    if _single_writer_conflict(candidate, active_tasks, single_writer_roots):
+    if _single_writer_conflict(
+        candidate,
+        active_tasks,
+        single_writer_roots,
+        ignore_task_ids={stale_takeover_task_id} if stale_takeover_task_id else None,
+    ):
         blockers.append("single-writer root conflict")
 
     candidate_branch = candidate.get("candidate_branch")
-    if candidate_branch and any(task.get("branch") == candidate_branch for task in active_tasks):
+    if candidate_branch and any(
+        task.get("branch") == candidate_branch and task["task_id"] != stale_takeover_task_id
+        for task in active_tasks
+    ):
         blockers.append("branch already owned by active task")
     if candidate_branch and branch_exists(root, str(candidate_branch)):
-        blockers.append("branch already exists")
+        if not stale_takeover_task_id:
+            blockers.append("branch already exists")
 
     candidate_worktree = candidate.get("candidate_worktree")
-    if candidate_worktree and any(entry.get("path") == candidate_worktree for entry in active_worktrees):
+    if candidate_worktree and any(
+        entry.get("path") == candidate_worktree and entry.get("task_id") != stale_takeover_task_id
+        for entry in active_worktrees
+    ):
         blockers.append("worktree path already owned")
-    if candidate_branch and any(entry.get("branch") == candidate_branch for entry in active_worktrees):
+    if candidate_branch and any(
+        entry.get("branch") == candidate_branch and entry.get("task_id") != stale_takeover_task_id
+        for entry in active_worktrees
+    ):
         blockers.append("worktree branch already owned")
 
     return blockers
@@ -291,6 +421,46 @@ def _update_claim_after_promotion(
         return
 
 
+def _update_claim_after_takeover(
+    claims: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    args: argparse.Namespace,
+    destination: Path,
+    now: datetime,
+) -> None:
+    for claim in claims.get("claims", []):
+        if claim.get("candidate_id") != candidate["candidate_id"]:
+            continue
+        lease_minutes = int(args.lease_minutes)
+        claim["status"] = "taken_over"
+        claim["window_id"] = args.window_id
+        claim["claimed_at"] = _iso(now)
+        claim["expires_at"] = _iso(now + timedelta(minutes=lease_minutes))
+        claim["candidate_worktree"] = str(destination).replace("\\", "/")
+        return
+
+
+def _stale_claim_for_candidate(root: Path, candidate: dict[str, Any], claims: dict[str, Any], now: datetime) -> dict[str, Any] | None:
+    claim = _claim_by_candidate(claims).get(candidate["candidate_id"])
+    if not claim:
+        return None
+    entry = _worktree_entry_for_claim(_active_worktrees(root), claim)
+    if _claim_is_stale(root, claim, entry, now):
+        return claim
+    return None
+
+
+def _takeover_stale_claim(root: Path, candidate: dict[str, Any], claim: dict[str, Any], args: argparse.Namespace, now: datetime) -> Path:
+    formal_task_id = claim.get("formal_task_id")
+    if not formal_task_id:
+        raise GovernanceError("stale claim takeover requires a formal task id")
+    destination = Path(str(claim.get("candidate_worktree") or "")).resolve()
+    if not destination.exists():
+        cmd_worktree_create(argparse.Namespace(task_id=formal_task_id, path=str(destination), worker_owner=args.worker_owner))
+    return destination
+
+
 def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> Path:
     registry = load_task_registry(root)
     tasks = registry.setdefault("tasks", [])
@@ -325,14 +495,22 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
         if not safe:
             return None, blocked
         selected = safe[0]
+        stale_claim = _stale_claim_for_candidate(root, selected, claims, now)
         if args.write_claim:
-            _record_claim(claims, selected, args=args, now=now)
-            _write_claims(root, claims)
+            if stale_claim is None:
+                _record_claim(claims, selected, args=args, now=now)
+                _write_claims(root, claims)
         if getattr(args, "promote_task", False):
-            destination = _promote_candidate_to_worktree(root, selected, args, now)
-            claims = _load_claims(root)
-            _update_claim_after_promotion(claims, selected, destination=destination, now=_iso(now))
-            _write_claims(root, claims)
+            if stale_claim is not None and stale_claim.get("formal_task_id"):
+                destination = _takeover_stale_claim(root, selected, stale_claim, args, now)
+                claims = _load_claims(root)
+                _update_claim_after_takeover(claims, selected, args=args, destination=destination, now=now)
+                _write_claims(root, claims)
+            else:
+                destination = _promote_candidate_to_worktree(root, selected, args, now)
+                claims = _load_claims(root)
+                _update_claim_after_promotion(claims, selected, destination=destination, now=_iso(now))
+                _write_claims(root, claims)
         return selected, blocked
 
 
@@ -348,7 +526,10 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
             f"top_candidate={first_blocker['candidate_id']} reason={'; '.join(first_blocker['blockers'])}"
         )
         return 1
-    mode = "promoted" if args.promote_task else ("claimed" if args.write_claim else "dry-run")
+    claims = _load_claims(root)
+    selected_claim = _claim_by_candidate(claims).get(selected["candidate_id"])
+    takeover_mode = bool(selected_claim and selected_claim.get("status") == "taken_over")
+    mode = "taken-over" if takeover_mode else ("promoted" if args.promote_task else ("claimed" if args.write_claim else "dry-run"))
     print(
         f"[OK] claim-next {mode} candidate_id={selected['candidate_id']} "
         f"task_id_hint={selected['task_id_hint']} branch={selected['candidate_branch']}"

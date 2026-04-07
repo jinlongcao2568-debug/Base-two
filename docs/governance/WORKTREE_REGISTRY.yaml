@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-07T20:47:15+08:00'
+updated_at: '2026-04-07T21:02:39+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -717,6 +717,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-042-roadmap-claim-promotion-worktree
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-043
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-043-roadmap-takeover-publish-hardening
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed
