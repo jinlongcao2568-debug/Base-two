@@ -30,6 +30,7 @@ from task_lifecycle_ops import (
     cmd_sync,
 )
 from task_orchestration_ops import cmd_orchestration_status
+from roadmap_candidate_index import cmd_plan_roadmap_candidates
 from task_worker_ops import (
     cmd_auto_close_children,
     cmd_worker_design_confirm,
@@ -49,6 +50,10 @@ from task_worktree_ops import cmd_cleanup_orphans, cmd_prepare_child_execution, 
 def add_coordination_commands(subparsers) -> None:
     planner_parser = subparsers.add_parser("plan-coordination")
     planner_parser.set_defaults(func=cmd_plan_coordination)
+
+    roadmap_candidates_parser = subparsers.add_parser("plan-roadmap-candidates")
+    roadmap_candidates_parser.add_argument("--output", default=".codex/local/roadmap_candidates/index.yaml")
+    roadmap_candidates_parser.set_defaults(func=cmd_plan_roadmap_candidates)
 
     promote_parser = subparsers.add_parser("promote-candidate")
     promote_parser.add_argument("candidate_id")

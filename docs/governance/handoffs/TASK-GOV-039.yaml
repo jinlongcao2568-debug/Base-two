@@ -1,0 +1,32 @@
+task_id: TASK-GOV-039
+summary_status: done
+last_handoff_at: '2026-04-07T20:04:52+08:00'
+completed_items:
+- Added scripts/roadmap_candidate_index.py for backlog validation and deterministic
+  candidate status derivation.
+- Added plan-roadmap-candidates to task_ops with local .codex output to avoid tracked
+  dirty-state churn.
+- Added tests/governance/test_roadmap_candidate_index.py for ready, waiting, controlled,
+  and missing dependency cases.
+- Generated a local roadmap candidate index showing 23 candidates, 1 ready, and 22
+  waiting.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_roadmap_candidate_index.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+- .codex/local/roadmap_candidates/
+- scripts/
+- tests/governance/
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Task activated through queue-and-activate branch_action=created.
+- 'Default candidate index output is local and ignored: .codex/local/roadmap_candidates/index.yaml.'
+- Tracked audit snapshots can still be generated with --output if explicitly requested.
+- 'Worker finish summary: Implemented roadmap backlog candidate index generation with
+  local default output'
+- Task closed.
