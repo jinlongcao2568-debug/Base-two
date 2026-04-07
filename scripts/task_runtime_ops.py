@@ -31,6 +31,7 @@ from task_lifecycle_ops import (
 )
 from task_orchestration_ops import cmd_orchestration_status
 from roadmap_candidate_index import cmd_plan_roadmap_candidates
+from roadmap_claim_next import cmd_claim_next
 from task_worker_ops import (
     cmd_auto_close_children,
     cmd_worker_design_confirm,
@@ -54,6 +55,13 @@ def add_coordination_commands(subparsers) -> None:
     roadmap_candidates_parser = subparsers.add_parser("plan-roadmap-candidates")
     roadmap_candidates_parser.add_argument("--output", default=".codex/local/roadmap_candidates/index.yaml")
     roadmap_candidates_parser.set_defaults(func=cmd_plan_roadmap_candidates)
+
+    claim_next_parser = subparsers.add_parser("claim-next")
+    claim_next_parser.add_argument("--write-claim", action="store_true")
+    claim_next_parser.add_argument("--window-id", default="window-local")
+    claim_next_parser.add_argument("--lease-minutes", type=int, default=30)
+    claim_next_parser.add_argument("--now")
+    claim_next_parser.set_defaults(func=cmd_claim_next)
 
     promote_parser = subparsers.add_parser("promote-candidate")
     promote_parser.add_argument("candidate_id")
