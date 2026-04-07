@@ -3,12 +3,26 @@ from __future__ import annotations
 from typing import Any
 
 
+def claim_next_intent_payload() -> dict[str, Any]:
+    return {
+        "intent_id": "claim-next",
+        "canonical_phrase": "持续按路线图开发",
+        "mapped_command": "python scripts/task_ops.py claim-next --write-claim",
+        "command_argv": ["python", "scripts/task_ops.py", "claim-next", "--write-claim"],
+        "examples": ["持续按路线图开发", "持续按路线图推进", "按总路线图自动领取下一个任务"],
+        "action_any": ["持续", "继续", "自动领取", "领取", "推进", "开发"],
+        "context_any": ["路线图", "总路线图", "roadmap", "候选池", "下一个任务", "多窗口"],
+        "disallow_any": ["当前任务", "手头任务"],
+    }
+
+
 def automation_intents_payload() -> dict[str, Any]:
     return {
         "version": "1.1",
         "recognition_mode": "heuristic_free_form",
         "generic_continue_signals": ["继续", "接着", "恢复", "继续开发", "继续推进"],
         "supported_intents": [
+            claim_next_intent_payload(),
             {
                 "intent_id": "continue-current",
                 "canonical_phrase": "继续当前任务",

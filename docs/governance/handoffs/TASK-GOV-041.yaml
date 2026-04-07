@@ -1,0 +1,28 @@
+task_id: TASK-GOV-041
+summary_status: done
+last_handoff_at: '2026-04-07T20:24:54+08:00'
+completed_items:
+- Added the `claim-next` automation intent for the highest-priority roadmap continuation phrase.
+- Added `automation_intent` preflight support for `claim-next` dry-run candidate selection.
+- Updated automation fixtures and tests to assert the highest-priority phrase routes to `claim-next`.
+- Verified real preflight selects `stage1-core-contract` without formal ledger mutation.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_automation_intent.py -q
+- pytest tests/automation/test_automation_runner.py -q
+current_risks: []
+candidate_write_paths:
+- .codex/local/roadmap_candidates/
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+candidate_test_paths:
+- tests/governance/
+- tests/automation/
+resume_notes:
+- Task activated through queue-and-activate branch_action=created.
+- The exact high-priority roadmap phrase now maps to `claim-next`, not legacy `continue-roadmap`.
+- Preflight is dry-run; execution uses `task_ops.py claim-next --write-claim` only.
+- Task closed.

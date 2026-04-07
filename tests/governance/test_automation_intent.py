@@ -17,6 +17,7 @@ from .helpers import (
     set_idle_control_plane,
     write_yaml,
 )
+from .test_roadmap_candidate_index import _candidate, _write_backlog
 
 
 def _preflight(repo: Path, utterance: str) -> tuple[int, dict]:
@@ -104,6 +105,24 @@ def test_preflight_maps_generic_continue_to_current_when_live_task_is_active(tmp
     assert payload["status"] == "ready"
     assert payload["intent_id"] == "continue-current"
     assert payload["matched_phrase"] == "generic_active_continue"
+
+
+def test_preflight_routes_highest_priority_roadmap_phrase_to_claim_next(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    candidate = _candidate("stage1-core-contract", status="planned", priority=100)
+    candidate["allowed_dirs"] = ["src/stage1_orchestration/", "tests/stage1/"]
+    candidate["planned_write_paths"] = ["src/stage1_orchestration/", "tests/stage1/"]
+    candidate["planned_test_paths"] = ["tests/stage1/"]
+    _write_backlog(repo, [candidate])
+
+    code, payload = _preflight(repo, "持续按路线图开发")
+
+    assert code == 0
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "claim-next"
+    assert payload["mapped_command"] == "python scripts/task_ops.py claim-next --write-claim"
+    assert payload["claim_next_candidate"]["candidate_id"] == "stage1-core-contract"
 
 
 def test_preflight_blocks_continue_current_when_idle(tmp_path: Path) -> None:

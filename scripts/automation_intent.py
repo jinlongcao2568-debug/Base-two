@@ -34,6 +34,7 @@ from task_dirty_state import classify_task_dirty_state
 from task_handoff import build_recovery_pack
 from task_publish_ops import PUBLISH_ACTIONS, publish_preflight
 from task_rendering import find_task
+from roadmap_claim_next import claim_next
 
 
 INTENTS_FILE = Path("docs/governance/AUTOMATION_INTENTS.yaml")
@@ -303,6 +304,46 @@ def _preflight_continue_roadmap(root: Path, intent: dict[str, Any], matched_phra
     }
 
 
+def _preflight_claim_next(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    args = argparse.Namespace(write_claim=False, window_id="preflight", lease_minutes=30, now=None)
+    selected, blocked = claim_next(root, args)
+    if selected is None:
+        blockers = []
+        if blocked:
+            top_blocker = blocked[0]
+            blockers.append(f"{top_blocker['candidate_id']}: {'; '.join(top_blocker['blockers'])}")
+        else:
+            blockers.append("no roadmap candidates are available")
+        return {
+            "status": "blocked",
+            "matched_phrase": matched_phrase,
+            "intent_id": intent["intent_id"],
+            "mapped_command": intent["mapped_command"],
+            "explanation": "已识别为最高级路线图领取，但当前没有安全候选。",
+            "blockers": blockers,
+            "closeout_recommendation": None,
+            "recovery_pack": None,
+            "recovery_source": None,
+            "recovery_warnings": [],
+        }
+    return {
+        "status": "ready",
+        "matched_phrase": matched_phrase,
+        "intent_id": intent["intent_id"],
+        "mapped_command": intent["mapped_command"],
+        "explanation": (
+            f"最高级路线图领取已匹配；claim-next dry-run 选择 `{selected['candidate_id']}`，"
+            f"候选分支 `{selected['candidate_branch']}`。"
+        ),
+        "blockers": [],
+        "closeout_recommendation": None,
+        "recovery_pack": None,
+        "recovery_source": None,
+        "recovery_warnings": [],
+        "claim_next_candidate": selected,
+    }
+
+
 def _preflight_publish_action(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
     action = intent["intent_id"]
     if action not in PUBLISH_ACTIONS:
@@ -340,6 +381,8 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)
+    if intent["intent_id"] == "claim-next":
+        return _preflight_claim_next(root, intent, matched_phrase)
     if intent["intent_id"] in {"continue-roadmap", "continue-roadmap-loop"}:
         return _preflight_continue_roadmap(root, intent, matched_phrase)
     if intent["intent_id"] in PUBLISH_ACTIONS:

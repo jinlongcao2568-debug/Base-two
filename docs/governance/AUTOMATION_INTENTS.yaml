@@ -82,6 +82,38 @@ supported_intents:
       - 按计划
       - 按路线
       - 继续推进
+  - intent_id: claim-next
+    canonical_phrase: 持续按路线图开发
+    mapped_command: python scripts/task_ops.py claim-next --write-claim
+    command_argv:
+      - python
+      - scripts/task_ops.py
+      - claim-next
+      - --write-claim
+    description: Highest-priority roadmap task claim. It reads the roadmap candidate pool and locally claims the best safe route.
+    planner_preflight_hint: Use claim-next before free-form successor inference when the user asks to keep developing by roadmap.
+    examples:
+      - 持续按路线图开发
+      - 持续按路线图推进
+      - 按总路线图自动领取下一个任务
+      - 多窗口按路线图领任务
+    action_any:
+      - 持续
+      - 继续
+      - 自动领取
+      - 领取
+      - 推进
+      - 开发
+    context_any:
+      - 路线图
+      - 总路线图
+      - roadmap
+      - 候选池
+      - 下一个任务
+      - 多窗口
+    disallow_any:
+      - 当前任务
+      - 手头任务
   - intent_id: continue-roadmap-loop
     canonical_phrase: 持续按路线图开发
     mapped_command: python scripts/automation_runner.py loop --continue-roadmap --prepare-worktrees
