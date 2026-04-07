@@ -10,7 +10,7 @@ size_class: null
 automation_mode: null
 worker_state: idle
 blocked_reason: null
-last_reported_at: '2026-04-07T20:24:54+08:00'
+last_reported_at: '2026-04-07T20:47:15+08:00'
 topology: null
 allowed_dirs: []
 reserved_paths: []
@@ -24,4 +24,4 @@ lane_index: null
 parallelism_plan_id: null
 review_bundle_status: null
 next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-07T20:24:54+08:00'
+updated_at: '2026-04-07T20:47:15+08:00'

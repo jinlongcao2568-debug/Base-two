@@ -58,6 +58,9 @@ def add_coordination_commands(subparsers) -> None:
 
     claim_next_parser = subparsers.add_parser("claim-next")
     claim_next_parser.add_argument("--write-claim", action="store_true")
+    claim_next_parser.add_argument("--promote-task", action="store_true")
+    claim_next_parser.add_argument("--worktree-root")
+    claim_next_parser.add_argument("--worker-owner", choices=list(EXECUTION_WORKER_OWNERS))
     claim_next_parser.add_argument("--window-id", default="window-local")
     claim_next_parser.add_argument("--lease-minutes", type=int, default=30)
     claim_next_parser.add_argument("--now")

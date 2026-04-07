@@ -7,8 +7,8 @@ def claim_next_intent_payload() -> dict[str, Any]:
     return {
         "intent_id": "claim-next",
         "canonical_phrase": "持续按路线图开发",
-        "mapped_command": "python scripts/task_ops.py claim-next --write-claim",
-        "command_argv": ["python", "scripts/task_ops.py", "claim-next", "--write-claim"],
+        "mapped_command": "python scripts/task_ops.py claim-next --promote-task",
+        "command_argv": ["python", "scripts/task_ops.py", "claim-next", "--promote-task"],
         "examples": ["持续按路线图开发", "持续按路线图推进", "按总路线图自动领取下一个任务"],
         "action_any": ["持续", "继续", "自动领取", "领取", "推进", "开发"],
         "context_any": ["路线图", "总路线图", "roadmap", "候选池", "下一个任务", "多窗口"],

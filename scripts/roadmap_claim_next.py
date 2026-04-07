@@ -17,8 +17,12 @@ from governance_lib import (
     load_task_registry,
     load_worktree_registry,
     load_yaml,
+    validate_task,
 )
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
+from task_handoff import ensure_handoff_file
+from task_rendering import update_runlog_file, update_task_file
+from task_worktree_ops import cmd_worktree_create
 
 
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
@@ -222,6 +226,89 @@ def _record_claim(claims: dict[str, Any], candidate: dict[str, Any], *, args: ar
     claims["claims"] = [*existing, new_claim]
 
 
+def _build_execution_task(candidate: dict[str, Any], *, now: str) -> dict[str, Any]:
+    task_id = candidate["task_id_hint"]
+    task = {
+        "task_id": task_id,
+        "title": candidate["title"],
+        "status": "doing",
+        "task_kind": "execution",
+        "execution_mode": "isolated_worktree",
+        "parent_task_id": None,
+        "stage": candidate["stage"],
+        "branch": candidate["candidate_branch"],
+        "size_class": "standard",
+        "automation_mode": "manual",
+        "worker_state": "idle",
+        "blocked_reason": None,
+        "last_reported_at": now,
+        "topology": "single_task",
+        "allowed_dirs": list(candidate.get("allowed_dirs") or []),
+        "reserved_paths": list(candidate.get("reserved_paths") or []),
+        "planned_write_paths": list(candidate.get("planned_write_paths") or []),
+        "planned_test_paths": list(candidate.get("planned_test_paths") or []),
+        "required_tests": list(candidate.get("required_tests") or []),
+        "task_file": f"docs/governance/tasks/{task_id}.md",
+        "runlog_file": f"docs/governance/runlogs/{task_id}-RUNLOG.md",
+        "lane_count": 1,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": "not_applicable",
+        "successor_state": None,
+        "created_at": now,
+        "activated_at": now,
+        "closed_at": None,
+        "roadmap_candidate_id": candidate["candidate_id"],
+        "integration_gate": candidate.get("integration_gate"),
+    }
+    validate_task(task)
+    return task
+
+
+def _candidate_worktree_path(root: Path, candidate: dict[str, Any], worktree_root: str | None) -> Path:
+    if worktree_root:
+        return (Path(worktree_root) / candidate["task_id_hint"]).resolve()
+    raw_path = Path(str(candidate["candidate_worktree"]))
+    if raw_path.is_absolute():
+        return raw_path.resolve()
+    return (root / raw_path).resolve()
+
+
+def _update_claim_after_promotion(
+    claims: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    destination: Path,
+    now: str,
+) -> None:
+    for claim in claims.get("claims", []):
+        if claim.get("candidate_id") != candidate["candidate_id"]:
+            continue
+        claim["status"] = "promoted"
+        claim["promoted_at"] = now
+        claim["formal_task_id"] = candidate["task_id_hint"]
+        claim["candidate_worktree"] = str(destination).replace("\\", "/")
+        return
+
+
+def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> Path:
+    registry = load_task_registry(root)
+    tasks = registry.setdefault("tasks", [])
+    if any(task["task_id"] == candidate["task_id_hint"] for task in tasks):
+        raise GovernanceError(f"roadmap candidate task already exists: {candidate['task_id_hint']}")
+    task = _build_execution_task(candidate, now=_iso(now))
+    tasks.append(task)
+    registry["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    update_task_file(root, task)
+    update_runlog_file(root, task)
+    ensure_handoff_file(root, task)
+
+    destination = _candidate_worktree_path(root, candidate, args.worktree_root)
+    cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
+    return destination
+
+
 def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     now = _now(args.now)
     with _scheduler_lock(root):
@@ -241,11 +328,18 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
         if args.write_claim:
             _record_claim(claims, selected, args=args, now=now)
             _write_claims(root, claims)
+        if getattr(args, "promote_task", False):
+            destination = _promote_candidate_to_worktree(root, selected, args, now)
+            claims = _load_claims(root)
+            _update_claim_after_promotion(claims, selected, destination=destination, now=_iso(now))
+            _write_claims(root, claims)
         return selected, blocked
 
 
 def cmd_claim_next(args: argparse.Namespace) -> int:
     root = find_repo_root()
+    if args.promote_task:
+        args.write_claim = True
     selected, blocked = claim_next(root, args)
     if selected is None:
         first_blocker = blocked[0] if blocked else {"candidate_id": "none", "blockers": ["no candidates"]}
@@ -254,7 +348,7 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
             f"top_candidate={first_blocker['candidate_id']} reason={'; '.join(first_blocker['blockers'])}"
         )
         return 1
-    mode = "claimed" if args.write_claim else "dry-run"
+    mode = "promoted" if args.promote_task else ("claimed" if args.write_claim else "dry-run")
     print(
         f"[OK] claim-next {mode} candidate_id={selected['candidate_id']} "
         f"task_id_hint={selected['task_id_hint']} branch={selected['candidate_branch']}"
@@ -265,6 +359,9 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="AX9S roadmap claim-next preflight")
     parser.add_argument("--write-claim", action="store_true")
+    parser.add_argument("--promote-task", action="store_true")
+    parser.add_argument("--worktree-root")
+    parser.add_argument("--worker-owner")
     parser.add_argument("--window-id", default="window-local")
     parser.add_argument("--lease-minutes", type=int, default=30)
     parser.add_argument("--now")

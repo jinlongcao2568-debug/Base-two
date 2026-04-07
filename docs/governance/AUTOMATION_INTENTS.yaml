@@ -84,12 +84,12 @@ supported_intents:
       - 继续推进
   - intent_id: claim-next
     canonical_phrase: 持续按路线图开发
-    mapped_command: python scripts/task_ops.py claim-next --write-claim
+    mapped_command: python scripts/task_ops.py claim-next --promote-task
     command_argv:
       - python
       - scripts/task_ops.py
       - claim-next
-      - --write-claim
+      - --promote-task
     description: Highest-priority roadmap task claim. It reads the roadmap candidate pool and locally claims the best safe route.
     planner_preflight_hint: Use claim-next before free-form successor inference when the user asks to keep developing by roadmap.
     examples:

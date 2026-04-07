@@ -121,7 +121,7 @@ def test_preflight_routes_highest_priority_roadmap_phrase_to_claim_next(tmp_path
     assert code == 0
     assert payload["status"] == "ready"
     assert payload["intent_id"] == "claim-next"
-    assert payload["mapped_command"] == "python scripts/task_ops.py claim-next --write-claim"
+    assert payload["mapped_command"] == "python scripts/task_ops.py claim-next --promote-task"
     assert payload["claim_next_candidate"]["candidate_id"] == "stage1-core-contract"
 
 
