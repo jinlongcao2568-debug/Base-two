@@ -60,10 +60,14 @@ def test_stage4_formal_field_semantics_cover_required_fields() -> None:
         "request_id",
         "project_id",
         "request_type",
+        "request_topic",
+        "resolution_path",
+        "blocking_scope",
         "reason",
         "public_basis",
         "requested_materials",
         "priority",
         "source_rule_codes",
+        "profile_refs",
     ):
         assert field_name in review_request_index

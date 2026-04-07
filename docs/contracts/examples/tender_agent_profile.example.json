@@ -1,0 +1,1 @@
+{"object_type":"tender_agent_profile","profile_id":"tender-agent-profile-cn-example-001","project_id":"project-cn-example-001","source_refs":["raw_ingestion:project-cn-example-001"],"signal_summary":"Tender agent concentration is elevated and needs review.","risk_flags":["agent_high_risk_concentration"],"confidence":0.83}

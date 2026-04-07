@@ -1,12 +1,12 @@
-version: '1.1'
-updated_at: '2026-04-04T19:45:00+08:00'
-status: no_business_api_registered
+version: '1.2'
+updated_at: '2026-04-07T09:40:00+08:00'
+status: registered_formal_catalog
 authority_source: docs/product/AUTHORITY_SPEC.md
-last_reviewed_at: '2026-04-04T19:45:00+08:00'
-next_update_trigger: Register the first formal customer-visible API, webhook, or external message contract.
+last_reviewed_at: '2026-04-07T09:40:00+08:00'
+next_update_trigger: Any change to a formal interface, external delivery contract, or authority appendix D entry.
 description: >
-  No formal business API or external customer-facing message contract is registered in the current baseline.
-  This zero-state is intentional and reviewed; any new external interface must be added here in the same task.
+  Formal interface catalog aligned to the V1.5 authority baseline. The repo does not yet host
+  a web framework implementation, so all listed interfaces are contract-level formal interfaces.
 catalog_rules:
   required_fields:
     - name
@@ -17,5 +17,110 @@ catalog_rules:
     - output_contract
     - version
     - breaking_change
+    - implementation_status
     - last_changed_by_task
-interfaces: []
+  implementation_status_enum:
+    - contract_only
+    - implemented
+    - deprecated
+interfaces:
+  - name: GET /projects/{id}/public-check
+    owner: engineering-domain-owner
+    source_stage: stage6
+    target_stage: page_api
+    input_contract: ProjectPublicCheckRequestV1
+    output_contract: ProjectPublicCheckResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/public-chain
+    owner: engineering-domain-owner
+    source_stage: stage6
+    target_stage: page_api
+    input_contract: ProjectPublicChainRequestV1
+    output_contract: ProjectPublicChainResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/competitors
+    owner: engineering-domain-owner
+    source_stage: stage6
+    target_stage: page_api
+    input_contract: ProjectCompetitorsRequestV1
+    output_contract: ProjectCompetitorsResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/rules
+    owner: engineering-domain-owner
+    source_stage: stage4
+    target_stage: page_api
+    input_contract: ProjectRulesRequestV1
+    output_contract: ProjectRulesResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/evidence
+    owner: engineering-domain-owner
+    source_stage: stage4
+    target_stage: page_api
+    input_contract: ProjectEvidenceRequestV1
+    output_contract: ProjectEvidenceResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/review-requests
+    owner: engineering-domain-owner
+    source_stage: stage4
+    target_stage: page_api
+    input_contract: ProjectReviewRequestsRequestV1
+    output_contract: ProjectReviewRequestsResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: POST /reports/{id}/build-objection-pack
+    owner: engineering-domain-owner
+    source_stage: stage5
+    target_stage: page_api
+    input_contract: BuildObjectionPackRequestV1
+    output_contract: BuildObjectionPackResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/tender-design-risk
+    owner: engineering-domain-owner
+    source_stage: stage6
+    target_stage: page_api
+    input_contract: ProjectTenderDesignRiskRequestV1
+    output_contract: ProjectTenderDesignRiskResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/post-award-changes
+    owner: engineering-domain-owner
+    source_stage: stage6
+    target_stage: page_api
+    input_contract: ProjectPostAwardChangesRequestV1
+    output_contract: ProjectPostAwardChangesResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032
+  - name: GET /projects/{id}/bundle-risk
+    owner: engineering-domain-owner
+    source_stage: stage6
+    target_stage: page_api
+    input_contract: ProjectBundleRiskRequestV1
+    output_contract: ProjectBundleRiskResponseV1
+    version: v1
+    breaking_change: false
+    implementation_status: contract_only
+    last_changed_by_task: TASK-GOV-032

@@ -1,5 +1,5 @@
 object_name: project_base
-authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md
 authority_sections:
   - '5.2'
 schema_file: docs/contracts/schemas/stage3_project_base.schema.json

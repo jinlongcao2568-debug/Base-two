@@ -1,0 +1,163 @@
+version: '1.0'
+registry_name: coverage_governance_registry
+updated_at: '2026-04-07T09:40:00+08:00'
+description: 覆盖治理、可售状态、治理事件与限制条件的单一规范来源。
+fields_contract:
+  required:
+    - region_code
+    - validated_topics
+    - validated_sources
+    - coverage_sellable_state
+    - delivery_risk_state
+    - restriction_notes
+    - last_verified_at
+    - current_event_refs
+    - approved_by
+  enums:
+    coverage_sellable_state:
+      - NOT_READY
+      - VALIDATING
+      - SELLABLE
+      - RESTRICTED
+      - SUSPENDED
+      - RECOVERING
+    delivery_risk_state:
+      - OPEN
+      - REVIEW
+      - HOLD
+      - BLOCK
+regions:
+  - region_code: CN
+    validated_topics:
+      - project_manager_qualification_check
+      - real_competitor_identification
+      - public_coverage_check
+    validated_sources:
+      - SRC-GGZY-NATIONAL-001
+      - SRC-MOHURD-PERSON-001
+    coverage_sellable_state: SELLABLE
+    delivery_risk_state: REVIEW
+    restriction_notes:
+      - 地方增强能力按地区登记单独承诺
+    last_verified_at: '2026-04-01T18:00:00+08:00'
+    current_event_refs: []
+    approved_by: coverage_owner_cn
+  - region_code: CN-320100
+    validated_topics:
+      - project_manager_qualification_check
+      - evaluation_integrity_risk
+      - tender_design_risk
+    validated_sources:
+      - SRC-GGZY-NATIONAL-001
+      - SRC-MOHURD-PERSON-001
+    coverage_sellable_state: SELLABLE
+    delivery_risk_state: REVIEW
+    restriction_notes:
+      - 评分异常专题仅作线索和复核入口
+    last_verified_at: '2026-04-07T09:40:00+08:00'
+    current_event_refs: [EVT-2026-320100]
+    approved_by: coverage_owner_jssz
+  - region_code: CN-330100
+    validated_topics:
+      - project_manager_qualification_check
+      - real_competitor_identification
+      - public_coverage_check
+    validated_sources:
+      - SRC-GGZY-NATIONAL-001
+      - SRC-MOHURD-PERSON-001
+    coverage_sellable_state: SELLABLE
+    delivery_risk_state: OPEN
+    restriction_notes: []
+    last_verified_at: '2026-04-07T09:40:00+08:00'
+    current_event_refs: [EVT-2026-330100]
+    approved_by: coverage_owner_zjhz
+  - region_code: CN-340100
+    validated_topics:
+      - public_coverage_check
+      - split_procurement_risk
+    validated_sources:
+      - SRC-GGZY-NATIONAL-001
+    coverage_sellable_state: RESTRICTED
+    delivery_risk_state: HOLD
+    restriction_notes:
+      - 开放链不完整时只能受限售卖
+    last_verified_at: '2026-04-07T09:40:00+08:00'
+    current_event_refs: [EVT-2026-340100]
+    approved_by: coverage_owner_ahhf
+  - region_code: CN-350100
+    validated_topics:
+      - tender_agent_risk
+      - public_coverage_check
+    validated_sources:
+      - SRC-GGZY-NATIONAL-001
+    coverage_sellable_state: SUSPENDED
+    delivery_risk_state: BLOCK
+    restriction_notes:
+      - 治理状态暂停，禁止外发和标准售卖
+    last_verified_at: '2026-04-07T09:40:00+08:00'
+    current_event_refs: [EVT-2026-350100]
+    approved_by: coverage_owner_fz
+events:
+  - event_id: EVT-2026-001
+    region_code: CN
+    from_state: REVIEW
+    to_state: SELLABLE
+    trigger_type: initial_alignment_seed
+    trigger_summary: Seeded from the V1.5-aligned governance baseline.
+    owner: coverage_owner_cn
+    approved_by: governance_owner_cn
+    occurred_at: '2026-04-07T09:40:00+08:00'
+    resolved_at: null
+    evidence_refs:
+      - GOV-BASELINE-V15
+    post_action:
+      - align_region_registry
+      - align_delivery_controls
+  - event_id: EVT-2026-320100
+    region_code: CN-320100
+    from_state: VALIDATING
+    to_state: SELLABLE
+    trigger_type: review_ready_seed
+    trigger_summary: Review-ready case seeded as sellable with delivery review gating.
+    owner: coverage_owner_jssz
+    approved_by: governance_owner_cn
+    occurred_at: '2026-04-07T09:40:00+08:00'
+    resolved_at: null
+    evidence_refs: [CASE-REVIEW-READY]
+    post_action: [align_fact_field]
+  - event_id: EVT-2026-330100
+    region_code: CN-330100
+    from_state: VALIDATING
+    to_state: SELLABLE
+    trigger_type: open_issued_seed
+    trigger_summary: Open-issued case seeded as fully sellable and delivery-open.
+    owner: coverage_owner_zjhz
+    approved_by: governance_owner_cn
+    occurred_at: '2026-04-07T09:40:00+08:00'
+    resolved_at: null
+    evidence_refs: [CASE-OPEN-ISSUED]
+    post_action: [align_fact_field]
+  - event_id: EVT-2026-340100
+    region_code: CN-340100
+    from_state: SELLABLE
+    to_state: RESTRICTED
+    trigger_type: incomplete_public_chain
+    trigger_summary: Hold case seeded as restricted because the chain is incomplete.
+    owner: coverage_owner_ahhf
+    approved_by: governance_owner_cn
+    occurred_at: '2026-04-07T09:40:00+08:00'
+    resolved_at: null
+    evidence_refs: [CASE-HOLD-INCOMPLETE]
+    post_action: [restrict_sales]
+  - event_id: EVT-2026-350100
+    region_code: CN-350100
+    from_state: SELLABLE
+    to_state: SUSPENDED
+    trigger_type: high_risk_agent_cluster
+    trigger_summary: Block case seeded as suspended due to high-risk agent concentration.
+    owner: coverage_owner_fz
+    approved_by: governance_owner_cn
+    occurred_at: '2026-04-07T09:40:00+08:00'
+    resolved_at: null
+    evidence_refs: [CASE-BLOCK-HIGH-RISK]
+    post_action: [suspend_sales, block_delivery]

@@ -1,0 +1,29 @@
+version: '1.0'
+registry_name: field_policy_dictionary
+updated_at: '2026-04-07T09:40:00+08:00'
+description: 客户可见字段审批、脱敏与审计规则的单一规范来源。
+policies:
+  policy.project_manager_cert_no:
+    classification: restricted_person_field
+    approval_required: true
+    approval_role: compliance_owner
+    masking_rule: partial_mask_last4
+    external_audit_required: true
+  policy.pm_public_profile_url:
+    classification: conditional_public_profile
+    approval_required: true
+    approval_role: delivery_owner
+    masking_rule: domain_only_or_signed_link
+    external_audit_required: true
+  policy.fact_summary:
+    classification: customer_visible_summary
+    approval_required: false
+    approval_role: null
+    masking_rule: none
+    external_audit_required: false
+  policy.award_suspicion_summary:
+    classification: conditional_customer_visible_risk_summary
+    approval_required: true
+    approval_role: review_owner
+    masking_rule: none
+    external_audit_required: true

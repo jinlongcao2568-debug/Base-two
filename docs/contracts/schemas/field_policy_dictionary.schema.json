@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/field_policy_dictionary.schema.json",
+  "title": "field_policy_dictionary",
+  "type": "object",
+  "required": ["version", "registry_name", "updated_at", "policies"],
+  "properties": {
+    "version": { "type": "string" },
+    "registry_name": { "const": "field_policy_dictionary" },
+    "updated_at": { "type": "string" },
+    "description": { "type": "string" },
+    "policies": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["classification", "approval_required", "masking_rule", "external_audit_required"],
+        "properties": {
+          "classification": { "type": "string" },
+          "approval_required": { "type": "boolean" },
+          "approval_role": { "type": ["string", "null"] },
+          "masking_rule": { "type": "string" },
+          "external_audit_required": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

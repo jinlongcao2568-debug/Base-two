@@ -1,0 +1,1 @@
+{"object_type":"vendor_fit_profile","profile_id":"vendor-fit-profile-cn-example-001","project_id":"project-cn-example-001","source_refs":["raw_ingestion:project-cn-example-001"],"signal_summary":"Vendor fit pattern suggests one likely vendor cluster.","risk_flags":["single_vendor_fit_pattern"],"confidence":0.76}

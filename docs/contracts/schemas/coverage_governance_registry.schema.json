@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/coverage_governance_registry.schema.json",
+  "title": "coverage_governance_registry",
+  "type": "object",
+  "required": ["version", "registry_name", "updated_at", "fields_contract", "regions", "events"],
+  "properties": {
+    "version": { "type": "string" },
+    "registry_name": { "const": "coverage_governance_registry" },
+    "updated_at": { "type": "string" },
+    "description": { "type": "string" },
+    "fields_contract": { "type": "object" },
+    "regions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "region_code",
+          "validated_topics",
+          "validated_sources",
+          "coverage_sellable_state",
+          "delivery_risk_state",
+          "restriction_notes",
+          "last_verified_at",
+          "current_event_refs",
+          "approved_by"
+        ],
+        "properties": {
+          "region_code": { "type": "string", "minLength": 1 },
+          "validated_topics": { "type": "array", "items": { "type": "string" } },
+          "validated_sources": { "type": "array", "items": { "type": "string" } },
+          "coverage_sellable_state": { "type": "string", "enum": ["NOT_READY", "VALIDATING", "SELLABLE", "RESTRICTED", "SUSPENDED", "RECOVERING"] },
+          "delivery_risk_state": { "type": "string", "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"] },
+          "restriction_notes": { "type": "array", "items": { "type": "string" } },
+          "last_verified_at": { "type": "string" },
+          "current_event_refs": { "type": "array", "items": { "type": "string" } },
+          "approved_by": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "events": { "type": "array", "minItems": 1, "items": { "type": "object" } }
+  },
+  "additionalProperties": true
+}

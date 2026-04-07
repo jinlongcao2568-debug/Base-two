@@ -29,6 +29,7 @@ def test_stage3_stage4_stage6_minimal_flow_is_real_consumption() -> None:
         requested_at="2026-04-05T10:00:00+08:00",
     )
     project_base = bundle["stage3"]["project_base"]
+    structured_profiles = bundle["stage3"]["structured_profiles"]
     rule_hit = bundle["stage4"]["rule_hits"][0]
     project_fact = bundle["stage6"]["project_fact"]
     sales_context = bundle["stage7"]["sales_context"]
@@ -52,6 +53,9 @@ def test_stage3_stage4_stage6_minimal_flow_is_real_consumption() -> None:
     assert project_fact["review_status"] == golden["expected_review_status"]
     assert project_fact["report_status"] == golden["expected_report_status"]
     assert rule_hit["review_status"] == project_fact["review_status"]
+    assert len(structured_profiles) == 7
+    assert project_fact["coverage_sellable_state"] == "SELLABLE"
+    assert project_fact["delivery_risk_state"] == "REVIEW"
     assert sales_context["source_project_fact_ref"] == f"project_fact:{project_fact['project_id']}:{project_fact['fact_version']}"
     assert contact_context["source_project_fact_ref"] == sales_context["source_project_fact_ref"]
     assert delivery_payload["sales_context_ref"] == sales_context["context_ref"]

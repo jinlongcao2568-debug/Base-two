@@ -1,16 +1,24 @@
 {
   "rule_hit_id": "rule-hit-cn-example-001",
   "project_id": "project-cn-example-001",
-  "rule_code": "REAL_COMPETITOR_IDENTIFIED",
+  "rule_code": "EXPERT_SCORE_ANOMALY_CLUE",
   "severity": "MEDIUM",
-  "confidence": 0.82,
+  "confidence": 0.88,
   "result_type": "CLUE",
-  "why_hit": "A competitor cluster was detected from public tender results.",
-  "boundary_note": "Evidence is public and traceable but still requires review before promotion to OPEN.",
+  "why_hit": "Public scoring disclosure indicates a scoring anomaly that still needs analyst confirmation.",
+  "boundary_note": "The signal is public and traceable but remains a clue until review closes.",
   "evidence_refs": [
     "evidence:ev-001"
   ],
-  "target_entity_type": "bidder",
-  "target_entity_id": "bidder-cn-example-001",
+  "profile_refs": [
+    "scoring_anomaly_profile:profile-cn-example-001"
+  ],
+  "writeback_fields": [
+    "evaluation_integrity_risk",
+    "award_suspicion_summary",
+    "clue_summary"
+  ],
+  "target_entity_type": "project",
+  "target_entity_id": "project-cn-example-001",
   "review_status": "PENDING"
 }

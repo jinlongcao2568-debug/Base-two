@@ -1,0 +1,7 @@
+object_name: post_award_change_profile
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md
+authority_sections: ['6.16.7', '7.6']
+schema_file: docs/contracts/schemas/stage3_post_award_change_profile.schema.json
+example_file: docs/contracts/examples/post_award_change_profile.example.json
+description: 中标后履约风险的后续变更画像对象。
+fields: [{name: object_type, required: true, type: string, source_stage: stage3}, {name: profile_id, required: true, type: string, source_stage: stage3}, {name: project_id, required: true, type: string, source_stage: stage3}, {name: source_refs, required: true, type: "array[string]", source_stage: stage3}, {name: signal_summary, required: true, type: string, source_stage: stage3}, {name: risk_flags, required: true, type: "array[string]", source_stage: stage3}, {name: confidence, required: true, type: number, source_stage: stage3}]

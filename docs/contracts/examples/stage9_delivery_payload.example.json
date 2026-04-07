@@ -8,10 +8,12 @@
   "contact_context_ref": "contact_context:project-cn-open-001:2",
   "report_record_ref": "report_record:report-open-001",
   "sale_gate_status": "OPEN",
+  "coverage_sellable_state": "SELLABLE",
+  "delivery_risk_state": "OPEN",
   "review_status": "CONFIRMED",
   "report_status": "ISSUED",
   "delivery_readiness": "ready",
   "fact_summary": "Project is open for standard downstream sales and delivery consumption.",
   "risk_summary": "No blocking or hold condition remains after confirmation.",
-  "payload_summary": "Delivery payload is ready based on sale gate OPEN and report status ISSUED."
+  "payload_summary": "Delivery payload is ready based on coverage SELLABLE, delivery risk OPEN, sale gate OPEN, and report status ISSUED."
 }

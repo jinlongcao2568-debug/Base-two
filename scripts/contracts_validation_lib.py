@@ -14,7 +14,7 @@ SCHEMAS_DIR = CONTRACTS_DIR / "schemas"
 EXAMPLES_DIR = CONTRACTS_DIR / "examples"
 FIELD_SEMANTICS_DIR = CONTRACTS_DIR / "field_semantics"
 HANDOFF_EXAMPLES_DIR = EXAMPLES_DIR / "handoffs"
-AUTHORITY_FILE = ROOT / "docs" / "baseline" / "AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md"
+AUTHORITY_FILE = ROOT / "docs" / "baseline" / "AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md"
 ROOT_DUPLICATES = [
     ROOT / "sources_registry.yaml",
     ROOT / "region_coverage_registry.yaml",
@@ -27,6 +27,9 @@ REGISTRY_FILES = {
     "region_coverage_registry.yaml": "region_coverage_registry.schema.json",
     "customer_delivery_field_whitelist.yaml": "customer_delivery_field_whitelist.schema.json",
     "customer_delivery_field_blacklist.yaml": "customer_delivery_field_blacklist.schema.json",
+    "coverage_governance_registry.yaml": "coverage_governance_registry.schema.json",
+    "field_policy_dictionary.yaml": "field_policy_dictionary.schema.json",
+    "delivery_object_matrix.yaml": "delivery_object_matrix.schema.json",
 }
 
 PROJECT_BASE_REQUIRED_FIELDS = [
@@ -52,6 +55,8 @@ RULE_HIT_REQUIRED_FIELDS = [
     "why_hit",
     "boundary_note",
     "evidence_refs",
+    "profile_refs",
+    "writeback_fields",
     "target_entity_type",
     "target_entity_id",
     "review_status",
@@ -75,11 +80,15 @@ REVIEW_REQUEST_REQUIRED_FIELDS = [
     "request_id",
     "project_id",
     "request_type",
+    "request_topic",
+    "resolution_path",
+    "blocking_scope",
     "reason",
     "public_basis",
     "requested_materials",
     "priority",
     "source_rule_codes",
+    "profile_refs",
 ]
 PROJECT_FACT_REQUIRED_FIELDS = [
     "object_type",
@@ -89,6 +98,7 @@ PROJECT_FACT_REQUIRED_FIELDS = [
     "fact_source_summary",
     "project_base_ref",
     "rule_hit_refs",
+    "report_record_ref",
     "public_chain_status",
     "rule_hit_summary",
     "clue_summary",
@@ -102,6 +112,12 @@ PROJECT_FACT_REQUIRED_FIELDS = [
     "risk_summary",
     "review_status",
     "manual_override_status",
+    "coverage_sellable_state",
+    "delivery_risk_state",
+    "tender_fairness_risk",
+    "evaluation_integrity_risk",
+    "post_award_change_risk",
+    "award_suspicion_summary",
     "report_status",
     "last_fact_refreshed_at",
 ]
@@ -123,11 +139,16 @@ SALES_CONTEXT_REQUIRED_FIELDS = [
     "fact_version",
     "source_project_fact_ref",
     "sale_gate_status",
+    "coverage_sellable_state",
     "real_competitor_count",
     "serviceable_competitor_count",
     "competitor_quality_grade",
     "price_cluster_score",
     "price_gradient_pattern",
+    "tender_fairness_risk",
+    "evaluation_integrity_risk",
+    "post_award_change_risk",
+    "award_suspicion_summary",
     "sales_readiness_bucket",
     "recommended_sales_action",
     "summary",
@@ -142,6 +163,7 @@ CONTACT_CONTEXT_REQUIRED_FIELDS = [
     "sale_gate_status",
     "review_status",
     "manual_override_status",
+    "delivery_risk_state",
     "contact_strategy",
     "analyst_follow_up_required",
     "summary",
@@ -156,6 +178,8 @@ DELIVERY_PAYLOAD_REQUIRED_FIELDS = [
     "contact_context_ref",
     "report_record_ref",
     "sale_gate_status",
+    "coverage_sellable_state",
+    "delivery_risk_state",
     "review_status",
     "report_status",
     "delivery_readiness",
@@ -168,6 +192,9 @@ FORMAL_ENUMS = {
     "review_status": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"],
     "report_status": ["DRAFT", "READY", "ISSUED", "REVOKED"],
     "competitor_quality_grade": ["A", "B", "C", "D"],
+    "coverage_sellable_state": ["NOT_READY", "VALIDATING", "SELLABLE", "RESTRICTED", "SUSPENDED", "RECOVERING"],
+    "delivery_risk_state": ["OPEN", "REVIEW", "HOLD", "BLOCK"],
+    "manual_override_status": ["NONE", "PENDING", "CONFIRMED", "REJECTED"],
     "evidence_grade": ["A", "B", "C"],
     "result_type": ["AUTO_HIT", "CLUE", "OBSERVATION"],
     "severity": ["HIGH", "MEDIUM", "LOW"],
@@ -176,6 +203,9 @@ AUTHORITY_SNIPPETS = {
     "sale_gate_status": "`sale_gate_status`：仅允许 `OPEN / REVIEW / HOLD / BLOCK`",
     "review_status": "`review_status`：仅允许 `PENDING / CONFIRMED / REJECTED / OVERRIDDEN`",
     "report_status": "`report_status`：仅允许 `DRAFT / READY / ISSUED / REVOKED`",
+    "coverage_sellable_state": "`coverage_sellable_state`：仅允许 `NOT_READY / VALIDATING / SELLABLE / RESTRICTED / SUSPENDED / RECOVERING`",
+    "delivery_risk_state": "`delivery_risk_state`：仅允许 `OPEN / REVIEW / HOLD / BLOCK`",
+    "manual_override_status": "`manual_override_status`：仅允许 `NONE / PENDING / CONFIRMED / REJECTED`",
 }
 HANDOFF_REQUIRED_IDS = {
     "stage3-to-stage4-project_base",

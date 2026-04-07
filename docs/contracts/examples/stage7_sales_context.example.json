@@ -5,12 +5,17 @@
   "fact_version": 2,
   "source_project_fact_ref": "project_fact:project-cn-open-001:2",
   "sale_gate_status": "OPEN",
-  "real_competitor_count": 1,
-  "serviceable_competitor_count": 1,
+  "coverage_sellable_state": "SELLABLE",
+  "real_competitor_count": 2,
+  "serviceable_competitor_count": 2,
   "competitor_quality_grade": "A",
   "price_cluster_score": 82,
   "price_gradient_pattern": "STABLE_SPREAD",
+  "tender_fairness_risk": "LOW",
+  "evaluation_integrity_risk": "LOW",
+  "post_award_change_risk": "LOW",
+  "award_suspicion_summary": "No suspicious aggregation remains.",
   "sales_readiness_bucket": "ready",
   "recommended_sales_action": "prioritize_standard_follow_up",
-  "summary": "OPEN gate with 1 serviceable competitors and price cluster score 82."
+  "summary": "OPEN gate, coverage SELLABLE, and suspicion summary 'No suspicious aggregation remains.'."
 }

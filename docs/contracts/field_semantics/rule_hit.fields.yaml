@@ -1,10 +1,11 @@
 object_name: rule_hit
-authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md
 authority_sections:
-  - '5.11'
+  - '6.11'
+  - '7'
 schema_file: docs/contracts/schemas/stage4_rule_hit.schema.json
 example_file: docs/contracts/examples/rule_hit.example.json
-description: 阶段 4 规则核查的正式结果对象，必须带有边界说明和证据引用。
+description: 阶段 4 规则核查的正式结果对象，必须带有边界说明、证据引用、画像引用和正式回写字段。
 fields:
   - name: rule_hit_id
     required: true
@@ -21,10 +22,7 @@ fields:
   - name: severity
     required: true
     type: string
-    enum:
-      - HIGH
-      - MEDIUM
-      - LOW
+    enum: [HIGH, MEDIUM, LOW]
     source_stage: stage4
   - name: confidence
     required: true
@@ -33,10 +31,7 @@ fields:
   - name: result_type
     required: true
     type: string
-    enum:
-      - AUTO_HIT
-      - CLUE
-      - OBSERVATION
+    enum: [AUTO_HIT, CLUE, OBSERVATION]
     source_stage: stage4
   - name: why_hit
     required: true
@@ -47,6 +42,14 @@ fields:
     type: string
     source_stage: stage4
   - name: evidence_refs
+    required: true
+    type: array[string]
+    source_stage: stage4
+  - name: profile_refs
+    required: true
+    type: array[string]
+    source_stage: stage4
+  - name: writeback_fields
     required: true
     type: array[string]
     source_stage: stage4
@@ -61,9 +64,5 @@ fields:
   - name: review_status
     required: true
     type: string
-    enum:
-      - PENDING
-      - CONFIRMED
-      - REJECTED
-      - OVERRIDDEN
+    enum: [PENDING, CONFIRMED, REJECTED, OVERRIDDEN]
     source_stage: stage5

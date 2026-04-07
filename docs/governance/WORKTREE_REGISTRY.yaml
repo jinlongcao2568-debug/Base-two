@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-07T09:04:44+08:00'
+updated_at: '2026-04-07T10:09:30+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1097,7 +1097,17 @@ entries:
   parent_task_id: null
   branch: feat/TASK-GOV-031-v15-authority-dev-manual
   path: D:/Base One/Base-two/AX9
-  status: active
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-032
+  work_mode: coordination
+  parent_task_id: null
+  branch: feat/TASK-GOV-032-v15-full-alignment
+  path: D:/Base One/Base-two/AX9
+  status: closed
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null

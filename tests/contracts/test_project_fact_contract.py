@@ -16,6 +16,9 @@ FORMAL_ENUMS = {
     "review_status": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"],
     "report_status": ["DRAFT", "READY", "ISSUED", "REVOKED"],
     "competitor_quality_grade": ["A", "B", "C", "D"],
+    "coverage_sellable_state": ["NOT_READY", "VALIDATING", "SELLABLE", "RESTRICTED", "SUSPENDED", "RECOVERING"],
+    "delivery_risk_state": ["OPEN", "REVIEW", "HOLD", "BLOCK"],
+    "manual_override_status": ["NONE", "PENDING", "CONFIRMED", "REJECTED"],
 }
 REQUIRED_FIELDS = {
     "object_type",
@@ -38,6 +41,12 @@ REQUIRED_FIELDS = {
     "risk_summary",
     "review_status",
     "manual_override_status",
+    "coverage_sellable_state",
+    "delivery_risk_state",
+    "tender_fairness_risk",
+    "evaluation_integrity_risk",
+    "post_award_change_risk",
+    "award_suspicion_summary",
     "report_status",
     "last_fact_refreshed_at",
 }

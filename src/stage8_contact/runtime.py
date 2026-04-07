@@ -16,6 +16,7 @@ def build_contact_context(project_fact: dict[str, Any]) -> dict[str, Any]:
     fact_version = project_fact["fact_version"]
     sale_gate_status = project_fact["sale_gate_status"]
     manual_override_status = project_fact["manual_override_status"]
+    delivery_risk_state = project_fact["delivery_risk_state"]
     contact_strategy = CONTACT_STRATEGY[sale_gate_status]
     analyst_follow_up_required = sale_gate_status != "OPEN" or manual_override_status != "NONE"
     return {
@@ -28,10 +29,11 @@ def build_contact_context(project_fact: dict[str, Any]) -> dict[str, Any]:
         "sale_gate_status": sale_gate_status,
         "review_status": project_fact["review_status"],
         "manual_override_status": manual_override_status,
+        "delivery_risk_state": delivery_risk_state,
         "contact_strategy": contact_strategy,
         "analyst_follow_up_required": analyst_follow_up_required,
         "summary": (
             f"Contact stays {contact_strategy} because sale gate is {sale_gate_status} "
-            f"and manual override status is {manual_override_status}."
+            f"while delivery risk is {delivery_risk_state} and manual override status is {manual_override_status}."
         ),
     }

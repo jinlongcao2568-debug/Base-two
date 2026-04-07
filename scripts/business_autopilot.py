@@ -35,8 +35,8 @@ CORE_STAGE_IDS = ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6")
 DOWNSTREAM_STAGE_IDS = ("stage7", "stage8", "stage9")
 BUSINESS_STAGE_IDS = (*CORE_STAGE_IDS, *DOWNSTREAM_STAGE_IDS)
 AUTHORITY_INPUTS = [
-    "docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md",
-    "docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md",
+    "docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md",
+    "docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.5_2026-04-07.md",
     "docs/product/AUTHORITY_SPEC.md",
 ]
 REVIEW_POLICY = [
@@ -49,16 +49,25 @@ CONTRACT_INPUTS_BY_MODULE = {
     "stage1_orchestration": [
         "docs/contracts/sources_registry.yaml",
         "docs/contracts/region_coverage_registry.yaml",
+        "docs/contracts/coverage_governance_registry.yaml",
     ],
     "stage2_ingestion": [
         "docs/contracts/sources_registry.yaml",
         "docs/contracts/region_coverage_registry.yaml",
+        "docs/contracts/coverage_governance_registry.yaml",
     ],
     "stage3_parsing": [
         "docs/contracts/handoff_catalog.yaml",
         "docs/contracts/schemas/stage3_project_base.schema.json",
         "docs/contracts/examples/project_base.example.json",
         "docs/contracts/field_semantics/project_base.fields.yaml",
+        "docs/contracts/schemas/stage3_qualification_clause_profile.schema.json",
+        "docs/contracts/schemas/stage3_parameter_requirement_profile.schema.json",
+        "docs/contracts/schemas/stage3_vendor_fit_profile.schema.json",
+        "docs/contracts/schemas/stage3_scoring_anomaly_profile.schema.json",
+        "docs/contracts/schemas/stage3_tender_agent_profile.schema.json",
+        "docs/contracts/schemas/stage3_split_procurement_profile.schema.json",
+        "docs/contracts/schemas/stage3_post_award_change_profile.schema.json",
     ],
     "stage4_validation": [
         "docs/contracts/handoff_catalog.yaml",
@@ -83,6 +92,9 @@ CONTRACT_INPUTS_BY_MODULE = {
         "docs/contracts/schemas/stage6_project_fact.schema.json",
         "docs/contracts/examples/project_fact.example.json",
         "docs/contracts/field_semantics/project_fact.fields.yaml",
+        "docs/contracts/coverage_governance_registry.yaml",
+        "docs/contracts/field_policy_dictionary.yaml",
+        "docs/contracts/delivery_object_matrix.yaml",
         "docs/contracts/customer_delivery_field_whitelist.yaml",
         "docs/contracts/customer_delivery_field_blacklist.yaml",
     ],
@@ -91,18 +103,23 @@ CONTRACT_INPUTS_BY_MODULE = {
         "docs/contracts/schemas/stage6_project_fact.schema.json",
         "docs/contracts/examples/project_fact.example.json",
         "docs/contracts/field_semantics/project_fact.fields.yaml",
+        "docs/contracts/coverage_governance_registry.yaml",
     ],
     "stage8_contact": [
         "docs/contracts/handoff_catalog.yaml",
         "docs/contracts/schemas/stage6_project_fact.schema.json",
         "docs/contracts/examples/project_fact.example.json",
         "docs/contracts/field_semantics/project_fact.fields.yaml",
+        "docs/contracts/field_policy_dictionary.yaml",
     ],
     "stage9_delivery": [
         "docs/contracts/handoff_catalog.yaml",
         "docs/contracts/schemas/stage6_project_fact.schema.json",
         "docs/contracts/examples/project_fact.example.json",
         "docs/contracts/field_semantics/project_fact.fields.yaml",
+        "docs/contracts/coverage_governance_registry.yaml",
+        "docs/contracts/field_policy_dictionary.yaml",
+        "docs/contracts/delivery_object_matrix.yaml",
         "docs/contracts/customer_delivery_field_whitelist.yaml",
         "docs/contracts/customer_delivery_field_blacklist.yaml",
     ],

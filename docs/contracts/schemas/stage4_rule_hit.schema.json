@@ -14,63 +14,26 @@
     "why_hit",
     "boundary_note",
     "evidence_refs",
+    "profile_refs",
+    "writeback_fields",
     "target_entity_type",
     "target_entity_id",
     "review_status"
   ],
   "properties": {
-    "rule_hit_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "project_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "rule_code": {
-      "type": "string",
-      "minLength": 1
-    },
-    "severity": {
-      "type": "string",
-      "enum": ["HIGH", "MEDIUM", "LOW"]
-    },
-    "confidence": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1
-    },
-    "result_type": {
-      "type": "string",
-      "enum": ["AUTO_HIT", "CLUE", "OBSERVATION"]
-    },
-    "why_hit": {
-      "type": "string",
-      "minLength": 1
-    },
-    "boundary_note": {
-      "type": "string",
-      "minLength": 1
-    },
-    "evidence_refs": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "target_entity_type": {
-      "type": "string",
-      "minLength": 1
-    },
-    "target_entity_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "review_status": {
-      "type": "string",
-      "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"]
-    }
+    "rule_hit_id": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "rule_code": { "type": "string", "enum": ["PM_CERT_PROFESSION_MISMATCH", "PM_CERT_LEVEL_MISMATCH", "PM_CERT_UNIT_MISMATCH", "PM_CERT_EXPIRED", "PM_CERT_PUBLIC_INFO_CONFLICT", "PM_OVERLAP_PROJECT_CLUE", "PM_POSSIBLE_IN_SERVICE_CLUE", "PM_CHANGE_NOT_PUBLICLY_CLEARED_CLUE", "PM_CONTRACT_PERIOD_OVERLAP_CLUE", "BID_PRICE_CLUSTERING", "BID_PRICE_REGULAR_GRADIENT", "BID_PRICE_TWIN_VALUES", "BID_PRICE_EXTREME_NARROW_BAND", "BID_PRICE_PATTERN_CLUE", "REAL_COMPETITOR_IDENTIFIED", "SERVICEABLE_COMPETITOR_IDENTIFIED", "STRONG_COMPETITOR_REMOVED_CLUE", "ABNORMAL_PRICE_CLUSTER_FILTERED", "INVALID_BID_FILTER_PATTERN_CLUE", "QUAL_REVIEW_INCONSISTENCY_CLUE", "MISSING_INVALID_REASON_PUBLICATION", "BIDDER_SAME_CONTROLLER_CLUE", "BIDDER_SAME_LEGAL_REP_CLUE", "BIDDER_ADDRESS_OVERLAP_CLUE", "BIDDER_PHONE_OVERLAP_CLUE", "BIDDER_MANAGEMENT_RELATION_CLUE", "BIDDER_PENALTY_ACTIVE", "PM_PENALTY_ACTIVE", "BIDDER_BLACKLIST_ACTIVE", "PRIOR_COLLUSION_PENALTY_CLUE", "MISSING_OPENING_RECORD_PUBLICATION", "MISSING_FULL_CANDIDATE_PUBLICATION", "MISSING_INVALID_BID_PUBLICATION", "LATE_CRITICAL_CLARIFICATION_CLUE", "PUBLIC_CHAIN_INCOMPLETE", "DISCRIMINATORY_QUALIFICATION_CLUE", "REGIONAL_RESTRICTION_CLUE", "OVER_NARROW_EXPERIENCE_REQUIREMENT_CLUE", "NON_ESSENTIAL_HARD_GATE_CLUE", "TAILORED_PARAMETER_CLUE", "BRAND_DIRECTIONALITY_CLUE", "SINGLE_VENDOR_FIT_PATTERN_CLUE", "COMBINED_PARAMETER_EXCLUSION_CLUE", "EXPERT_SCORE_ANOMALY_CLUE", "ABNORMAL_NON_PRICE_SCORE_CLUE", "SCORING_METHOD_INCONSISTENCY_CLUE", "MISSING_SCORING_DISCLOSURE_OBSERVATION", "AGENT_HIGH_RISK_CONCENTRATION_CLUE", "AGENT_HISTORY_PENALTY_CLUE", "AGENT_OWNER_VENDOR_REPEAT_PATTERN_CLUE", "AGENT_ABNORMAL_REGION_CLUSTER_CLUE", "TENDER_SPLIT_AVOIDANCE_CLUE", "ABNORMAL_PACKAGE_FRAGMENTATION_CLUE", "THRESHOLD_PROXIMITY_SPLIT_CLUE", "POST_AWARD_SCOPE_CHANGE_CLUE", "PM_POST_AWARD_REPLACEMENT_CLUE", "ABNORMAL_CONTRACT_PERIOD_CHANGE_CLUE", "PERFORMANCE_PUBLIC_CHAIN_BREAK_CLUE"] },
+    "severity": { "type": "string", "enum": ["HIGH", "MEDIUM", "LOW"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "result_type": { "type": "string", "enum": ["AUTO_HIT", "CLUE", "OBSERVATION"] },
+    "why_hit": { "type": "string", "minLength": 1 },
+    "boundary_note": { "type": "string", "minLength": 1 },
+    "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "profile_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "writeback_fields": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "target_entity_type": { "type": "string", "minLength": 1 },
+    "target_entity_id": { "type": "string", "minLength": 1 },
+    "review_status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"] }
   }
 }

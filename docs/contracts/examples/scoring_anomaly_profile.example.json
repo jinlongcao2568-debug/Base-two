@@ -1,0 +1,1 @@
+{"object_type":"scoring_anomaly_profile","profile_id":"scoring-anomaly-profile-cn-example-001","project_id":"project-cn-example-001","source_refs":["raw_ingestion:project-cn-example-001"],"signal_summary":"Expert non-price scoring shows a visible anomaly spread.","risk_flags":["expert_score_anomaly","abnormal_non_price_score"],"confidence":0.88}

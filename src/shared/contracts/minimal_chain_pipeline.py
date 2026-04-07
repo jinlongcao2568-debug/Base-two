@@ -6,7 +6,7 @@ from typing import Any
 from src.domain.engineering.public_chain.runtime import build_public_chain_view
 from src.stage1_orchestration.runtime import build_ingestion_job
 from src.stage2_ingestion.runtime import build_raw_ingestion_artifact
-from src.stage3_parsing.runtime import build_project_base
+from src.stage3_parsing.runtime import build_project_base, build_structured_profiles
 from src.stage4_validation.runtime import evaluate_formal_objects
 from src.stage5_reporting.runtime import build_report_record
 from src.stage6_facts.runtime import build_project_fact
@@ -30,7 +30,8 @@ def run_minimal_runtime_chain(
     raw_ingestion_artifact = build_raw_ingestion_artifact(ingestion_job)
     resolved_scenario_id = raw_ingestion_artifact["scenario_id"]
     project_base = build_project_base(raw_ingestion_artifact)
-    stage4_outputs = evaluate_formal_objects(raw_ingestion_artifact, project_base)
+    structured_profiles = build_structured_profiles(raw_ingestion_artifact)
+    stage4_outputs = evaluate_formal_objects(raw_ingestion_artifact, project_base, structured_profiles)
     report_record = build_report_record(project_base, resolved_scenario_id)
     project_fact = build_project_fact(
         project_base,
@@ -46,7 +47,7 @@ def run_minimal_runtime_chain(
         "scenario_id": resolved_scenario_id,
         "stage1": {"ingestion_job": ingestion_job},
         "stage2": {"raw_ingestion_artifact": raw_ingestion_artifact},
-        "stage3": {"project_base": project_base},
+        "stage3": {"project_base": project_base, "structured_profiles": structured_profiles},
         "stage4": stage4_outputs,
         "stage5": {"report_record": report_record},
         "stage6": {"project_fact": project_fact},
@@ -63,6 +64,7 @@ def write_runtime_outputs(output_dir: str | Path, bundle: dict[str, Any]) -> dic
         "stage1.ingestion_job": base_dir / "stage1" / "ingestion_job.json",
         "stage2.raw_ingestion_artifact": base_dir / "stage2" / "raw_ingestion_artifact.json",
         "stage3.project_base": base_dir / "stage3" / "project_base.json",
+        "stage3.structured_profiles": base_dir / "stage3" / "structured_profiles.json",
         "stage4.rule_hits": base_dir / "stage4" / "rule_hits.json",
         "stage4.evidences": base_dir / "stage4" / "evidences.json",
         "stage4.review_requests": base_dir / "stage4" / "review_requests.json",
@@ -76,6 +78,7 @@ def write_runtime_outputs(output_dir: str | Path, bundle: dict[str, Any]) -> dic
     write_json(artifacts["stage1.ingestion_job"], bundle["stage1"]["ingestion_job"])
     write_json(artifacts["stage2.raw_ingestion_artifact"], bundle["stage2"]["raw_ingestion_artifact"])
     write_json(artifacts["stage3.project_base"], bundle["stage3"]["project_base"])
+    write_json(artifacts["stage3.structured_profiles"], bundle["stage3"]["structured_profiles"])
     write_json(artifacts["stage4.rule_hits"], bundle["stage4"]["rule_hits"])
     write_json(artifacts["stage4.evidences"], bundle["stage4"]["evidences"])
     write_json(artifacts["stage4.review_requests"], bundle["stage4"]["review_requests"])

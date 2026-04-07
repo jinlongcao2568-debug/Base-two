@@ -1,56 +1,57 @@
 object_name: review_request
-authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md
+authority_source: docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md
 authority_sections:
-  - '5.12'
+  - '6.12'
+  - '7'
 schema_file: docs/contracts/schemas/stage4_review_request.schema.json
 example_file: docs/contracts/examples/review_request.example.json
-description: 正式 stage4 请求核验事项对象，用于把未决边界、复核需求和补证请求以结构化方式传入 stage5/stage6。
+description: 正式 stage4 请求核验事项对象，用于把新增专题的未决边界、复核需求和补证请求以结构化方式传入 stage5/stage6。
 fields:
   - name: request_id
     required: true
     type: string
     source_stage: stage4
-    consumer_surfaces: [review_requests, governance, delivery]
-    notes: Stable formal review-request identity.
   - name: project_id
     required: true
     type: string
     source_stage: stage3
-    consumer_surfaces: [review_requests, governance, delivery]
-    notes: Stable project identity carried into the review request.
   - name: request_type
     required: true
     type: string
     source_stage: stage4
-    consumer_surfaces: [review_requests, governance]
-    notes: Formal request type for analyst or operator follow-up.
+  - name: request_topic
+    required: true
+    type: string
+    source_stage: stage4
+  - name: resolution_path
+    required: true
+    type: string
+    source_stage: stage4
+  - name: blocking_scope
+    required: true
+    type: string
+    source_stage: stage4
   - name: reason
     required: true
     type: string
     source_stage: stage4
-    consumer_surfaces: [review_requests, governance]
-    notes: Why the review request was raised.
   - name: public_basis
     required: true
     type: string
     source_stage: stage4
-    consumer_surfaces: [review_requests, delivery]
-    notes: Public basis supporting the request without exposing internal-only material.
   - name: requested_materials
     required: true
     type: array[string]
     source_stage: stage4
-    consumer_surfaces: [review_requests, delivery]
-    notes: Materials or artifacts required to resolve the request.
   - name: priority
     required: true
     type: string
     source_stage: stage4
-    consumer_surfaces: [review_requests, governance]
-    notes: Priority label used for follow-up routing.
   - name: source_rule_codes
     required: true
     type: array[string]
     source_stage: stage4
-    consumer_surfaces: [review_requests, governance]
-    notes: Rule codes that caused the review request to be opened.
+  - name: profile_refs
+    required: true
+    type: array[string]
+    source_stage: stage4

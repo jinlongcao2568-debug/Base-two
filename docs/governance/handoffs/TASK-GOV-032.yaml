@@ -1,0 +1,66 @@
+task_id: TASK-GOV-032
+summary_status: done
+last_handoff_at: '2026-04-07T10:09:30+08:00'
+completed_items:
+- Registered the formal V1.5 interface catalog and rewrote SCHEMA_REGISTRY to the
+  V1.5 object and field model.
+- Added independent governance assets for coverage governance, field policy, and delivery
+  object matrix, and rewired whitelist/blacklist references.
+- Aligned stage4/stage6/stage7/stage8/stage9 contracts, examples, minimal-chain runtimes,
+  and public-chain consumer fields to V1.5.
+- Added stage2 placeholder-input coverage, stage3 structured profile outputs, 7 profile
+  contract bundles, and V1.5 governance/profile contract tests.
+- Passed contracts, stage, integration, authority-alignment, repo, and hygiene checks
+  for the scoped alignment work.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py src docs tests
+- python scripts/check_authority_alignment.py
+- pytest tests/contracts -q
+- pytest tests/stage3 -q
+- pytest tests/stage4 -q
+- pytest tests/stage6 -q
+- pytest tests/stage7 -q
+- pytest tests/stage8 -q
+- pytest tests/stage9 -q
+- pytest tests/integration -q
+current_risks: []
+candidate_write_paths:
+- docs/baseline/
+- docs/governance/
+- docs/contracts/
+- src/stage2_ingestion/
+- src/stage3_parsing/
+- src/stage4_validation/
+- src/stage6_facts/
+- src/stage7_sales/
+- src/stage8_contact/
+- src/stage9_delivery/
+- src/shared/contracts/
+- tests/contracts/
+- tests/stage2/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+- tests/integration/
+candidate_test_paths:
+- tests/contracts/
+- tests/stage2/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+- tests/integration/
+resume_notes:
+- The repo is aligned at the governance, contract, runtime, and scoped test level
+  for the V1.5 minimal chain.
+- Follow-up work should start from implementation expansion, not from re-opening baseline
+  governance debates.
+- Task closed.

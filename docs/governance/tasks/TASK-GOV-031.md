@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-031`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-v15-authority-baseline-and-dev-manual-v1`
 - `branch`: `feat/TASK-GOV-031-v15-authority-dev-manual`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -80,22 +80,21 @@
 - `README.md`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `baseline_and_manual_ready_for_review`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `review_decision`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `review`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -104,5 +103,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/, scripts/, README.md`
 - `branch`: `feat/TASK-GOV-031-v15-authority-dev-manual`
-- `updated_at`: `2026-04-07T09:24:12+08:00`
+- `updated_at`: `2026-04-07T09:33:17+08:00`
 <!-- generated:task-meta:end -->

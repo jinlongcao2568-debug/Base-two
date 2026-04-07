@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ax9.local/contracts/delivery_object_matrix.schema.json",
+  "title": "delivery_object_matrix",
+  "type": "object",
+  "required": ["version", "registry_name", "updated_at", "objects"],
+  "properties": {
+    "version": { "type": "string" },
+    "registry_name": { "const": "delivery_object_matrix" },
+    "updated_at": { "type": "string" },
+    "description": { "type": "string" },
+    "objects": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {
+          "type": "object",
+          "required": ["allowed_groups", "conditional_groups", "blocked_groups", "approval_required", "audit_required"],
+          "properties": {
+            "allowed_groups": { "type": "array", "items": { "type": "string" } },
+            "conditional_groups": { "type": "array", "items": { "type": "string" } },
+            "blocked_groups": { "type": "array", "items": { "type": "string" } },
+            "approval_required": { "type": "boolean" },
+            "audit_required": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

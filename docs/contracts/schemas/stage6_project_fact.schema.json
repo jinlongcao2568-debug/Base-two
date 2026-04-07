@@ -12,6 +12,7 @@
     "fact_source_summary",
     "project_base_ref",
     "rule_hit_refs",
+    "report_record_ref",
     "public_chain_status",
     "rule_hit_summary",
     "clue_summary",
@@ -25,105 +26,44 @@
     "risk_summary",
     "review_status",
     "manual_override_status",
+    "coverage_sellable_state",
+    "delivery_risk_state",
+    "tender_fairness_risk",
+    "evaluation_integrity_risk",
+    "post_award_change_risk",
+    "award_suspicion_summary",
     "report_status",
     "last_fact_refreshed_at"
   ],
   "properties": {
-    "object_type": {
-      "const": "project_fact"
-    },
-    "project_id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "fact_version": {
-      "type": "integer",
-      "minimum": 1
-    },
-    "fact_refresh_trigger": {
-      "type": "string",
-      "minLength": 1
-    },
-    "fact_source_summary": {
-      "type": "string",
-      "minLength": 1
-    },
-    "project_base_ref": {
-      "type": "string",
-      "minLength": 1
-    },
-    "rule_hit_refs": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
-    },
-    "report_record_ref": {
-      "type": "string",
-      "minLength": 1
-    },
-    "public_chain_status": {
-      "type": "string",
-      "minLength": 1
-    },
-    "rule_hit_summary": {
-      "type": "string",
-      "minLength": 1
-    },
-    "clue_summary": {
-      "type": "string",
-      "minLength": 1
-    },
-    "sale_gate_status": {
-      "type": "string",
-      "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"]
-    },
-    "real_competitor_count": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "serviceable_competitor_count": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "competitor_quality_grade": {
-      "type": "string",
-      "enum": ["A", "B", "C", "D"]
-    },
-    "price_cluster_score": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 100
-    },
-    "price_gradient_pattern": {
-      "type": "string",
-      "minLength": 1
-    },
-    "fact_summary": {
-      "type": "string",
-      "minLength": 1
-    },
-    "risk_summary": {
-      "type": "string",
-      "minLength": 1
-    },
-    "review_status": {
-      "type": "string",
-      "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"]
-    },
-    "manual_override_status": {
-      "type": "string",
-      "minLength": 1
-    },
-    "report_status": {
-      "type": "string",
-      "enum": ["DRAFT", "READY", "ISSUED", "REVOKED"]
-    },
-    "last_fact_refreshed_at": {
-      "type": "string",
-      "format": "date-time"
-    }
+    "object_type": { "const": "project_fact" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "fact_version": { "type": "integer", "minimum": 1 },
+    "fact_refresh_trigger": { "type": "string", "minLength": 1 },
+    "fact_source_summary": { "type": "string", "minLength": 1 },
+    "project_base_ref": { "type": "string", "minLength": 1 },
+    "rule_hit_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "report_record_ref": { "type": "string", "minLength": 1 },
+    "public_chain_status": { "type": "string", "minLength": 1 },
+    "rule_hit_summary": { "type": "string", "minLength": 1 },
+    "clue_summary": { "type": "string", "minLength": 1 },
+    "sale_gate_status": { "type": "string", "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"] },
+    "real_competitor_count": { "type": "integer", "minimum": 0 },
+    "serviceable_competitor_count": { "type": "integer", "minimum": 0 },
+    "competitor_quality_grade": { "type": "string", "enum": ["A", "B", "C", "D"] },
+    "price_cluster_score": { "type": "number", "minimum": 0, "maximum": 100 },
+    "price_gradient_pattern": { "type": "string", "minLength": 1 },
+    "fact_summary": { "type": "string", "minLength": 1 },
+    "risk_summary": { "type": "string", "minLength": 1 },
+    "review_status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "REJECTED", "OVERRIDDEN"] },
+    "manual_override_status": { "type": "string", "enum": ["NONE", "PENDING", "CONFIRMED", "REJECTED"] },
+    "coverage_sellable_state": { "type": "string", "enum": ["NOT_READY", "VALIDATING", "SELLABLE", "RESTRICTED", "SUSPENDED", "RECOVERING"] },
+    "delivery_risk_state": { "type": "string", "enum": ["OPEN", "REVIEW", "HOLD", "BLOCK"] },
+    "tender_fairness_risk": { "type": "string", "minLength": 1 },
+    "evaluation_integrity_risk": { "type": "string", "minLength": 1 },
+    "post_award_change_risk": { "type": "string", "minLength": 1 },
+    "award_suspicion_summary": { "type": "string", "minLength": 1 },
+    "report_status": { "type": "string", "enum": ["DRAFT", "READY", "ISSUED", "REVOKED"] },
+    "last_fact_refreshed_at": { "type": "string", "format": "date-time" }
   }
 }

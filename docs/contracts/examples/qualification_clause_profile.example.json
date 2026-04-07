@@ -1,0 +1,1 @@
+{"object_type":"qualification_clause_profile","profile_id":"qualification-clause-profile-cn-example-001","project_id":"project-cn-example-001","source_refs":["raw_ingestion:project-cn-example-001"],"signal_summary":"Qualification clauses include a region-specific and non-essential gate wording.","risk_flags":["regional_restriction","non_essential_hard_gate"],"confidence":0.81}

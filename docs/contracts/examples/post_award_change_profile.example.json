@@ -1,0 +1,1 @@
+{"object_type":"post_award_change_profile","profile_id":"post-award-change-profile-cn-example-001","project_id":"project-cn-example-001","source_refs":["raw_ingestion:project-cn-example-001"],"signal_summary":"Post-award change chain indicates a possible abnormal scope change.","risk_flags":["post_award_scope_change"],"confidence":0.71}

@@ -35,6 +35,7 @@ def test_stage_chain_case_matrix_consumes_multi_sample_flow(case_id: str) -> Non
     bundle = run_minimal_runtime_chain(scenario_id=case_id, requested_at="2026-04-05T10:00:00+08:00")
     raw_payload = bundle["stage2"]["raw_ingestion_artifact"]["raw_payload"]
     project_base = bundle["stage3"]["project_base"]
+    structured_profiles = bundle["stage3"]["structured_profiles"]
     rule_hit = bundle["stage4"]["rule_hits"][0]
     evidence = bundle["stage4"]["evidences"][0]
     review_request = bundle["stage4"]["review_requests"][0]
@@ -68,9 +69,14 @@ def test_stage_chain_case_matrix_consumes_multi_sample_flow(case_id: str) -> Non
     assert rule_hit["evidence_refs"] == [f"evidence:{evidence['evidence_id']}"]
     assert review_request["source_rule_codes"] == [rule_hit["rule_code"]]
     assert evidence["evidence_grade"] == golden["expected_evidence_grade"]
+    assert len(structured_profiles) == 7
+    assert rule_hit["profile_refs"]
+    assert review_request["profile_refs"]
     assert public_chain_view["project_name"] == project_base["project_name"]
     assert public_chain_view["public_chain_status"] == project_fact["public_chain_status"]
     assert public_chain_view["sale_gate_status"] == project_fact["sale_gate_status"]
+    assert public_chain_view["coverage_sellable_state"] == project_fact["coverage_sellable_state"]
+    assert public_chain_view["delivery_risk_state"] == project_fact["delivery_risk_state"]
     assert sales_context["project_id"] == project_fact["project_id"]
     assert contact_context["project_id"] == project_fact["project_id"]
     assert delivery_payload["project_id"] == project_fact["project_id"]

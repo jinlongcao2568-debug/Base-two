@@ -5,73 +5,25 @@
   "type": "object",
   "required": [
     "version",
+    "template_name",
     "updated_at",
-    "delivery_object_matrix"
+    "field_policy_dictionary_source",
+    "delivery_object_matrix_source",
+    "allowlist",
+    "conditional_allowlist"
   ],
   "properties": {
-    "version": {
-      "type": "string"
-    },
-    "updated_at": {
-      "type": "string"
-    },
-    "delivery_object_matrix": {
-      "type": "object",
-      "minProperties": 1,
-      "patternProperties": {
-        "^[a-zA-Z0-9_]+$": {
-          "type": "object",
-          "minProperties": 1,
-          "patternProperties": {
-            "^[a-zA-Z0-9_]+$": {
-              "type": "object",
-              "required": [
-                "allowed_groups",
-                "conditional_groups",
-                "blocked_groups",
-                "approval_required",
-                "audit_required"
-              ],
-              "properties": {
-                "allowed_groups": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "conditional_groups": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "blocked_groups": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "approval_required": {
-                  "type": "boolean"
-                },
-                "audit_required": {
-                  "type": "boolean"
-                }
-              },
-              "additionalProperties": true
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "conditional_field_policy_refs": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
-    }
+    "version": { "type": "string" },
+    "template_name": { "const": "customer_delivery_field_whitelist" },
+    "updated_at": { "type": "string" },
+    "description": { "type": "string" },
+    "rules": { "type": "object" },
+    "field_policy_dictionary_source": { "type": "string", "minLength": 1 },
+    "delivery_object_matrix_source": { "type": "string", "minLength": 1 },
+    "coverage_governance_registry_source": { "type": "string", "minLength": 1 },
+    "allowlist": { "type": "object", "minProperties": 1 },
+    "conditional_allowlist": { "type": "array", "items": { "type": "object" } },
+    "conditional_field_policy_refs": { "type": "object", "additionalProperties": { "type": "string" } }
   },
   "additionalProperties": true
 }

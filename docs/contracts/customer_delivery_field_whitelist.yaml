@@ -1,182 +1,115 @@
-version: '1.1'
+version: '1.2'
 template_name: customer_delivery_field_whitelist
-updated_at: '2026-04-02T18:30:00+08:00'
-description: 客户交付版/演示版/导出版与对外 API 的最小白名单模板。 未进入白名单的字段不得默认外发；条件性白名单字段必须同时满足审批、最小化与审计要求。
+updated_at: '2026-04-07T09:40:00+08:00'
+description: 客户交付版/演示版/导出版与对外 API 的最小白名单模板。
 rules:
   default_policy: deny_unlisted_fields
   stricter_document_wins: true
   external_delivery_requires_audit: true
   natural_person_fields_require_masking_or_minimization: true
+field_policy_dictionary_source: docs/contracts/field_policy_dictionary.yaml
+delivery_object_matrix_source: docs/contracts/delivery_object_matrix.yaml
+coverage_governance_registry_source: docs/contracts/coverage_governance_registry.yaml
 allowlist:
   project_summary:
-  - field: project_name
-    reason: 基础项目识别
-  - field: region_code
-    reason: 地区识别
-  - field: source_family
-    reason: 来源说明
-  - field: public_chain_status
-    reason: 公开链完整度说明
+    - field: project_name
+      reason: 基础项目识别
+    - field: region_code
+      reason: 地区识别
+    - field: source_family
+      reason: 来源说明
+    - field: public_chain_status
+      reason: 公开链完整度说明
   fact_summary:
-  - field: sale_gate_status
-    reason: 正式产品结论摘要
-  - field: real_competitor_count
-    reason: 竞争者分析摘要
-  - field: serviceable_competitor_count
-    reason: 竞争者分析摘要
-  - field: competitor_quality_grade
-    reason: 竞争者识别质量说明
-  - field: price_cluster_score
-    reason: 报价异常强度摘要
-  - field: price_gradient_pattern
-    reason: 报价模式摘要
-  - field: fact_summary
-    reason: 统一事实摘要
-  - field: risk_summary
-    reason: 风险摘要
-  - field: manual_override_status
-    reason: 人工覆盖可见性
+    - field: sale_gate_status
+      reason: 正式产品结论摘要
+    - field: real_competitor_count
+      reason: 竞争者分析摘要
+    - field: serviceable_competitor_count
+      reason: 竞争者分析摘要
+    - field: competitor_quality_grade
+      reason: 竞争者识别质量说明
+    - field: price_cluster_score
+      reason: 报价异常强度摘要
+    - field: price_gradient_pattern
+      reason: 报价模式摘要
+    - field: fact_summary
+      reason: 统一事实摘要
+    - field: risk_summary
+      reason: 风险摘要
+    - field: manual_override_status
+      reason: 人工覆盖可见性
+    - field: coverage_sellable_state
+      reason: 覆盖治理状态摘要
+    - field: delivery_risk_state
+      reason: 交付阻断状态摘要
+    - field: tender_fairness_risk
+      reason: 招标公平风险摘要
+    - field: evaluation_integrity_risk
+      reason: 评标过程风险摘要
+    - field: post_award_change_risk
+      reason: 中标后异常变更风险摘要
+    - field: award_suspicion_summary
+      reason: 聚合怀疑摘要
   rule_explanation:
-  - field: rule_code
-    reason: 规则解释所需
-  - field: result_type
-    reason: 结果类型说明
-  - field: why_hit
-    reason: 命中原因解释
-  - field: boundary_note
-    reason: 边界说明
-  - field: evidence_grade
-    reason: 证据等级说明
+    - field: rule_code
+      reason: 规则解释所需
+    - field: result_type
+      reason: 结果类型说明
+    - field: why_hit
+      reason: 命中原因解释
+    - field: boundary_note
+      reason: 边界说明
+    - field: evidence_grade
+      reason: 证据等级说明
   delivery_meta:
-  - field: report_status
-    reason: 交付状态说明
-  - field: last_fact_refreshed_at
-    reason: 最近刷新时间说明
+    - field: report_status
+      reason: 交付状态说明
+    - field: last_fact_refreshed_at
+      reason: 最近刷新时间说明
 conditional_allowlist:
-- field: project_manager_name_masked
-  category: natural_person_fields
-  requires:
-  - public_traceable
-  - minimum_necessary
-  - external_delivery_approved
-  - audit_enabled
-  - masked
-  reason: 与异议/复核直接相关的最小化自然人信息
-- field: project_manager_role_normalized
-  category: natural_person_fields
-  requires:
-  - public_traceable
-  - minimum_necessary
-  - audit_enabled
-  reason: 角色解释
-- field: project_manager_cert_specialty
-  category: natural_person_fields
-  requires:
-  - public_traceable
-  - minimum_necessary
-  - external_delivery_approved
-  reason: 资格核查必要字段
-- field: project_manager_public_cert_status
-  category: natural_person_fields
-  requires:
-  - public_traceable
-  - minimum_necessary
-  - external_delivery_approved
-  reason: 资格核查必要字段
-- field: entity_name
-  category: penalty_fields
-  requires:
-  - public_traceable
-  - topic_related
-  - audit_enabled
-  reason: 处罚对象解释
-- field: penalty_type
-  category: penalty_fields
-  requires:
-  - public_traceable
-  - topic_related
-  reason: 处罚类型解释
-- field: penalty_status
-  category: penalty_fields
-  requires:
-  - public_traceable
-  - topic_related
-  reason: 处罚状态解释
-- field: penalty_source_url
-  category: penalty_fields
-  requires:
-  - public_traceable
-  - audit_enabled
-  reason: 来源回链
-- field: approved_evidence_snippet
-  category: evidence_fields
-  requires:
-  - external_delivery_approved
-  - audit_enabled
-  - snippet_only
-  reason: 经批准的证据节选
-- field: approved_source_url
-  category: evidence_fields
-  requires:
-  - public_traceable
-  - external_delivery_approved
-  reason: 经批准的来源链接
-delivery_object_matrix:
-  project_base:
-    customer_delivery:
-      allowed_groups:
-      - project_summary
-      conditional_groups: []
-      blocked_groups:
-      - internal_audit
-      approval_required: false
-      audit_required: true
-    external_objection_pack:
-      allowed_groups:
-      - project_summary
-      conditional_groups: []
-      blocked_groups:
-      - internal_audit
-      approval_required: false
-      audit_required: true
-  project_fact:
-    customer_delivery:
-      allowed_groups:
-      - fact_summary
-      conditional_groups:
-      - rule_explanation
-      blocked_groups:
-      - internal_audit
-      approval_required: false
-      audit_required: true
-    external_objection_pack:
-      allowed_groups:
-      - fact_summary
-      conditional_groups:
-      - rule_explanation
-      blocked_groups:
-      - manual_override_internal_reason
-      approval_required: true
-      audit_required: true
-  evidence:
-    customer_delivery:
-      allowed_groups:
-      - evidence_excerpt
-      conditional_groups:
-      - person_professional_excerpt
-      blocked_groups:
-      - raw_artifacts
-      approval_required: true
-      audit_required: true
-    external_objection_pack:
-      allowed_groups:
-      - evidence_excerpt
-      conditional_groups:
-      - person_professional_excerpt
-      blocked_groups:
-      - raw_artifacts
-      approval_required: true
-      audit_required: true
+  - field: project_manager_name_masked
+    category: natural_person_fields
+    requires: [public_traceable, minimum_necessary, external_delivery_approved, audit_enabled, masked]
+    reason: 与异议/复核直接相关的最小化自然人信息
+  - field: project_manager_role_normalized
+    category: natural_person_fields
+    requires: [public_traceable, minimum_necessary, audit_enabled]
+    reason: 角色解释
+  - field: project_manager_cert_specialty
+    category: natural_person_fields
+    requires: [public_traceable, minimum_necessary, external_delivery_approved]
+    reason: 资格核查必要字段
+  - field: project_manager_public_cert_status
+    category: natural_person_fields
+    requires: [public_traceable, minimum_necessary, external_delivery_approved]
+    reason: 资格核查必要字段
+  - field: entity_name
+    category: penalty_fields
+    requires: [public_traceable, topic_related, audit_enabled]
+    reason: 处罚对象解释
+  - field: penalty_type
+    category: penalty_fields
+    requires: [public_traceable, topic_related]
+    reason: 处罚类型解释
+  - field: penalty_status
+    category: penalty_fields
+    requires: [public_traceable, topic_related]
+    reason: 处罚状态解释
+  - field: penalty_source_url
+    category: penalty_fields
+    requires: [public_traceable, audit_enabled]
+    reason: 来源回链
+  - field: approved_evidence_snippet
+    category: evidence_fields
+    requires: [external_delivery_approved, audit_enabled, snippet_only]
+    reason: 经批准的证据节选
+  - field: approved_source_url
+    category: evidence_fields
+    requires: [public_traceable, external_delivery_approved]
+    reason: 经批准的来源链接
 conditional_field_policy_refs:
   project_manager_cert_no: policy.project_manager_cert_no
   pm_public_profile_url: policy.pm_public_profile_url
+  fact_summary: policy.fact_summary
+  award_suspicion_summary: policy.award_suspicion_summary

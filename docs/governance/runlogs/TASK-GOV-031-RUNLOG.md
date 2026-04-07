@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-031`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-v15-authority-baseline-and-dev-manual-v1`
 - `branch`: `feat/TASK-GOV-031-v15-authority-dev-manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -29,21 +29,20 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `baseline_and_manual_ready_for_review`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `review_decision`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-031`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-v15-authority-baseline-and-dev-manual-v1`
 - `branch`: `feat/TASK-GOV-031-v15-authority-dev-manual`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

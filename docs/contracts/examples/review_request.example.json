@@ -1,15 +1,22 @@
 {
   "request_id": "review-request-cn-example-001",
   "project_id": "project-cn-example-001",
-  "request_type": "MANUAL_COMPETITOR_CONFIRMATION",
-  "reason": "A medium-risk competitor clue needs manual confirmation before promotion to OPEN.",
-  "public_basis": "Public result notice and public chain evidence are traceable but require analyst confirmation.",
+  "request_type": "ANALYST_SCORING_REVIEW",
+  "request_topic": "evaluation_integrity_risk",
+  "resolution_path": "analyst_review",
+  "blocking_scope": "commercial_followup",
+  "reason": "The scoring anomaly clue must be reviewed before the project can move out of REVIEW.",
+  "public_basis": "Public scoring disclosure and qualification wording are traceable and indicate a likely evaluation integrity issue.",
   "requested_materials": [
-    "public result notice",
-    "opening record excerpt"
+    "scoring disclosure page",
+    "qualification clause excerpt",
+    "analyst memo"
   ],
   "priority": "MEDIUM",
   "source_rule_codes": [
-    "REAL_COMPETITOR_IDENTIFIED"
+    "EXPERT_SCORE_ANOMALY_CLUE"
+  ],
+  "profile_refs": [
+    "scoring_anomaly_profile:profile-cn-example-001"
   ]
 }

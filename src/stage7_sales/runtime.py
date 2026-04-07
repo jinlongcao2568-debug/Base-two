@@ -34,10 +34,15 @@ def build_sales_context(project_fact: dict[str, Any]) -> dict[str, Any]:
         "competitor_quality_grade": project_fact["competitor_quality_grade"],
         "price_cluster_score": project_fact["price_cluster_score"],
         "price_gradient_pattern": project_fact["price_gradient_pattern"],
+        "coverage_sellable_state": project_fact["coverage_sellable_state"],
+        "tender_fairness_risk": project_fact["tender_fairness_risk"],
+        "evaluation_integrity_risk": project_fact["evaluation_integrity_risk"],
+        "post_award_change_risk": project_fact["post_award_change_risk"],
+        "award_suspicion_summary": project_fact["award_suspicion_summary"],
         "sales_readiness_bucket": SALES_READINESS_BUCKET[sale_gate_status],
         "recommended_sales_action": RECOMMENDED_SALES_ACTION[sale_gate_status],
         "summary": (
-            f"{sale_gate_status} gate with {project_fact['serviceable_competitor_count']} "
-            f"serviceable competitors and price cluster score {project_fact['price_cluster_score']}."
+            f"{sale_gate_status} gate, coverage {project_fact['coverage_sellable_state']}, "
+            f"and suspicion summary '{project_fact['award_suspicion_summary']}'."
         ),
     }

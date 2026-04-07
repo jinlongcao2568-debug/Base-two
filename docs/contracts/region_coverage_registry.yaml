@@ -1,6 +1,7 @@
 version: '1.1'
 registry_name: region_coverage_registry
 updated_at: '2026-04-02T18:30:00+08:00'
+governance_registry_source: docs/contracts/coverage_governance_registry.yaml
 description: 地区覆盖与可售状态登记表。只有满足地区可售判定阈值并通过最近一次验证的地区， 才允许标记为 is_sellable=true 并进入首版可售包。
 thresholds:
   coverage_level_min_for_sellable: L1

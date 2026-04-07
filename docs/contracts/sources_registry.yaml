@@ -1,6 +1,7 @@
 version: '1.1'
 registry_name: sources_registry
 updated_at: '2026-04-02T18:30:00+08:00'
+governance_registry_source: docs/contracts/coverage_governance_registry.yaml
 default_timezone: Asia/Shanghai
 maintainer: engineering-domain-owner
 description: 建设工程域公开源登记表。未登记的公开源不得进入正式可售能力； 未完成最近一次有效验证的源不得用于客户可见增强能力。

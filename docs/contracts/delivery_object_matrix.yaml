@@ -1,0 +1,44 @@
+version: '1.0'
+registry_name: delivery_object_matrix
+updated_at: '2026-04-07T09:40:00+08:00'
+description: 对象级交付矩阵的单一规范来源。
+objects:
+  project_base:
+    customer_delivery:
+      allowed_groups: [project_summary]
+      conditional_groups: []
+      blocked_groups: [internal_audit]
+      approval_required: false
+      audit_required: true
+    external_objection_pack:
+      allowed_groups: [project_summary]
+      conditional_groups: []
+      blocked_groups: [internal_audit]
+      approval_required: false
+      audit_required: true
+  project_fact:
+    customer_delivery:
+      allowed_groups: [fact_summary]
+      conditional_groups: [rule_explanation]
+      blocked_groups: [internal_audit]
+      approval_required: false
+      audit_required: true
+    external_objection_pack:
+      allowed_groups: [fact_summary]
+      conditional_groups: [rule_explanation]
+      blocked_groups: [manual_override_internal_reason]
+      approval_required: true
+      audit_required: true
+  evidence:
+    customer_delivery:
+      allowed_groups: [evidence_excerpt]
+      conditional_groups: [person_professional_excerpt]
+      blocked_groups: [raw_artifacts]
+      approval_required: true
+      audit_required: true
+    external_objection_pack:
+      allowed_groups: [evidence_excerpt]
+      conditional_groups: [person_professional_excerpt]
+      blocked_groups: [raw_artifacts]
+      approval_required: true
+      audit_required: true

@@ -1,0 +1,1 @@
+{"object_type":"split_procurement_profile","profile_id":"split-procurement-profile-cn-example-001","project_id":"project-cn-example-001","source_refs":["raw_ingestion:project-cn-example-001"],"signal_summary":"Package structure suggests a possible split procurement pattern.","risk_flags":["abnormal_package_fragmentation"],"confidence":0.73}

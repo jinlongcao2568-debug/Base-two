@@ -3,6 +3,15 @@ from __future__ import annotations
 from typing import Any
 
 from src.shared.contracts.minimal_chain_profiles import get_scenario_profile
+from src.shared.contracts.runtime_support import load_yaml
+
+
+def _coverage_state(region_code: str) -> str:
+    registry = load_yaml("docs/contracts/coverage_governance_registry.yaml")
+    for entry in registry["regions"]:
+        if entry["region_code"] == region_code:
+            return entry["coverage_sellable_state"]
+    raise ValueError(f"missing coverage governance entry for region_code={region_code}")
 
 
 def build_project_fact(
@@ -35,6 +44,12 @@ def build_project_fact(
         "risk_summary": profile["risk_summary"],
         "review_status": primary_rule_hit["review_status"],
         "manual_override_status": profile["manual_override_status"],
+        "coverage_sellable_state": _coverage_state(project_base["region_code"]),
+        "delivery_risk_state": profile["delivery_risk_state"],
+        "tender_fairness_risk": profile["tender_fairness_risk"],
+        "evaluation_integrity_risk": profile["evaluation_integrity_risk"],
+        "post_award_change_risk": profile["post_award_change_risk"],
+        "award_suspicion_summary": profile["award_suspicion_summary"],
         "report_status": report_record["report_status"],
         "last_fact_refreshed_at": profile["last_fact_refreshed_at"],
     }

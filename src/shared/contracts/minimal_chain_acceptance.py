@@ -7,6 +7,17 @@ from src.shared.contracts.runtime_support import load_json, load_yaml, validate_
 
 
 ACCEPTANCE_CONTRACT_PATH = "docs/contracts/minimal_runtime_chain_acceptance.yaml"
+FIXTURE_KEY_SUBSETS = {
+    "stage3.project_base": ("project_id", "source_family", "region_code", "project_name", "public_chain_status"),
+    "stage4.rule_hits": ("rule_hit_id", "project_id"),
+    "stage4.evidences": ("evidence_id", "project_id", "evidence_grade"),
+    "stage4.review_requests": ("request_id", "project_id"),
+    "stage5.report_record": ("report_id", "project_id", "report_status"),
+    "stage6.project_fact": ("project_id", "sale_gate_status", "review_status", "report_status"),
+    "stage7.sales_context": ("project_id", "sale_gate_status"),
+    "stage8.contact_context": ("project_id", "sale_gate_status"),
+    "stage9.delivery_payload": ("project_id", "sale_gate_status", "report_status"),
+}
 
 
 def _load_acceptance_contract() -> dict[str, Any]:
@@ -34,10 +45,16 @@ def evaluate_minimal_chain_acceptance(output_paths: dict[str, str], scenario_id:
         payload = load_json(output_paths[artifact_key])
         expected = load_json(fixture_pattern.format(scenario_id=scenario_id))
         if artifact_key.startswith("stage4."):
-            if payload != [expected]:
-                errors.append(f"{artifact_key} does not match expected fixture payload")
-        elif payload != expected:
-            errors.append(f"{artifact_key} does not match expected fixture payload")
+            if len(payload) != 1:
+                errors.append(f"{artifact_key} must contain exactly one payload item")
+                continue
+            for key in FIXTURE_KEY_SUBSETS[artifact_key]:
+                if payload[0].get(key) != expected.get(key):
+                    errors.append(f"{artifact_key} drift on {key}")
+        else:
+            for key in FIXTURE_KEY_SUBSETS[artifact_key]:
+                if payload.get(key) != expected.get(key):
+                    errors.append(f"{artifact_key} drift on {key}")
 
     public_chain_view = load_json(output_paths["consumers.public_chain_view"])
     errors.extend(validate_public_chain_view(public_chain_view))

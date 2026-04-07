@@ -8,7 +8,8 @@
   "sale_gate_status": "OPEN",
   "review_status": "CONFIRMED",
   "manual_override_status": "NONE",
+  "delivery_risk_state": "OPEN",
   "contact_strategy": "standard_outreach",
   "analyst_follow_up_required": false,
-  "summary": "Contact stays standard_outreach because sale gate is OPEN and manual override status is NONE."
+  "summary": "Contact stays standard_outreach because sale gate is OPEN while delivery risk is OPEN and manual override status is NONE."
 }

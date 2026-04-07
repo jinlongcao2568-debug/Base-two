@@ -15,3 +15,10 @@ def build_project_base(raw_ingestion_artifact: dict[str, Any]) -> dict[str, Any]
         "region_code": raw_payload["region_code"],
         **profile,
     }
+
+
+def build_structured_profiles(raw_ingestion_artifact: dict[str, Any]) -> list[dict[str, Any]]:
+    raw_payload = raw_ingestion_artifact["raw_payload"]
+    scenario_id = get_scenario_id(raw_payload)
+    profiles = get_scenario_profile(scenario_id)["stage3_profiles"]
+    return [profiles[key] for key in sorted(profiles)]

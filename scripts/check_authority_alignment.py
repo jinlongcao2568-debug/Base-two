@@ -410,10 +410,14 @@ def _evaluate_professionalization(root: Path) -> list[str]:
         "docs/governance/SCHEMA_REGISTRY.md",
         errors,
     )
-    if interface_catalog.get("status") != "no_business_api_registered":
-        errors.append("INTERFACE_CATALOG must stay in explicit zero-state until a business API exists")
-    if interface_catalog.get("interfaces") != []:
-        errors.append("INTERFACE_CATALOG zero-state must keep interfaces empty")
+    if interface_catalog.get("status") != "registered_formal_catalog":
+        errors.append("INTERFACE_CATALOG must reflect the registered formal catalog after V1.5 alignment")
+    interfaces = interface_catalog.get("interfaces") or []
+    if len(interfaces) < 10:
+        errors.append("INTERFACE_CATALOG must register the formal V1.5 interface set")
+    for entry in interfaces:
+        if entry.get("implementation_status") not in {"contract_only", "implemented", "deprecated"}:
+            errors.append(f"INTERFACE_CATALOG missing valid implementation_status for {entry.get('name')}")
     if not interface_catalog.get("last_reviewed_at"):
         errors.append("INTERFACE_CATALOG missing last_reviewed_at")
     if not interface_catalog.get("next_update_trigger"):
