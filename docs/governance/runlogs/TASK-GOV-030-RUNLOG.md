@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-030`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-red-green-and-slow-tests-v1`
 - `branch`: `feat/TASK-GOV-030-governance-red-green-slow-tests`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `5`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `plan-TASK-GOV-030-5`
@@ -15,6 +15,7 @@
 
 - `2026-04-07T08:37:31+08:00`: task package created
 - `2026-04-07T08:56:59+08:00`: worker-finish `Repaired governance regressions, restored publish/child-workflow tests to green, and reduced governance/automation suite runtime.`
+- `2026-04-07T09:04:20+08:00`: automatic lease takeover previous_owner=`019d6546-4b83-7d50-b696-509696a02751` reason=`close`
 ## Test Log
 
 - to-be-filled
@@ -29,20 +30,20 @@
 - `pytest tests/governance -q --durations=20`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-030`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `governance-red-green-and-slow-tests-v1`
 - `branch`: `feat/TASK-GOV-030-governance-red-green-slow-tests`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `5`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `plan-TASK-GOV-030-5`

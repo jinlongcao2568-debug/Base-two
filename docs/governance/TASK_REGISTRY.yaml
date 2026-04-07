@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-07T08:56:59+08:00'
+updated_at: '2026-04-07T09:04:44+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -2159,7 +2159,7 @@ tasks:
   closed_at: '2026-04-07T07:09:58+08:00'
 - task_id: TASK-GOV-030
   title: 治理红测修复与慢测治理
-  status: review
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -2167,9 +2167,9 @@ tasks:
   branch: feat/TASK-GOV-030-governance-red-green-slow-tests
   size_class: heavy
   automation_mode: manual
-  worker_state: review_pending
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-07T08:56:59+08:00'
+  last_reported_at: '2026-04-07T09:04:20+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -2209,4 +2209,61 @@ tasks:
   successor_state: immediate
   created_at: '2026-04-07T08:37:31+08:00'
   activated_at: '2026-04-07T08:39:02+08:00'
+  closed_at: '2026-04-07T09:04:20+08:00'
+- task_id: TASK-GOV-031
+  title: V1.5权威文档基线落库与开发手册重建
+  status: review
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-v15-authority-baseline-and-dev-manual-v1
+  branch: feat/TASK-GOV-031-v15-authority-dev-manual
+  size_class: standard
+  automation_mode: manual
+  worker_state: review_pending
+  blocked_reason: null
+  last_reported_at: '2026-04-07T09:11:03+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/baseline/
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/handoffs/
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/tasks/
+  - docs/governance/runlogs/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - tests/
+  - scripts/
+  - README.md
+  planned_write_paths:
+  - docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md
+  - docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.5_2026-04-07.md
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/handoffs/TASK-GOV-031.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/tasks/TASK-GOV-031.md
+  - docs/governance/runlogs/TASK-GOV-031-RUNLOG.md
+  planned_test_paths:
+  - docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.5_全量规则码版.md
+  - docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.5_2026-04-07.md
+  required_tests:
+  - 文档结构完整性检查
+  - 交叉引用一致性检查
+  - 权威文档与开发手册职责边界检查
+  task_file: docs/governance/tasks/TASK-GOV-031.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-031-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-07T09:04:20+08:00'
+  activated_at: '2026-04-07T09:05:42+08:00'
   closed_at: null

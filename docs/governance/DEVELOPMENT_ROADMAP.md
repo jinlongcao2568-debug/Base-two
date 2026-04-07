@@ -1,6 +1,6 @@
 ---
-current_phase: governance-red-green-and-slow-tests-v1
-current_task_id: TASK-GOV-030
+current_phase: governance-v15-authority-baseline-and-dev-manual-v1
+current_task_id: TASK-GOV-031
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: stale_successor_inputs_under_correction
 
 ## Current Task
 
-- `TASK-GOV-030`: `治理红测修复与慢测治理` is the live coordination task for `governance-red-green-and-slow-tests-v1`.
+- `TASK-GOV-031`: rebuild the baseline around the user's V1.5 authority document and generate a fresh V1.5-aligned development manual.
 ## Recently Closed
 
 - `TASK-GOV-018`: closed the parented total-upgrade track and left stale successor inputs that must now be cleaned.

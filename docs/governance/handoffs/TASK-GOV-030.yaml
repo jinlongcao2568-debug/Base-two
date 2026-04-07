@@ -1,6 +1,6 @@
 task_id: TASK-GOV-030
-summary_status: review
-last_handoff_at: '2026-04-07T08:56:59+08:00'
+summary_status: done
+last_handoff_at: '2026-04-07T09:04:20+08:00'
 completed_items:
 - Fixed child execution mirror allowance for DEVELOPMENT_ROADMAP in execution-context
   repo checks.
@@ -8,17 +8,12 @@ completed_items:
   assert the intended remote state.
 - Reduced slow automation and governance hotspots by shrinking heavy-parent regression
   fanout and replacing the 20-worktree cap test with synthetic active entries.
-remaining_items:
-- Further governance-suite runtime reduction remains possible in continuation/parallel-closeout
-  paths.
-next_step: Review the scoped governance and test changes, then decide whether to pursue
-  a second slow-test optimization pass.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - pytest tests/automation -q --durations=15
 - pytest tests/governance -q --durations=20
-current_risks:
-- Governance suite is green but still dominated by continuation and parallel closeout
-  integration-style tests above 3s each.
+current_risks: []
 candidate_write_paths:
 - scripts/governance_repo_checks.py
 - tests/governance/helpers.py
@@ -36,3 +31,4 @@ resume_notes:
   fixture reuse before touching production governance flow.
 - 'Worker finish summary: Repaired governance regressions, restored publish/child-workflow
   tests to green, and reduced governance/automation suite runtime.'
+- Task closed.
