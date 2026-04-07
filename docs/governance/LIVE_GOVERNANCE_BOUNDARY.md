@@ -38,3 +38,11 @@ Historical artifacts remain searchable for audit and recovery, but they are not 
 - Historical task files, runlogs, handoffs, and registry rows must not redefine the current default governance gate.
 - Do not derive the current default gate from historical `required_tests` records.
 - If live governance surfaces and historical artifacts disagree, the live governance surfaces win for current execution.
+
+## Ledger Derivation Boundary
+
+- `task_ops derive-ledgers --from current-task` treats `docs/governance/CURRENT_TASK.yaml` as the live source for repairing registry, worktree, roadmap, and generated task/runlog metadata.
+- `task_ops derive-ledgers --from task-file --task-id TASK-ID` may use a task file as a repair input only under command-enforced constraints.
+- Closed historical task files may repair their own registry or worktree row, but they must not overwrite an unrelated live `CURRENT_TASK.yaml`.
+- Non-closed task files may derive live control-plane state only when `CURRENT_TASK.yaml` is idle or already points to the same task.
+- `derive-ledgers` is a repair command, not a replacement for `check_repo.py`; repository gates remain responsible for detecting drift.

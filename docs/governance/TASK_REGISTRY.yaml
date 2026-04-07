@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-07T16:10:28+08:00'
+updated_at: '2026-04-07T17:30:19+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -2006,3 +2006,63 @@ tasks:
   created_at: '2026-04-07T15:55:05+08:00'
   activated_at: '2026-04-07T15:58:00+08:00'
   closed_at: '2026-04-07T16:10:28+08:00'
+- task_id: TASK-GOV-036
+  title: Ledger activation command hardening
+  status: done
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-ledger-activation-commands-v1
+  branch: feat/TASK-GOV-036-ledger-activation-commands
+  size_class: standard
+  automation_mode: manual
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-07T17:30:19+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - README.md
+  - tests/automation/
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage1/
+  - tests/stage2/
+  - tests/stage3/
+  - tests/stage4/
+  - tests/stage5/
+  - tests/stage6/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  planned_write_paths:
+  - docs/governance/
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_runtime_ops.py
+  - tests/governance/test_task_ops.py
+  - tests/governance/test_task_ledger_derivation.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - python scripts/check_authority_alignment.py
+  - pytest tests/governance/test_task_ops.py -q
+  - pytest tests/governance/test_task_ledger_derivation.py -q
+  - pytest tests/governance/test_task_continuation.py -q
+  task_file: docs/governance/tasks/TASK-GOV-036.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-036-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-07T16:58:42+08:00'
+  activated_at: '2026-04-07T16:58:42+08:00'
+  closed_at: '2026-04-07T17:30:19+08:00'

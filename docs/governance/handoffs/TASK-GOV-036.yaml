@@ -1,0 +1,32 @@
+task_id: TASK-GOV-036
+summary_status: done
+last_handoff_at: '2026-04-07T17:30:19+08:00'
+completed_items:
+- Manually activated TASK-GOV-036 as the live governance task without creating a bootstrap
+  commit.
+- Implemented task_ops queue-and-activate.
+- Implemented governed dual-source task_ops derive-ledgers.
+- Added targeted governance regressions and documentation guidance.
+- Ran the required validation set successfully.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_task_ops.py -q
+- pytest tests/governance/test_task_ledger_derivation.py -q
+- pytest tests/governance/test_task_continuation.py -q
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py src docs tests
+- python scripts/check_authority_alignment.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+- scripts/task_lifecycle_ops.py
+- scripts/task_runtime_ops.py
+- tests/governance/test_task_ops.py
+- tests/governance/test_task_ledger_derivation.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Use the confirmed governed dual-source policy for task-file derivation.
+- Implementation and validation are complete; no bootstrap commit was created.
+- Task closed.

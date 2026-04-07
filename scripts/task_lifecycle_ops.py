@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import argparse
+from typing import Any
 
 from governance_lib import (
     CURRENT_TASK_FILE,
     GovernanceError,
     append_runlog_bullets,
+    branch_exists,
     build_current_task_payload,
     collect_split_errors,
     current_branch,
     dump_yaml,
     ensure_clean_worktree,
     find_repo_root,
+    git,
     infer_default_automation_mode,
     infer_default_topology,
+    is_idle_current_payload,
     iso_now,
     load_current_task,
     load_task_policy,
@@ -21,12 +25,14 @@ from governance_lib import (
     load_worktree_registry,
     missing_required_tests,
     sync_task_artifacts,
+    sync_named_section,
     task_map,
     task_parallelism_plan,
     task_required_tests_for_matrix,
     read_text,
     validate_task,
     worktree_map,
+    write_roadmap,
 )
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
@@ -56,14 +62,27 @@ from task_rendering import (
 def cmd_new(args: argparse.Namespace) -> int:
     root = find_repo_root()
     registry = load_task_registry(root)
-    task_policy = load_task_policy(root)
     tasks = registry.setdefault("tasks", [])
     if any(task["task_id"] == args.task_id for task in tasks):
         raise GovernanceError(f"task already exists: {args.task_id}")
+    task = _build_new_task(root, args)
+    tasks.append(task)
+    registry["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    update_task_file(root, task)
+    update_runlog_file(root, task)
+    ensure_handoff_file(root, task)
+    sync_task_artifacts(root, registry, [task["task_id"]])
+    print(f"[OK] created task {args.task_id}")
+    return 0
+
+
+def _build_new_task(root, args: argparse.Namespace) -> dict[str, Any]:
+    task_policy = load_task_policy(root)
     task = {
         "task_id": args.task_id,
         "title": args.title,
-        "status": args.status,
+        "status": getattr(args, "status", "queued"),
         "task_kind": args.task_kind,
         "execution_mode": args.execution_mode
         or ("shared_coordination" if args.task_kind == "coordination" else "isolated_worktree"),
@@ -72,7 +91,7 @@ def cmd_new(args: argparse.Namespace) -> int:
         "branch": args.branch or f"feat/{args.task_id}-work",
         "size_class": args.size_class,
         "automation_mode": args.automation_mode or "",
-        "worker_state": args.worker_state,
+        "worker_state": getattr(args, "worker_state", "idle"),
         "blocked_reason": None,
         "last_reported_at": iso_now(),
         "topology": args.topology or "",
@@ -101,15 +120,39 @@ def cmd_new(args: argparse.Namespace) -> int:
         task["lane_count"] = plan["lane_count"]
         task["parallelism_plan_id"] = plan["parallelism_plan_id"]
     validate_task(task)
-    tasks.append(task)
+    return task
+
+
+def _switch_or_create_branch(root, branch: str) -> str:
+    if current_branch(root) == branch:
+        return "current"
+    ensure_clean_worktree(root)
+    if branch_exists(root, branch):
+        git(root, "switch", branch)
+        return "switched"
+    git(root, "switch", "-c", branch)
+    return "created"
+
+
+def _mark_active(task: dict[str, Any]) -> None:
+    task["status"] = "doing"
+    task["worker_state"] = "running"
+    task["blocked_reason"] = None
+    task["last_reported_at"] = iso_now()
+    if task.get("activated_at") is None:
+        task["activated_at"] = iso_now()
+
+
+def _activate_coordination_task(root, registry: dict, worktrees: dict, task: dict, *, reason: str) -> list[str]:
+    if task["task_kind"] != "coordination":
+        raise GovernanceError("only coordination tasks can be activated in the main worktree")
+    claim_coordination_lease(root, task, reason=reason)
+    touched_tasks = pause_other_doing_tasks(registry["tasks"], task["task_id"])
+    _mark_active(task)
     registry["updated_at"] = iso_now()
-    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
-    update_task_file(root, task)
-    update_runlog_file(root, task)
-    ensure_handoff_file(root, task)
-    sync_task_artifacts(root, registry, [task["task_id"]])
-    print(f"[OK] created task {args.task_id}")
-    return 0
+    upsert_coordination_entry(worktrees, task, root)
+    worktrees["updated_at"] = iso_now()
+    return touched_tasks
 
 
 def cmd_activate(args: argparse.Namespace) -> int:
@@ -123,17 +166,7 @@ def cmd_activate(args: argparse.Namespace) -> int:
     ensure_clean_worktree(root)
     if current_branch(root) != task["branch"]:
         raise GovernanceError(f"branch mismatch: expected {task['branch']}, got {current_branch(root)}")
-    claim_coordination_lease(root, task, reason="activate")
-    touched_tasks = pause_other_doing_tasks(registry["tasks"], task["task_id"])
-    task["status"] = "doing"
-    task["worker_state"] = "running"
-    task["blocked_reason"] = None
-    task["last_reported_at"] = iso_now()
-    if task["activated_at"] is None:
-        task["activated_at"] = iso_now()
-    registry["updated_at"] = iso_now()
-    upsert_coordination_entry(worktrees, task, root)
-    worktrees["updated_at"] = iso_now()
+    touched_tasks = _activate_coordination_task(root, registry, worktrees, task, reason="activate")
     persist_activation_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, touched_tasks)
     write_handoff(
         root,
@@ -159,6 +192,61 @@ def cmd_activate(args: argparse.Namespace) -> int:
         safe_write=True,
     )
     print(f"[OK] activated {task['task_id']}")
+    return 0
+
+
+def cmd_queue_and_activate(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
+    tasks = registry.setdefault("tasks", [])
+    tasks_by_id = task_map(registry)
+    existing = tasks_by_id.get(args.task_id)
+    created = False
+    if existing is not None:
+        if not args.existing_ok:
+            raise GovernanceError(f"task already exists: {args.task_id}")
+        task = existing
+        if task.get("status") != "queued":
+            raise GovernanceError("existing task must be queued for queue-and-activate --existing-ok")
+    else:
+        task = _build_new_task(root, args)
+        created = True
+    if task["task_kind"] != "coordination":
+        raise GovernanceError("queue-and-activate only supports coordination tasks")
+    branch_action = _switch_or_create_branch(root, task["branch"])
+    if created:
+        tasks.append(task)
+    touched_tasks = _activate_coordination_task(root, registry, worktrees, task, reason="queue-and-activate")
+    update_task_file(root, task)
+    update_runlog_file(root, task)
+    ensure_handoff_file(root, task)
+    persist_activation_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, touched_tasks)
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        next_step="Continue the scoped implementation and keep the control plane aligned.",
+        next_tests=list(task.get("required_tests") or []),
+        candidate_write_paths=list(task.get("planned_write_paths") or []),
+        candidate_test_paths=list(task.get("planned_test_paths") or []),
+        resume_notes=[f"Task activated through queue-and-activate branch_action={branch_action}."],
+        append_resume_notes=True,
+    )
+    record_session_event(
+        root,
+        session_id=current_session_id(root),
+        thread_id=coordination_thread_id(root),
+        current_command="queue-and-activate",
+        mode="manual",
+        writer_state="writable",
+        current_task_id=task["task_id"],
+        continue_intent=None,
+        runtime_status=runtime_status_for_task(task),
+        safe_write=True,
+    )
+    print(f"[OK] queue-and-activated {task['task_id']} branch={branch_action}")
     return 0
 
 
@@ -425,6 +513,243 @@ def cmd_reconcile_ledgers(args: argparse.Namespace) -> int:
         print(f"[OK] reconciled ledgers from truth sources for: {', '.join(touched) if touched else 'no task fields changed'}")
     else:
         print(f"[OK] reconcile dry run: {', '.join(touched) if touched else 'no task fields changed'}")
+    return 0
+
+
+DERIVED_CURRENT_TASK_KEYS = (
+    "title",
+    "status",
+    "task_kind",
+    "execution_mode",
+    "parent_task_id",
+    "stage",
+    "branch",
+    "size_class",
+    "automation_mode",
+    "worker_state",
+    "blocked_reason",
+    "topology",
+    "allowed_dirs",
+    "reserved_paths",
+    "planned_write_paths",
+    "planned_test_paths",
+    "required_tests",
+    "task_file",
+    "runlog_file",
+    "lane_count",
+    "lane_index",
+    "parallelism_plan_id",
+    "review_bundle_status",
+)
+
+DERIVED_TASK_FILE_KEYS = (
+    "status",
+    "task_kind",
+    "execution_mode",
+    "stage",
+    "branch",
+    "size_class",
+    "automation_mode",
+    "worker_state",
+    "topology",
+    "lane_count",
+    "lane_index",
+    "parallelism_plan_id",
+    "review_bundle_status",
+    "successor_state",
+)
+
+LIVE_TASK_FILE_STATUSES = {"doing", "paused", "review", "blocked"}
+
+
+def cmd_derive_ledgers(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    current_task = load_current_task(root)
+    roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
+    if args.source == "current-task":
+        return _derive_ledgers_from_current_task(
+            root,
+            registry,
+            worktrees,
+            current_task,
+            roadmap_frontmatter,
+            roadmap_body,
+            write=args.write,
+        )
+    if args.task_id is None:
+        raise GovernanceError("--task-id is required when deriving from task-file")
+    return _derive_ledgers_from_task_file(
+        root,
+        registry,
+        worktrees,
+        current_task,
+        roadmap_frontmatter,
+        roadmap_body,
+        task_id=args.task_id,
+        write=args.write,
+    )
+
+
+def _copy_current_task_fields(task: dict[str, Any], current_task: dict[str, Any]) -> bool:
+    changed = False
+    for key in DERIVED_CURRENT_TASK_KEYS:
+        if task.get(key) != current_task.get(key):
+            task[key] = current_task.get(key)
+            changed = True
+    if changed:
+        task["last_reported_at"] = iso_now()
+    return changed
+
+
+def _apply_task_file_fields(task: dict[str, Any], fields: dict[str, str]) -> bool:
+    changed = False
+    for key in DERIVED_TASK_FILE_KEYS:
+        if key not in fields:
+            continue
+        value = _coerce_reconciled_value(key, fields[key])
+        if task.get(key) != value:
+            task[key] = value
+            changed = True
+    if changed:
+        task["last_reported_at"] = iso_now()
+    validate_task(task)
+    return changed
+
+
+def _sync_worktree_entry_from_task(worktrees: dict[str, Any], task: dict[str, Any], root) -> bool:
+    before = repr(worktrees.get("entries", []))
+    if task.get("task_kind") != "coordination":
+        return False
+    if task.get("status") in {"doing", "review", "blocked"}:
+        upsert_coordination_entry(worktrees, task, root)
+    elif task.get("status") == "paused":
+        upsert_coordination_entry(worktrees, task, root)
+        entry = worktree_map(worktrees).get(task["task_id"])
+        if entry is not None:
+            entry["status"] = "paused"
+    elif task.get("status") in {"queued", "done"}:
+        entry = worktree_map(worktrees).get(task["task_id"])
+        if entry is not None:
+            entry["status"] = "closed"
+            if task.get("status") == "done" and entry.get("work_mode") == "execution":
+                entry["cleanup_state"] = "pending"
+    changed = repr(worktrees.get("entries", [])) != before
+    if changed:
+        worktrees["updated_at"] = iso_now()
+    return changed
+
+
+def _persist_derived_live_state(
+    root,
+    registry: dict,
+    worktrees: dict,
+    task: dict,
+    roadmap_frontmatter: dict,
+    roadmap_body: str,
+    touched_tasks: list[str],
+) -> None:
+    roadmap_body = sync_named_section(
+        roadmap_body,
+        "## Current Task",
+        f"- `{task['task_id']}`: `{task['title']}` is the live coordination task for `{task['stage']}`.",
+    )
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "Continue the live task after ledger derivation."))
+    roadmap_frontmatter["current_task_id"] = task["task_id"]
+    roadmap_frontmatter["current_phase"] = task["stage"]
+    write_roadmap(root, roadmap_frontmatter, roadmap_body)
+    sync_task_artifacts(root, registry, touched_tasks)
+
+
+def _write_derived_history_state(root, registry: dict, worktrees: dict, touched_tasks: list[str]) -> None:
+    registry["updated_at"] = iso_now()
+    worktrees["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    sync_task_artifacts(root, registry, touched_tasks)
+
+
+def _derive_ledgers_from_current_task(
+    root,
+    registry: dict,
+    worktrees: dict,
+    current_task: dict,
+    roadmap_frontmatter: dict,
+    roadmap_body: str,
+    *,
+    write: bool,
+) -> int:
+    if is_idle_current_payload(current_task):
+        for entry in worktrees.get("entries", []):
+            if entry.get("work_mode") == "coordination" and entry.get("status") == "active":
+                entry["status"] = "closed"
+        if write:
+            persist_idle_state(root, registry, worktrees, roadmap_frontmatter, roadmap_body, [])
+        print("[OK] derive-ledgers current-task: idle control plane")
+        return 0
+    if current_task.get("status") == "done":
+        raise GovernanceError("cannot derive from a done CURRENT_TASK; close it to idle or derive from task-file")
+    task = find_task(registry["tasks"], current_task["current_task_id"])
+    changed = _copy_current_task_fields(task, current_task)
+    worktree_changed = _sync_worktree_entry_from_task(worktrees, task, root)
+    touched = [task["task_id"]] if changed or worktree_changed else []
+    if write:
+        registry["updated_at"] = iso_now()
+        worktrees["updated_at"] = iso_now()
+        _persist_derived_live_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, [task["task_id"]])
+    print(f"[OK] derive-ledgers current-task: {task['task_id']} {'written' if write else 'dry-run'}")
+    return 0
+
+
+def _derive_ledgers_from_task_file(
+    root,
+    registry: dict,
+    worktrees: dict,
+    current_task: dict,
+    roadmap_frontmatter: dict,
+    roadmap_body: str,
+    *,
+    task_id: str,
+    write: bool,
+) -> int:
+    task = find_task(registry["tasks"], task_id)
+    task_path = root / task["task_file"]
+    if not task_path.exists():
+        raise GovernanceError(f"task file missing: {task['task_file']}")
+    fields = extract_markdown_fields(read_text(task_path))
+    _apply_task_file_fields(task, fields)
+    worktree_changed = _sync_worktree_entry_from_task(worktrees, task, root)
+    current_id = current_task.get("current_task_id")
+    touched = [task["task_id"]]
+    if task["status"] == "done":
+        if write:
+            if current_id == task["task_id"]:
+                persist_idle_state(root, registry, worktrees, roadmap_frontmatter, roadmap_body, touched)
+            else:
+                _write_derived_history_state(root, registry, worktrees, touched)
+        print(f"[OK] derive-ledgers task-file: {task['task_id']} historical {'written' if write else 'dry-run'}")
+        return 0
+    if task["status"] == "queued":
+        if current_id == task["task_id"]:
+            raise GovernanceError("queued task cannot be derived as live; use queue-and-activate")
+        if write:
+            _write_derived_history_state(root, registry, worktrees, touched if worktree_changed else touched)
+        print(f"[OK] derive-ledgers task-file: {task['task_id']} queued {'written' if write else 'dry-run'}")
+        return 0
+    if task["status"] not in LIVE_TASK_FILE_STATUSES:
+        raise GovernanceError(f"unsupported task-file status for live derivation: {task['status']}")
+    if task.get("task_kind") != "coordination" or task.get("parent_task_id") is not None:
+        raise GovernanceError("only top-level coordination tasks can derive live control-plane state from task-file")
+    if current_id not in {None, task["task_id"]}:
+        raise GovernanceError(f"live current task already exists: {current_id}")
+    if write:
+        registry["updated_at"] = iso_now()
+        worktrees["updated_at"] = iso_now()
+        _persist_derived_live_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, touched)
+    print(f"[OK] derive-ledgers task-file: {task['task_id']} live {'written' if write else 'dry-run'}")
     return 0
 
 

@@ -57,6 +57,18 @@ Conflict rule:
 
 ## Continuation Commands
 
+- `python scripts/task_ops.py queue-and-activate TASK-ID ...`
+  - preferred entry when creating and immediately activating a new top-level coordination task
+  - performs branch create/switch, task package creation, current-task activation, worktree ledger sync, roadmap sync, and handoff creation in one governed command
+  - fails before writing task artifacts when a branch switch is required and the worktree is dirty
+  - use `--existing-ok` only to repair an already queued coordination task into the same activation path
+- `python scripts/task_ops.py derive-ledgers --from current-task --write`
+  - repairs live registry, worktree, roadmap, and generated task/runlog metadata from `CURRENT_TASK.yaml`
+  - dry-runs unless `--write` is provided
+- `python scripts/task_ops.py derive-ledgers --from task-file --task-id TASK-ID --write`
+  - repairs ledger state from an existing task file and registry row
+  - closed task files may repair their own historical ledger row, but must not overwrite an unrelated live `CURRENT_TASK.yaml`
+  - non-closed task files may derive live state only when the control plane is idle or already points to the same task
 - `python scripts/automation_intent.py preflight --utterance "<text>"`
   - performs a non-mutating preflight for free-form continuation requests
   - blocks instead of guessing when the request could imply a task switch

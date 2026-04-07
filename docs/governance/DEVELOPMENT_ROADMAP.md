@@ -38,43 +38,44 @@ automation_foundation: targeted_governance_test_triggers_live
 - no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
+- `TASK-GOV-035`: separated live governance surfaces from historical audit artifacts and search inputs.
 - `TASK-GOV-034`: narrowed governance test triggering so ordinary governance edits no longer default to the full governance and automation suites.
 - `TASK-GOV-024`: closed the governed closeout/lease/runtime-contract bundle.
 - `TASK-GOV-019`: corrected stale successor inputs and absorbed-backlog filtering.
 
 ## Current Phase Goal
 
-- Establish an explicit boundary between live governance surfaces and historical audit artifacts.
-- Prevent closed task files, runlogs, handoffs, and registry history from being mistaken for the current default governance test gate.
-- Preserve historical evidence exactly as recorded while redirecting operator and prompt search behavior toward the live governance surfaces first.
+- Make new-task activation a single governed operation instead of a manual multi-ledger sequence.
+- Provide an explicit ledger derivation command for drift repair without weakening the live-vs-historical boundary.
+- Preserve closed task files as historical evidence while allowing task-file repair under governed constraints.
 
 ## Internal Gates
 
-1. `phase_1_activate_boundary_task`
-   - align CURRENT_TASK, roadmap, registry, worktree entry, task file, runlog, and handoff with `TASK-GOV-035`
-   - keep the task scoped to governance docs, authority checks, and governance regressions only
-2. `phase_2_define_live_governance_surfaces`
-   - add a live boundary document that names the canonical operator and prompt sources
-   - explicitly classify closed tasks, runlogs, handoffs, and registry history as audit artifacts
-3. `phase_3_align_operator_and_prompt_guidance`
-   - point operator guidance and prompt governance at the live surfaces first
-   - forbid treating historical required_tests records as current default gates
+1. `phase_1_activate_ledger_command_task`
+   - align CURRENT_TASK, roadmap, registry, worktree entry, task file, runlog, and handoff with `TASK-GOV-036`
+   - keep the task scoped to governance docs, task lifecycle scripts, and governance regressions only
+2. `phase_2_queue_and_activate`
+   - add a command that creates or repairs a queued coordination task and activates it with branch and ledger sync
+   - preserve clean-worktree branch-switch safety
+3. `phase_3_derive_ledgers`
+   - add explicit source selection for current-task and task-file derivation
+   - prevent closed historical task files from overwriting unrelated live current-task state
 4. `phase_4_regression_evidence`
-   - prove authority and governance checks fail if the live boundary is missing or the live-vs-historical distinction drifts
-   - keep the validation set targeted; do not reintroduce full governance or automation suites as default gates
+   - prove the new commands repair expected drift and reject unsafe historical/live overwrites
+   - keep the validation set targeted to lifecycle command behavior
 
 ## Explicitly Out Of Scope
 
 - Do not rewrite or delete historical task files, runlogs, handoffs, or registry rows.
 - Do not touch `src/`, `docs/contracts/`, `db/migrations/`, or stage/contract/integration suites.
 - Do not change the test bundles defined in `TEST_MATRIX.yaml` or weaken release-grade protections.
-- Do not introduce a second governance source of truth outside the existing live control-plane documents.
+- Do not introduce a second governance source of truth outside the governed current-task and task-file derivation commands.
 
 ## Exit Criteria
 
-- Live governance guidance names the canonical live surfaces and classifies historical artifacts as audit-only evidence.
-- Operator and prompt guidance no longer leave room to infer current default gates from historical task/runlog/handoff/registry records.
-- Authority and governance regressions cover the new boundary behavior without requiring the full governance or automation suites.
+- `queue-and-activate` creates or repairs coordination-task activation without leaving half-synced ledgers.
+- `derive-ledgers` repairs current-task and task-file drift with dry-run by default and guarded write behavior.
+- Governance regressions cover current-task derivation, task-file derivation, closed historical safety, and live-task conflict blocking.
 
 ## Historical Artifact Classes
 

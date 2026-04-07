@@ -21,8 +21,10 @@ from task_lifecycle_ops import (
     cmd_can_start,
     cmd_close,
     cmd_decide_topology,
+    cmd_derive_ledgers,
     cmd_new,
     cmd_pause,
+    cmd_queue_and_activate,
     cmd_reconcile_ledgers,
     cmd_split_check,
     cmd_sync,
@@ -107,6 +109,26 @@ def add_task_lifecycle_commands(subparsers) -> None:
     new_parser.add_argument("--required-tests", nargs="*", default=[])
     new_parser.set_defaults(func=cmd_new)
 
+    queue_activate_parser = subparsers.add_parser("queue-and-activate")
+    queue_activate_parser.add_argument("task_id")
+    queue_activate_parser.add_argument("--title", required=True)
+    queue_activate_parser.add_argument("--stage", required=True)
+    queue_activate_parser.add_argument("--branch")
+    queue_activate_parser.add_argument("--task-kind", default="coordination", choices=["coordination", "execution"])
+    queue_activate_parser.add_argument("--execution-mode", choices=["shared_coordination", "isolated_worktree"])
+    queue_activate_parser.add_argument("--parent-task-id")
+    queue_activate_parser.add_argument("--size-class", default="standard", choices=["micro", "standard", "heavy"])
+    queue_activate_parser.add_argument("--automation-mode", choices=["manual", "assisted", "autonomous"])
+    queue_activate_parser.add_argument("--topology", choices=["single_task", "single_worker", "parallel_parent"])
+    queue_activate_parser.add_argument("--successor-state", choices=["immediate", "backlog"])
+    queue_activate_parser.add_argument("--allowed-dirs", nargs="*", default=[])
+    queue_activate_parser.add_argument("--reserved-paths", nargs="*", default=[])
+    queue_activate_parser.add_argument("--planned-write-paths", nargs="*", default=[])
+    queue_activate_parser.add_argument("--planned-test-paths", nargs="*", default=[])
+    queue_activate_parser.add_argument("--required-tests", nargs="*", default=[])
+    queue_activate_parser.add_argument("--existing-ok", action="store_true")
+    queue_activate_parser.set_defaults(func=cmd_queue_and_activate)
+
     activate_parser = subparsers.add_parser("activate")
     activate_parser.add_argument("task_id")
     activate_parser.set_defaults(func=cmd_activate)
@@ -134,6 +156,12 @@ def add_task_lifecycle_commands(subparsers) -> None:
     reconcile_parser = subparsers.add_parser("reconcile-ledgers")
     reconcile_parser.add_argument("--write", action="store_true")
     reconcile_parser.set_defaults(func=cmd_reconcile_ledgers)
+
+    derive_parser = subparsers.add_parser("derive-ledgers")
+    derive_parser.add_argument("--from", dest="source", required=True, choices=["current-task", "task-file"])
+    derive_parser.add_argument("--task-id")
+    derive_parser.add_argument("--write", action="store_true")
+    derive_parser.set_defaults(func=cmd_derive_ledgers)
 
     split_parser = subparsers.add_parser("split-check")
     split_parser.add_argument("parent_task_id")
