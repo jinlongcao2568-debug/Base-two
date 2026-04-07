@@ -1,0 +1,26 @@
+version: '1.0'
+updated_at: '2026-04-07T22:17:02+08:00'
+authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
+status: active
+root_path: D:/Base One/Base-two/AX9.clones
+slots:
+- slot_id: worker-01
+  path: D:/Base One/Base-two/AX9.clones/worker-01
+  branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
+  status: ready
+  last_provisioned_at: '2026-04-07T22:16:52+08:00'
+- slot_id: worker-02
+  path: D:/Base One/Base-two/AX9.clones/worker-02
+  branch: codex/worker-02-idle
+  status: ready
+  last_provisioned_at: '2026-04-07T22:16:55+08:00'
+- slot_id: worker-03
+  path: D:/Base One/Base-two/AX9.clones/worker-03
+  branch: codex/worker-03-idle
+  status: ready
+  last_provisioned_at: '2026-04-07T22:16:58+08:00'
+- slot_id: worker-04
+  path: D:/Base One/Base-two/AX9.clones/worker-04
+  branch: codex/worker-04-idle
+  status: ready
+  last_provisioned_at: '2026-04-07T22:17:02+08:00'

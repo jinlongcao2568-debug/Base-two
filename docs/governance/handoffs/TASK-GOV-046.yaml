@@ -1,0 +1,29 @@
+task_id: TASK-GOV-046
+summary_status: done
+last_handoff_at: '2026-04-07T22:18:58+08:00'
+completed_items:
+- Added docs/governance/FULL_CLONE_POOL.yaml to track four full clone slots.
+- Added scripts/full_clone_pool.py and task_ops provision-full-clone-pool.
+- Provisioned D:/Base One/Base-two/AX9.clones/worker-01 through worker-04 as complete
+  local clones.
+- Aligned worker-01 clone with the active stage1 contract branch and worker-02..04
+  with idle branches.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_full_clone_pool.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Task activated through queue-and-activate branch_action=created.
+- Full clone directories exist under D:/Base One/Base-two/AX9.clones/.
+- These are ordinary git clones, not worktree pointer directories.
+- 'Worker finish summary: Provisioned four full clone worker directories for manual
+  Codex opening'
+- Task closed.

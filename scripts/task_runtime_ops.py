@@ -32,6 +32,7 @@ from task_lifecycle_ops import (
 from task_orchestration_ops import cmd_orchestration_status
 from roadmap_candidate_index import cmd_plan_roadmap_candidates
 from roadmap_claim_next import cmd_claim_next
+from full_clone_pool import cmd_provision_full_clone_pool
 from task_worker_ops import (
     cmd_auto_close_children,
     cmd_worker_design_confirm,
@@ -243,6 +244,11 @@ def add_publish_commands(subparsers) -> None:
 
 
 def add_worktree_commands(subparsers) -> None:
+    clone_pool_parser = subparsers.add_parser("provision-full-clone-pool")
+    clone_pool_parser.add_argument("--slot-id")
+    clone_pool_parser.add_argument("--refresh", action="store_true")
+    clone_pool_parser.set_defaults(func=cmd_provision_full_clone_pool)
+
     prewarm_parser = subparsers.add_parser("prewarm-worktree-pool")
     prewarm_parser.add_argument("--slot-id")
     prewarm_parser.set_defaults(func=cmd_prewarm_worktree_pool)
