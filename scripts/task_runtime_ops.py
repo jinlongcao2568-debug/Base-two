@@ -45,7 +45,13 @@ from task_worker_ops import (
     cmd_worker_start,
     cmd_worker_test_first,
 )
-from task_worktree_ops import cmd_cleanup_orphans, cmd_prepare_child_execution, cmd_worktree_create, cmd_worktree_release
+from task_worktree_ops import (
+    cmd_cleanup_orphans,
+    cmd_prepare_child_execution,
+    cmd_prewarm_worktree_pool,
+    cmd_worktree_create,
+    cmd_worktree_release,
+)
 
 
 def add_coordination_commands(subparsers) -> None:
@@ -237,6 +243,10 @@ def add_publish_commands(subparsers) -> None:
 
 
 def add_worktree_commands(subparsers) -> None:
+    prewarm_parser = subparsers.add_parser("prewarm-worktree-pool")
+    prewarm_parser.add_argument("--slot-id")
+    prewarm_parser.set_defaults(func=cmd_prewarm_worktree_pool)
+
     prepare_parser = subparsers.add_parser("prepare-child-execution")
     prepare_parser.add_argument("task_id")
     prepare_parser.add_argument("--path", required=True)

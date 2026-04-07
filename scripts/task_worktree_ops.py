@@ -7,6 +7,7 @@ from governance_lib import (
     DEFAULT_RUNTIME_PROMPT_PROFILE,
     EXECUTION_CONTEXT_FILE,
     GovernanceError,
+    branch_exists,
     choose_worker_owner,
     collect_active_execution_errors,
     current_branch,
@@ -57,6 +58,72 @@ def _write_worktree_pool(root: Path, pool: dict) -> None:
     dump_yaml(root / WORKTREE_POOL_FILE, pool)
 
 
+def _pool_slot_path(root: Path, slot: dict) -> Path:
+    raw_path = Path(str(slot.get("path") or ""))
+    if raw_path.is_absolute():
+        return raw_path.resolve()
+    return (root / raw_path).resolve()
+
+
+def _pool_idle_branch(slot: dict) -> str:
+    return str(slot.get("idle_branch") or f"codex/{slot['slot_id']}-idle")
+
+
+def prewarm_pool_slot(root: Path, slot: dict) -> Path:
+    destination = _pool_slot_path(root, slot)
+    idle_branch = _pool_idle_branch(slot)
+    if destination.exists() and (destination / ".git").exists():
+        slot["idle_branch"] = idle_branch
+        slot["branch"] = git(destination, "branch", "--show-current").stdout.strip() or idle_branch
+        return destination
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if branch_exists(root, idle_branch):
+        git(root, "worktree", "add", str(destination), idle_branch)
+    else:
+        git(root, "worktree", "add", "-b", idle_branch, str(destination), "HEAD")
+    slot["idle_branch"] = idle_branch
+    slot["branch"] = idle_branch
+    return destination
+
+
+def reuse_pool_slot_worktree(root: Path, task: dict, slot: dict, worker_owner: str | None) -> Path:
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task_policy = load_task_policy(root)
+    tasks_by_id = task_map(registry)
+    parent_task = resolve_parent_task_for_execution(root, tasks_by_id, task)
+    destination = prewarm_pool_slot(root, slot)
+    validate_worktree_create_request(root, task, tasks_by_id, worktrees, destination)
+    dirty = git(destination, "status", "--porcelain", "--untracked-files=all", check=False).stdout.splitlines()
+    if dirty:
+        raise GovernanceError(f"pool slot worktree is dirty: {slot['slot_id']}")
+    if branch_exists(root, task["branch"]):
+        git(destination, "switch", task["branch"])
+    else:
+        git(destination, "switch", "-c", task["branch"])
+    assigned_owner = worker_owner or slot.get("worker_owner")
+    context = write_execution_context(destination, task, parent_task, assigned_owner)
+    upsert_execution_entry(worktrees, task, destination, assigned_owner)
+    sync_entry_workflow_state(worktree_map(worktrees)[task["task_id"]], context)
+    mirror_governance_ledgers_to_worktree(root, destination, registry, worktrees, task)
+    update_execution_runtime_entry(
+        root,
+        task["task_id"],
+        lane_session_id=None,
+        executor_status="prepared",
+        started_at=None,
+        last_heartbeat_at=None,
+        last_result=None,
+    )
+    worktrees["updated_at"] = iso_now()
+    registry["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    sync_task_artifacts(root, registry, [task["task_id"]])
+    slot["branch"] = task["branch"]
+    return destination
+
+
 def _release_pool_slot_for_path(root: Path, destination: Path, *, now: str) -> None:
     pool = _load_worktree_pool(root)
     updated = False
@@ -64,14 +131,46 @@ def _release_pool_slot_for_path(root: Path, destination: Path, *, now: str) -> N
         slot_path = Path(str(slot.get("path") or "")).resolve() if slot.get("path") else None
         if slot_path != destination:
             continue
+        try:
+            if destination.exists():
+                git(root, "worktree", "remove", "--force", str(destination))
+            prewarm_pool_slot(root, slot)
+        except GovernanceError:
+            slot["status"] = "blocked"
+            slot["last_released_at"] = now
+            updated = True
+            break
         slot["status"] = "idle"
         slot["current_task_id"] = None
-        slot["branch"] = None
+        slot["branch"] = _pool_idle_branch(slot)
         slot["last_released_at"] = now
         updated = True
         break
     if updated:
         _write_worktree_pool(root, pool)
+
+
+def cmd_prewarm_worktree_pool(args: argparse.Namespace) -> int:
+    root = find_repo_root()
+    pool = _load_worktree_pool(root)
+    if not pool.get("slots"):
+        raise GovernanceError(f"worktree pool is missing or empty: {WORKTREE_POOL_FILE}")
+    warmed: list[str] = []
+    for slot in pool.get("slots", []):
+        if args.slot_id and slot.get("slot_id") != args.slot_id:
+            continue
+        if slot.get("status") not in {"idle", "assigned"}:
+            continue
+        destination = prewarm_pool_slot(root, slot)
+        slot["status"] = "idle"
+        slot["path"] = display_path(destination)
+        warmed.append(slot["slot_id"])
+    _write_worktree_pool(root, pool)
+    if not warmed:
+        print("[OK] no idle pool slots needed prewarming")
+        return 0
+    print(f"[OK] prewarmed worktree pool slots: {', '.join(warmed)}")
+    return 0
 
 
 def _reset_execution_runtime(entry: dict, worker_owner: str) -> None:

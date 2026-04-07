@@ -26,7 +26,7 @@ from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candi
 from child_execution_flow import transient_child_paths
 from task_handoff import ensure_handoff_file
 from task_rendering import update_runlog_file, update_task_file
-from task_worktree_ops import cmd_worktree_create
+from task_worktree_ops import cmd_worktree_create, reuse_pool_slot_worktree
 
 
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
@@ -573,7 +573,15 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
         candidate["pool_slot_path"] = pool_slot["path"]
     destination = _candidate_worktree_path(root, candidate, args.worktree_root)
     try:
-        cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
+        if candidate.get("pool_slot_id"):
+            pool = _load_worktree_pool(root)
+            slot = _pool_slot_by_id(pool).get(candidate["pool_slot_id"])
+            if slot is None:
+                raise GovernanceError(f"assigned worktree pool slot missing: {candidate['pool_slot_id']}")
+            destination = reuse_pool_slot_worktree(root, task, slot, args.worker_owner)
+            _write_worktree_pool(root, pool)
+        else:
+            cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
     except Exception:
         _release_pool_slot(root, candidate.get("pool_slot_id"), now=now)
         raise

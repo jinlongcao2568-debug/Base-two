@@ -3,7 +3,7 @@
 ## Task Status
 
 - `task_id`: `TASK-RM-STAGE1-CORE-CONTRACT`
-- `status`: `doing`
+- `status`: `paused`
 - `stage`: `stage1`
 - `branch`: `codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract`
 - `worker_state`: `idle`
@@ -21,18 +21,17 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
 - `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
-
+- `next_gate`: `resume_required`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-RM-STAGE1-CORE-CONTRACT`
-- `status`: `doing`
+- `status`: `paused`
 - `stage`: `stage1`
 - `branch`: `codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract`
 - `worker_state`: `idle`

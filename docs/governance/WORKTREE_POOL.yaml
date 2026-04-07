@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-07T21:20:15+08:00'
+updated_at: '2026-04-07T21:35:57+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 slot_status_values:
@@ -18,25 +18,28 @@ slots:
   last_released_at: null
 - slot_id: worker-02
   worker_owner: worker-02
-  path: ../AX9.worktrees/worker-02
+  path: D:/Base One/Base-two/AX9.worktrees/worker-02
   status: idle
   current_task_id: null
-  branch: null
+  branch: codex/worker-02-idle
   last_claimed_at: null
   last_released_at: null
+  idle_branch: codex/worker-02-idle
 - slot_id: worker-03
   worker_owner: worker-03
-  path: ../AX9.worktrees/worker-03
+  path: D:/Base One/Base-two/AX9.worktrees/worker-03
   status: idle
   current_task_id: null
-  branch: null
+  branch: codex/worker-03-idle
   last_claimed_at: null
   last_released_at: null
+  idle_branch: codex/worker-03-idle
 - slot_id: worker-04
   worker_owner: worker-04
-  path: ../AX9.worktrees/worker-04
+  path: D:/Base One/Base-two/AX9.worktrees/worker-04
   status: idle
   current_task_id: null
-  branch: null
+  branch: codex/worker-04-idle
   last_claimed_at: null
   last_released_at: null
+  idle_branch: codex/worker-04-idle
