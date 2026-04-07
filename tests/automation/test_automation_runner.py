@@ -115,7 +115,7 @@ def _task_status_map(repo: Path, task_ids: list[str]) -> dict[str, str]:
     return {task_id: tasks[task_id] for task_id in task_ids}
 
 
-def _setup_parallel_parent(repo: Path, automation_mode: str, lane_count: int = 4) -> list[str]:
+def _setup_parallel_parent(repo: Path, automation_mode: str, lane_count: int = 2) -> list[str]:
     task_ids = [f"TASK-EXEC-{index:03d}" for index in range(1, lane_count + 1)]
     BUILDERS.set_live_task_mode(repo, automation_mode=automation_mode, lane_count=lane_count)
     BUILDERS.create_review_ready_children(repo, task_ids, write_path_prefix="src/exec")
@@ -236,7 +236,7 @@ def test_runner_once_succeeds_for_micro_task(tmp_path: Path) -> None:
             "done",
             "review",
             "[OK] prepared worktree for TASK-EXEC-001",
-            "[OK] auto-closed children: TASK-EXEC-001, TASK-EXEC-002, TASK-EXEC-003, TASK-EXEC-004",
+            "[OK] auto-closed children: TASK-EXEC-001, TASK-EXEC-002",
         ),
     ],
 )

@@ -445,6 +445,21 @@ def _clone_template_repo(template_repo: Path, destination: Path) -> None:
         )
     except subprocess.CalledProcessError:
         shutil.copytree(template_repo, destination)
+    remote_result = subprocess.run(
+        ["git", "remote"],
+        cwd=destination,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    if "origin" in remote_result.stdout.split():
+        subprocess.run(
+            ["git", "remote", "remove", "origin"],
+            cwd=destination,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
     _configure_test_repo_git_identity(destination)
 
 

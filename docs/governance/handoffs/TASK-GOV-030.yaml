@@ -1,28 +1,38 @@
 task_id: TASK-GOV-030
-summary_status: queued
-last_handoff_at: null
-completed_items: []
+summary_status: review
+last_handoff_at: '2026-04-07T08:56:59+08:00'
+completed_items:
+- Fixed child execution mirror allowance for DEVELOPMENT_ROADMAP in execution-context
+  repo checks.
+- Removed inherited origin remote from cloned governance test repos so publish tests
+  assert the intended remote state.
+- Reduced slow automation and governance hotspots by shrinking heavy-parent regression
+  fanout and replacing the 20-worktree cap test with synthetic active entries.
 remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+- Further governance-suite runtime reduction remains possible in continuation/parallel-closeout
+  paths.
+next_step: Review the scoped governance and test changes, then decide whether to pursue
+  a second slow-test optimization pass.
 next_tests:
-- python scripts/check_repo.py
-- python scripts/check_hygiene.py src scripts tests
-- python scripts/check_authority_alignment.py
-- pytest tests/governance/test_task_gov_018.py::test_stage7_scope_uses_governed_child_workflow
-  -q
-- pytest tests/governance/test_task_publish_ops.py -q
-- pytest tests/automation -q
-- pytest tests/governance -q
-current_risks: []
+- pytest tests/automation -q --durations=15
+- pytest tests/governance -q --durations=20
+current_risks:
+- Governance suite is green but still dominated by continuation and parallel closeout
+  integration-style tests above 3s each.
 candidate_write_paths:
-- docs/governance/
-- scripts/
-- tests/governance/
-- tests/automation/
-- README.md
+- scripts/governance_repo_checks.py
+- tests/governance/helpers.py
+- tests/automation/test_automation_runner.py
+- tests/governance/test_task_ops.py
+- tests/governance/test_task_ops_lane_limit.py
+- docs/governance/tasks/TASK-GOV-030.md
 candidate_test_paths:
 - tests/governance/
 - tests/automation/
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.
+- If slow-test work continues, prioritize continuation and parallel-closeout test
+  fixture reuse before touching production governance flow.
+- 'Worker finish summary: Repaired governance regressions, restored publish/child-workflow
+  tests to green, and reduced governance/automation suite runtime.'

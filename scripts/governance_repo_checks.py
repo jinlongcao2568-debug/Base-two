@@ -294,6 +294,7 @@ def _validate_modified_paths(
 ) -> None:
     execution_mirror_paths = {
         "docs/governance/CURRENT_TASK.yaml",
+        "docs/governance/DEVELOPMENT_ROADMAP.md",
         "docs/governance/TASK_REGISTRY.yaml",
         "docs/governance/WORKTREE_REGISTRY.yaml",
     }

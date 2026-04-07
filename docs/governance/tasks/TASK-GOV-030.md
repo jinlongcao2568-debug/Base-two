@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-030`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `review`
 - `stage`: `governance-red-green-and-slow-tests-v1`
 - `branch`: `feat/TASK-GOV-030-governance-red-green-slow-tests`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 - `lane_count`: `5`
 - `lane_index`: `null`
@@ -19,11 +19,23 @@
 - `successor_state`: `immediate`
 ## Primary Goals
 
-- to-be-filled
+- Restore the governance control-plane test chain to green by fixing the child execution prepare regression and the publish-flow fixture drift.
+- Reduce local feedback time for the governance and automation suites by removing avoidable repo/bootstrap overhead before touching broader behavior.
+- Keep the fix scoped to governance scripts, governance/automation tests, and operator-facing docs without changing stage1-stage9 business semantics.
 
 ## Explicitly Not Doing
 
-- to-be-filled
+- Do not modify `src/stage1_orchestration/` through `src/stage9_delivery/` business logic or contract semantics in this task.
+- Do not expand the publish feature set, add new automation capabilities, or change roadmap successor policy beyond what is required to restore existing tests.
+- Do not touch `docs/contracts/`, `db/migrations/`, or `tests/integration/`.
+
+## Acceptance Targets
+
+- `pytest tests/governance/test_task_gov_018.py::test_stage7_scope_uses_governed_child_workflow -q` passes.
+- `pytest tests/governance/test_task_publish_ops.py -q` passes.
+- `pytest tests/governance -q` passes.
+- `pytest tests/automation -q` remains green and completes faster than the current 2m33s baseline.
+- `python scripts/check_repo.py`, `python scripts/check_hygiene.py src scripts tests`, and `python scripts/check_authority_alignment.py` remain green after the repair.
 
 ## Allowed Dirs
 
@@ -64,22 +76,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `review`
+- `closeout_state`: `candidate_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `ready_for_review`
+- `remaining_scope`: `closeout_only`
+- `next_gate`: `closeout_decision`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `review`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `review_pending`
 - `topology`: `single_worker`
 - `lane_count`: `5`
 - `lane_index`: `null`
@@ -88,5 +99,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-030-governance-red-green-slow-tests`
-- `updated_at`: `2026-04-07T08:37:31+08:00`
+- `updated_at`: `2026-04-07T08:56:59+08:00`
 <!-- generated:task-meta:end -->
