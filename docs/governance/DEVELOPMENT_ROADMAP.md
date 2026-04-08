@@ -12,7 +12,7 @@ priority_order:
 business_automation_enabled: true
 business_automation_scope: stage1_to_stage9
 parallel_strategy: dependency_aware_disjoint_writes
-max_parallel_workers: 4
+max_parallel_workers: 9
 spec_source_policy: baseline_contracts_task_package
 business_gap_priority:
 - bootstrap_required

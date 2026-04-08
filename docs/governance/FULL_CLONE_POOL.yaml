@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-08T09:45:50+08:00'
+updated_at: '2026-04-08T10:01:24+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 root_path: D:/Base One/Base-two/AX9.clones
@@ -15,7 +15,7 @@ slots:
   status: active
   current_task_id: TASK-RM-STAGE1-CORE-CONTRACT
   idle_branch: codex/worker-01-idle
-  last_provisioned_at: '2026-04-08T09:45:45+08:00'
+  last_provisioned_at: '2026-04-08T10:00:57+08:00'
   last_claimed_at: '2026-04-07T21:20:11+08:00'
   last_released_at: null
 - slot_id: worker-02
@@ -24,7 +24,7 @@ slots:
   status: ready
   current_task_id: null
   idle_branch: codex/worker-02-idle
-  last_provisioned_at: '2026-04-08T09:45:47+08:00'
+  last_provisioned_at: '2026-04-08T10:00:59+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-03
@@ -33,7 +33,7 @@ slots:
   status: ready
   current_task_id: null
   idle_branch: codex/worker-03-idle
-  last_provisioned_at: '2026-04-08T09:45:48+08:00'
+  last_provisioned_at: '2026-04-08T10:01:00+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-04
@@ -42,6 +42,51 @@ slots:
   status: ready
   current_task_id: null
   idle_branch: codex/worker-04-idle
-  last_provisioned_at: '2026-04-08T09:45:50+08:00'
+  last_provisioned_at: '2026-04-08T10:01:02+08:00'
+  last_claimed_at: null
+  last_released_at: null
+- slot_id: worker-05
+  path: D:/Base One/Base-two/AX9.clones/worker-05
+  branch: codex/worker-05-idle
+  status: ready
+  current_task_id: null
+  idle_branch: codex/worker-05-idle
+  last_provisioned_at: '2026-04-08T10:01:07+08:00'
+  last_claimed_at: null
+  last_released_at: null
+- slot_id: worker-06
+  path: D:/Base One/Base-two/AX9.clones/worker-06
+  branch: codex/worker-06-idle
+  status: ready
+  current_task_id: null
+  idle_branch: codex/worker-06-idle
+  last_provisioned_at: '2026-04-08T10:01:11+08:00'
+  last_claimed_at: null
+  last_released_at: null
+- slot_id: worker-07
+  path: D:/Base One/Base-two/AX9.clones/worker-07
+  branch: codex/worker-07-idle
+  status: ready
+  current_task_id: null
+  idle_branch: codex/worker-07-idle
+  last_provisioned_at: '2026-04-08T10:01:15+08:00'
+  last_claimed_at: null
+  last_released_at: null
+- slot_id: worker-08
+  path: D:/Base One/Base-two/AX9.clones/worker-08
+  branch: codex/worker-08-idle
+  status: ready
+  current_task_id: null
+  idle_branch: codex/worker-08-idle
+  last_provisioned_at: '2026-04-08T10:01:19+08:00'
+  last_claimed_at: null
+  last_released_at: null
+- slot_id: worker-09
+  path: D:/Base One/Base-two/AX9.clones/worker-09
+  branch: codex/worker-09-idle
+  status: ready
+  current_task_id: null
+  idle_branch: codex/worker-09-idle
+  last_provisioned_at: '2026-04-08T10:01:24+08:00'
   last_claimed_at: null
   last_released_at: null

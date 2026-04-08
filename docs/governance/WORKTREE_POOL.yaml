@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-08T08:26:09+08:00'
+updated_at: '2026-04-08T10:01:01+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 slot_status_values:
@@ -43,3 +43,48 @@ slots:
   last_claimed_at: null
   last_released_at: null
   idle_branch: codex/worker-04-idle
+- slot_id: worker-05
+  worker_owner: worker-05
+  path: D:/Base One/Base-two/AX9.worktrees/worker-05
+  status: idle
+  current_task_id: null
+  branch: codex/worker-05-idle
+  last_claimed_at: null
+  last_released_at: null
+  idle_branch: codex/worker-05-idle
+- slot_id: worker-06
+  worker_owner: worker-06
+  path: D:/Base One/Base-two/AX9.worktrees/worker-06
+  status: idle
+  current_task_id: null
+  branch: codex/worker-06-idle
+  last_claimed_at: null
+  last_released_at: null
+  idle_branch: codex/worker-06-idle
+- slot_id: worker-07
+  worker_owner: worker-07
+  path: D:/Base One/Base-two/AX9.worktrees/worker-07
+  status: idle
+  current_task_id: null
+  branch: codex/worker-07-idle
+  last_claimed_at: null
+  last_released_at: null
+  idle_branch: codex/worker-07-idle
+- slot_id: worker-08
+  worker_owner: worker-08
+  path: D:/Base One/Base-two/AX9.worktrees/worker-08
+  status: idle
+  current_task_id: null
+  branch: codex/worker-08-idle
+  last_claimed_at: null
+  last_released_at: null
+  idle_branch: codex/worker-08-idle
+- slot_id: worker-09
+  worker_owner: worker-09
+  path: D:/Base One/Base-two/AX9.worktrees/worker-09
+  status: idle
+  current_task_id: null
+  branch: codex/worker-09-idle
+  last_claimed_at: null
+  last_released_at: null
+  idle_branch: codex/worker-09-idle
