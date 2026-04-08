@@ -1,0 +1,29 @@
+task_id: TASK-GOV-048
+summary_status: done
+last_handoff_at: '2026-04-08T09:24:21+08:00'
+completed_items:
+- Rewrote `AUTOMATION_INTENTS.yaml` to define fixed coordinator, task-window, review-window, and explicit recovery phrases.
+- Added `review_candidate_pool.py` and routed the review-window phrase to candidate/task audit output.
+- Added explicit `恢复：TASK-...` parsing without heuristic guessing.
+- Updated automation intent tests and fixtures to the final phrase set.
+remaining_items: []
+next_step: No further implementation is required for phrase standardization; use the fixed phrases or direct commands.
+next_tests:
+- pytest tests/governance/test_automation_intent.py -q
+- python scripts/check_repo.py
+current_risks:
+- TASK-GOV-049 remains a queued backlog stub created earlier and is not part of the active implementation bundle.
+candidate_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+candidate_test_paths:
+- tests/governance/
+- tests/automation/
+resume_notes:
+- Task activated through queue-and-activate branch_action=created.
+- Coordinator phrase is `协调窗口：定时更新候选池`.
+- Task-window phrase is `任务窗口：领取任务执行完毕持续领取持续开发`.
+- Explicit recovery phrase is `恢复：TASK-XXXX`.
+- Task closed.

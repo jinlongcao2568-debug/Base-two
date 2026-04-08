@@ -36,9 +36,13 @@ from task_publish_ops import PUBLISH_ACTIONS, publish_preflight
 from task_rendering import find_task
 from roadmap_claim_next import claim_next
 from worker_self_loop import preview_worker_action
+from review_candidate_pool import review_pool
+from control_plane_root import resolve_control_plane_root
+from roadmap_candidate_maintainer import refresh_once
 
 
 INTENTS_FILE = Path("docs/governance/AUTOMATION_INTENTS.yaml")
+RECOVER_TASK_PATTERN = re.compile(r"^恢复[:：]\s*(TASK-[A-Z0-9-]+)$", re.IGNORECASE)
 NORMALIZE_PATTERN = re.compile(r"[\s\-_，。！？!?,.;；：:\"'`()（）【】\[\]<>《》/\\]+")
 
 
@@ -79,6 +83,12 @@ def _generic_continue_detected(catalog: dict[str, Any], normalized_text: str) ->
 
 
 def _recognize_intent(root: Path, catalog: dict[str, Any], utterance: str) -> tuple[dict[str, Any] | None, str | None, str]:
+    recover_match = RECOVER_TASK_PATTERN.match(utterance.strip())
+    if recover_match:
+        intent = _intent_map(catalog).get("recover-task-explicit")
+        if intent is not None:
+            task_id = recover_match.group(1).upper()
+            return intent, task_id, f"精确匹配到显式恢复任务 `{task_id}`。"
     normalized_text = _normalize_text(utterance)
     if not normalized_text:
         return None, None, "输入为空，无法识别自动化意图。"
@@ -345,6 +355,24 @@ def _preflight_claim_next(root: Path, intent: dict[str, Any], matched_phrase: st
     }
 
 
+def _preflight_worker_recover(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    decision = preview_worker_action(root, explicit_task_id=matched_phrase)
+    return {
+        "status": decision["status"],
+        "matched_phrase": matched_phrase,
+        "intent_id": intent["intent_id"],
+        "mapped_command": f"python scripts/worker_self_loop.py once --task-id {matched_phrase}",
+        "explanation": decision["explanation"],
+        "blockers": list(decision.get("blockers") or []),
+        "closeout_recommendation": None,
+        "recovery_pack": None,
+        "recovery_source": None,
+        "recovery_warnings": [],
+        "worker_loop_decision": decision,
+        "resolved_task_id": matched_phrase,
+    }
+
+
 def _preflight_worker_self_loop(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
     decision = preview_worker_action(root)
     return {
@@ -359,6 +387,44 @@ def _preflight_worker_self_loop(root: Path, intent: dict[str, Any], matched_phra
         "recovery_source": None,
         "recovery_warnings": [],
         "worker_loop_decision": decision,
+    }
+
+
+def _preflight_review_candidate_pool(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    control_root = resolve_control_plane_root(root)
+    payload = review_pool(control_root)
+    payload.update(
+        {
+            "matched_phrase": matched_phrase,
+            "intent_id": intent["intent_id"],
+            "mapped_command": intent["mapped_command"],
+            "closeout_recommendation": None,
+            "recovery_pack": None,
+            "recovery_source": None,
+            "recovery_warnings": [],
+        }
+    )
+    return payload
+
+
+def _preflight_coordinator_refresh(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    control_root = resolve_control_plane_root(root)
+    summary = refresh_once(control_root)
+    return {
+        "status": "ready",
+        "matched_phrase": matched_phrase,
+        "intent_id": intent["intent_id"],
+        "mapped_command": intent["mapped_command"],
+        "explanation": (
+            f"候选池已刷新：ready={summary['ready_count']} waiting={summary['waiting_count']} "
+            f"top={summary['top_candidate_id']}"
+        ),
+        "blockers": [],
+        "closeout_recommendation": None,
+        "recovery_pack": None,
+        "recovery_source": None,
+        "recovery_warnings": [],
+        "candidate_summary": summary,
     }
 
 
@@ -382,8 +448,9 @@ def _preflight_publish_action(root: Path, intent: dict[str, Any], matched_phrase
 
 
 def preflight(root: Path, utterance: str) -> dict[str, Any]:
-    catalog = _load_catalog(root)
-    intent, matched_phrase, explanation = _recognize_intent(root, catalog, utterance)
+    control_root = resolve_control_plane_root(root)
+    catalog = _load_catalog(control_root)
+    intent, matched_phrase, explanation = _recognize_intent(control_root, catalog, utterance)
     if intent is None:
         return {
             "status": "unsupported",
@@ -399,8 +466,14 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)
+    if intent["intent_id"] == "coordinator-refresh-loop":
+        return _preflight_coordinator_refresh(root, intent, matched_phrase)
+    if intent["intent_id"] == "recover-task-explicit":
+        return _preflight_worker_recover(root, intent, matched_phrase)
     if intent["intent_id"] == "worker-self-loop":
         return _preflight_worker_self_loop(root, intent, matched_phrase)
+    if intent["intent_id"] == "review-candidate-pool":
+        return _preflight_review_candidate_pool(root, intent, matched_phrase)
     if intent["intent_id"] == "claim-next":
         return _preflight_claim_next(root, intent, matched_phrase)
     if intent["intent_id"] in {"continue-roadmap", "continue-roadmap-loop"}:
@@ -420,20 +493,26 @@ def _command_argv(intent: dict[str, Any]) -> list[str]:
 
 
 def execute(root: Path, utterance: str) -> int:
-    catalog = _load_catalog(root)
+    control_root = resolve_control_plane_root(root)
+    catalog = _load_catalog(control_root)
     preflight_result = preflight(root, utterance)
     if preflight_result["status"] != "ready":
         print(json.dumps(preflight_result, ensure_ascii=False, indent=2))
         return 1
 
     intent = _intent_map(catalog)[preflight_result["intent_id"]]
+    if preflight_result["intent_id"] == "recover-task-explicit":
+        argv = [sys.executable, "scripts/worker_self_loop.py", "once", "--task-id", preflight_result["resolved_task_id"]]
+    else:
+        argv = _command_argv(intent)
+    execution_root = root if preflight_result["intent_id"] in {"worker-self-loop", "recover-task-explicit"} else resolve_control_plane_root(root)
     print(
         f"[OK] automation-intent resolved `{preflight_result['intent_id']}` "
         f"from `{preflight_result['matched_phrase']}`"
     )
     result = subprocess.run(
-        _command_argv(intent),
-        cwd=root,
+        argv,
+        cwd=execution_root,
         text=True,
         capture_output=True,
         encoding="utf-8",

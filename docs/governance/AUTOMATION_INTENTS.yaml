@@ -1,5 +1,5 @@
-version: "1.2"
-updated_at: "2026-04-08T08:00:00+08:00"
+version: "1.3"
+updated_at: "2026-04-08T09:40:00+08:00"
 authority_source: docs/governance/OPERATOR_MANUAL.md
 recognition_mode: heuristic_free_form
 ambiguity_policy: block_on_successor_switch_ambiguity
@@ -10,6 +10,88 @@ generic_continue_signals:
   - 继续开发
   - 继续推进
 supported_intents:
+  - intent_id: coordinator-refresh-loop
+    canonical_phrase: 协调窗口：定时更新候选池
+    mapped_command: python scripts/roadmap_candidate_maintainer.py --loop --interval-seconds 60
+    command_argv:
+      - python
+      - scripts/roadmap_candidate_maintainer.py
+      - --loop
+      - --interval-seconds
+      - "60"
+    description: Coordination window loop for periodic candidate pool refresh.
+    examples:
+      - 协调窗口：定时更新候选池
+    action_any:
+      - 更新
+      - 刷新
+      - 定时更新
+    context_any:
+      - 协调窗口
+      - 候选池
+    disallow_any:
+      - 当前窗口
+      - 恢复
+  - intent_id: task-window-loop
+    canonical_phrase: 任务窗口：领取任务执行完毕持续领取持续开发
+    mapped_command: python scripts/worker_self_loop.py loop --interval-seconds 60
+    command_argv:
+      - python
+      - scripts/worker_self_loop.py
+      - loop
+      - --interval-seconds
+      - "60"
+    description: Task window loop: continue current task, close when ready, then claim the next task.
+    examples:
+      - 任务窗口：领取任务执行完毕持续领取持续开发
+      - 任务窗口：持续干活
+    action_any:
+      - 领取任务
+      - 持续领取
+      - 持续开发
+      - 持续干活
+    context_any:
+      - 任务窗口
+      - 当前窗口
+      - worker
+      - clone
+    disallow_any:
+      - 路线图
+      - 候选池
+      - 审查窗口
+  - intent_id: review-candidate-pool
+    canonical_phrase: 审查窗口：候选池有没有出错或者不合理或者开发上遗漏或不兼容，排查哪些任务是执行一半未完成
+    mapped_command: python scripts/review_candidate_pool.py
+    command_argv:
+      - python
+      - scripts/review_candidate_pool.py
+    description: Review window audit for candidate pool, stale claims, and incomplete execution tasks.
+    examples:
+      - 审查窗口：候选池有没有出错或者不合理或者开发上遗漏或不兼容，排查哪些任务是执行一半未完成
+      - 审查窗口：检查候选池和未完成任务
+    action_any:
+      - 审查
+      - 检查
+      - 排查
+    context_any:
+      - 审查窗口
+      - 候选池
+      - 未完成任务
+      - 不兼容
+      - 执行一半
+    disallow_any:
+      - 领取任务
+      - 持续开发
+  - intent_id: recover-task-explicit
+    canonical_phrase: 恢复：TASK-XXXX
+    mapped_command: python scripts/worker_self_loop.py once --task-id TASK-XXXX
+    command_argv:
+      - python
+      - scripts/worker_self_loop.py
+      - once
+    description: Explicit worker recovery command; the task id is extracted from the utterance.
+    examples:
+      - 恢复：TASK-RM-STAGE1-CORE-CONTRACT
   - intent_id: continue-current
     canonical_phrase: 继续当前任务
     mapped_command: python scripts/task_ops.py continue-current
@@ -33,34 +115,8 @@ supported_intents:
       - 这个任务
     disallow_any:
       - 路线图
-      - 总路线图
       - 候选池
       - 下一个任务
-  - intent_id: worker-self-loop
-    canonical_phrase: 恢复当前窗口任务
-    mapped_command: python scripts/worker_self_loop.py once
-    command_argv:
-      - python
-      - scripts/worker_self_loop.py
-      - once
-    description: Resume or advance the task bound to the current full clone worker window.
-    examples:
-      - 恢复当前窗口任务
-      - 继续当前窗口任务
-      - 当前窗口持续开发
-    action_any:
-      - 恢复
-      - 继续
-      - 持续开发
-    context_any:
-      - 当前窗口
-      - 当前窗口任务
-      - worker
-      - clone
-    disallow_any:
-      - 路线图
-      - 总路线图
-      - 候选池
   - intent_id: continue-roadmap
     canonical_phrase: 按路线图继续推进
     mapped_command: python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees
@@ -70,7 +126,7 @@ supported_intents:
       - once
       - --continue-roadmap
       - --prepare-worktrees
-    description: Continue by roadmap with the legacy coordination runner.
+    description: Legacy roadmap continuation entrypoint.
     examples:
       - 按路线图继续推进
       - 继续按路线图开发
@@ -97,7 +153,6 @@ supported_intents:
       - claim-next
       - --promote-task
     description: Highest-priority roadmap claim for the coordination window.
-    planner_preflight_hint: Use claim-next before free-form successor inference when the user asks to keep developing by roadmap.
     examples:
       - 持续按路线图开发
       - 持续按路线图推进
@@ -120,7 +175,6 @@ supported_intents:
     disallow_any:
       - 当前任务
       - 当前窗口
-      - 当前窗口任务
   - intent_id: continue-roadmap-loop
     canonical_phrase: 持续按路线图循环推进
     mapped_command: python scripts/automation_runner.py loop --continue-roadmap --prepare-worktrees
@@ -155,7 +209,6 @@ supported_intents:
     description: Commit task-scoped results when publish preflight passes.
     examples:
       - 提交当前任务成果
-      - 提交当前成果
   - intent_id: push-task-branch
     canonical_phrase: 推送当前任务分支
     mapped_command: python scripts/task_ops.py push-task-branch
@@ -166,7 +219,6 @@ supported_intents:
     description: Push the current task branch when publish preflight passes.
     examples:
       - 推送当前任务分支
-      - 推送当前分支
   - intent_id: create-task-pr
     canonical_phrase: 为当前任务开PR
     mapped_command: python scripts/task_ops.py create-task-pr
@@ -177,8 +229,6 @@ supported_intents:
     description: Create a draft PR for the current task branch after preflight passes.
     examples:
       - 为当前任务开PR
-      - 为当前分支开PR
-      - 创建当前任务PR
   - intent_id: publish-task-results
     canonical_phrase: 发布当前任务成果
     mapped_command: python scripts/task_ops.py publish-task-results
@@ -189,4 +239,3 @@ supported_intents:
     description: Commit, push, and create a draft PR for the current task branch when all publish gates pass.
     examples:
       - 发布当前任务成果
-      - 发布当前成果
