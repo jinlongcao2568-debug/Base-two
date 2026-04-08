@@ -5,6 +5,7 @@ import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import os
 import socket
 import subprocess
 import sys
@@ -41,6 +42,9 @@ def _console_url(host: str, port: int) -> str:
 
 def _run_task_ops(*args: str) -> dict[str, Any]:
     root = _repo_root()
+    creationflags = 0
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        creationflags = subprocess.CREATE_NO_WINDOW
     result = subprocess.run(
         [sys.executable, str(_script_dir() / "task_ops.py"), *args],
         cwd=root,
@@ -48,6 +52,7 @@ def _run_task_ops(*args: str) -> dict[str, Any]:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        creationflags=creationflags,
     )
     return {
         "argv": ["python", "scripts/task_ops.py", *args],
@@ -431,13 +436,19 @@ def start_console(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, *, open_br
     url = _console_url(host, port)
     if _port_in_use(host, port):
         if open_browser:
-            webbrowser.open(url)
+            if os.name == "nt":
+                os.startfile(url)
+            else:
+                webbrowser.open(url)
         print(f"[OK] governance console already running at {url}")
         return 0
 
     server = ThreadingHTTPServer((host, port), GovernanceConsoleHandler)
     if open_browser:
-        webbrowser.open(url)
+        if os.name == "nt":
+            os.startfile(url)
+        else:
+            webbrowser.open(url)
     print(f"[OK] governance console serving at {url}")
     try:
         server.serve_forever()

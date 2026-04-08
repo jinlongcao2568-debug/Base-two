@@ -1,0 +1,33 @@
+task_id: TASK-GOV-062
+summary_status: doing
+last_handoff_at: '2026-04-08T17:29:13+08:00'
+completed_items:
+- Hardened governance console task subprocesses with Windows no-window creation flags
+- Switched console browser launch to Windows-native startfile path
+- Replaced desktop shortcut target with hidden VBS launcher at C:/Users/92407/Desktop/AX9
+  Governance Console.lnk
+remaining_items:
+- Commit the governed task-scoped changes on the task branch
+next_step: Close the no-window hardening task and keep using the desktop shortcut
+  for launch.
+next_tests:
+- pytest tests/governance/test_governance_console.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-062.md
+- docs/governance/runlogs/TASK-GOV-062-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-062.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/CURRENT_TASK.yaml
+- scripts/governance_console.py
+- scripts/governance_console_launcher.vbs
+- tests/governance/test_governance_console.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=current.
+- Handoff recorded by session `019d6b2c-8952-7a63-a3bc-0c8506875a95`.
+- ai_guarded closeout candidate
+- 'Hidden launcher: scripts/governance_console_launcher.vbs'

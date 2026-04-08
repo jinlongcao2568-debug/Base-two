@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "scripts") not in sys.path:
@@ -27,3 +28,20 @@ def test_run_task_ops_returns_structured_result() -> None:
 
 def test_console_url_is_localhost() -> None:
     assert console._console_url("127.0.0.1", 8765) == "http://127.0.0.1:8765/"
+
+
+def test_run_task_ops_uses_hidden_subprocess_on_windows(monkeypatch) -> None:
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return Result()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    console._run_task_ops("review-candidate-pool")
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
