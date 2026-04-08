@@ -31,6 +31,7 @@ from task_lifecycle_ops import (
 )
 from task_orchestration_ops import cmd_orchestration_status
 from roadmap_candidate_index import cmd_plan_roadmap_candidates
+from roadmap_candidate_compiler import cmd_compile as cmd_compile_roadmap_candidates
 from roadmap_claim_next import cmd_claim_next
 from roadmap_execution_closeout import main as roadmap_closeout_main, close_ready_execution_tasks
 from full_clone_pool import cmd_provision_full_clone_pool
@@ -66,6 +67,9 @@ def add_coordination_commands(subparsers) -> None:
     roadmap_candidates_parser = subparsers.add_parser("plan-roadmap-candidates")
     roadmap_candidates_parser.add_argument("--output", default=".codex/local/roadmap_candidates/index.yaml")
     roadmap_candidates_parser.set_defaults(func=cmd_plan_roadmap_candidates)
+
+    compile_candidates_parser = subparsers.add_parser("compile-roadmap-candidates")
+    compile_candidates_parser.set_defaults(func=cmd_compile_roadmap_candidates)
 
     refresh_candidates_parser = subparsers.add_parser("refresh-roadmap-candidates")
     refresh_candidates_parser.add_argument("--loop", action="store_true")

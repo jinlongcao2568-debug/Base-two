@@ -41,6 +41,7 @@ required_top_level_fields:
 - updated_at
 - authority_source
 - scheduler_policy
+- compiler_policy
 - stages
 - candidates
 
@@ -82,6 +83,15 @@ candidate_field_rules:
   module_id:
     type: string
     requirement: must match MODULE_MAP module_id when business-facing
+  candidate_intent:
+    type: string
+    requirement: required for compiler-generated candidates so dispatch and review can distinguish formal roots, preview roots, slices, and gates
+  root_kind:
+    type: string
+    requirement: required for compiler-generated candidates to distinguish formal_root, preview_root, child_slice, integration_gate, and hard_gate
+  release_evidence:
+    type: list
+    requirement: compiler-generated reasons explaining which upstream evidence must be satisfied before release
   candidate_kind:
     type: enum
     values:
@@ -185,6 +195,22 @@ candidate_field_rules:
     - clean_worktree_takeover
     - scoped_dirty_checkpoint
     - out_of_scope_dirty_policy
+
+compiler_policy_rules:
+  mode:
+    values:
+    - inline_candidates
+    - module_graph_compiler
+  compiled_graph_file:
+    type: string
+    requirement: required when mode is module_graph_compiler
+  graph_version:
+    type: string
+    requirement: required when mode is module_graph_compiler
+  fallback_mode:
+    values:
+    - blocked_when_stale
+    - inline_only
 
 hard_gate_rules:
 - dependency_gate

@@ -30,12 +30,19 @@ scheduler_policy:
   natural_language_intent: [持续按路线图开发]
   candidate_refresh_mode: locked_refresh_before_claim
   claim_capacity_source: docs/governance/TASK_POLICY.yaml#roadmap_scheduler.max_active_claims_v1
+  dispatch_authority: compiled_candidate_graph
   single_writer_roots:
   - db/migrations/
   - src/stage6_facts/
   - src/stage7_sales/
   - src/stage8_contact/
   - src/stage9_delivery/
+
+compiler_policy:
+  mode: module_graph_compiler
+  compiled_graph_file: .codex/local/roadmap_candidates/compiled.yaml
+  graph_version: roadmap_compiled_graph_v1
+  fallback_mode: blocked_when_stale
 
 stages:
 - stage: stage1

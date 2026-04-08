@@ -683,13 +683,18 @@ def test_continue_roadmap_caps_business_children_at_four(tmp_path: Path) -> None
 
     result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task_policy = read_yaml(repo / "docs/governance/TASK_POLICY.yaml")
     parent = next(task for task in registry["tasks"] if task["task_id"].startswith("TASK-AUTO-"))
     children = [task for task in registry["tasks"] if task.get("parent_task_id") == parent["task_id"]]
+    expected_count = min(
+        6,
+        int(task_policy["size_classes"]["heavy"]["dynamic_lane_ceiling_v1"]),
+    )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert len(children) == 4
-    assert parent["lane_count"] == 4
-    assert parent["parallelism_plan_id"] == f"plan-{parent['task_id']}-4"
-    assert [child["lane_index"] for child in children] == [1, 2, 3, 4]
-    assert all(child["lane_count"] == 4 for child in children)
-    assert all(child["parallelism_plan_id"] == f"plan-{parent['task_id']}-4" for child in children)
+    assert len(children) == expected_count
+    assert parent["lane_count"] == expected_count
+    assert parent["parallelism_plan_id"] == f"plan-{parent['task_id']}-{expected_count}"
+    assert [child["lane_index"] for child in children] == list(range(1, expected_count + 1))
+    assert all(child["lane_count"] == expected_count for child in children)
+    assert all(child["parallelism_plan_id"] == f"plan-{parent['task_id']}-{expected_count}" for child in children)

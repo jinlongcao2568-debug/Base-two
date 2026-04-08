@@ -8,6 +8,7 @@ from typing import Any
 
 from control_plane_root import FULL_CLONE_POOL_FILE, load_full_clone_pool, resolve_control_plane_root
 from governance_lib import configure_utf8_stdio, dump_yaml, find_repo_root, load_yaml
+from roadmap_candidate_compiler import write_compiled_roadmap_candidates
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
 from roadmap_claim_next import CLAIMS_FILE
 
@@ -28,6 +29,7 @@ def _count_status(items: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def refresh_once(root: Path) -> dict[str, Any]:
+    write_compiled_roadmap_candidates(root)
     index = build_roadmap_candidate_index(root)
     dump_yaml(root / ROADMAP_CANDIDATES_FILE, index)
     claims = _load_optional(root / CLAIMS_FILE)

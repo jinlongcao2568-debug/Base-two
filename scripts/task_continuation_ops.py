@@ -28,6 +28,7 @@ from governance_lib import (
     load_task_policy,
     load_task_registry,
     load_worktree_registry,
+    load_yaml,
     sync_task_artifacts,
     task_map,
     task_required_tests_for_matrix,
@@ -55,6 +56,7 @@ from task_rendering import (
     upsert_coordination_entry,
 )
 from task_publish_ops import checkpoint_preflight, checkpoint_task_results
+from roadmap_claim_next import claim_next
 
 
 ADVANCE_MODE_VALUES = {"explicit_or_generated"}
@@ -63,6 +65,7 @@ PRIORITY_VALUES = {"governance_automation", "authority_chain", "business_automat
 
 AUTOPILOT_CAPABILITY_ID = "roadmap_autopilot_continuation"
 AUTOPILOT_BLUEPRINT_ID = "roadmap_autopilot_continuation"
+ROADMAP_BACKLOG_FILE = "docs/governance/ROADMAP_BACKLOG.yaml"
 
 
 def _record_runtime_event(root, **kwargs) -> None:
@@ -358,6 +361,8 @@ def _resolve_generated_successor(
     policy: dict[str, Any],
     current_task_id: str | None,
 ):
+    if _compiled_roadmap_dispatch_enabled(root):
+        return None
     if not policy["auto_create_missing_task"]:
         return None
     for gap_type in policy["priority_order"]:
@@ -662,6 +667,19 @@ def _handle_no_successor_continue_roadmap(
     current_payload: dict[str, Any],
     current_task: dict[str, Any] | None,
 ) -> int:
+    if _compiled_roadmap_dispatch_enabled(root):
+        closeout_result = _maybe_close_without_successor(
+            root,
+            registry,
+            worktrees,
+            current_payload,
+            current_task,
+        )
+        if closeout_result is not None:
+            return _claim_roadmap_candidate_via_claim_next(root)
+        if current_task is None and is_idle_current_payload(current_payload):
+            return _claim_roadmap_candidate_via_claim_next(root)
+        raise GovernanceError("current task is still active; continue-roadmap cannot switch until ai_guarded closeout is ready")
     if current_task is None and is_idle_current_payload(current_payload):
         raise GovernanceError("no successor is available for continue-roadmap from idle control plane")
     closeout_result = _maybe_close_without_successor(
@@ -698,6 +716,10 @@ def _advance_continue_roadmap(
     current_payload: dict[str, Any],
     current_task: dict[str, Any] | None,
 ) -> int:
+    if _compiled_roadmap_dispatch_enabled(root):
+        if current_task is not None:
+            _close_to_idle_when_no_successor(root, registry, worktrees, current_payload, current_task)
+        return _claim_roadmap_candidate_via_claim_next(root)
     frontmatter, body = _read_roadmap_state(root)
     lease = _claim_continue_roadmap_lease(
         root,
@@ -892,6 +914,43 @@ def _dirty_for_continuation_context(
     return classify_unscoped_dirty_state(root), None
 
 
+def _compiled_roadmap_dispatch_enabled(root) -> bool:
+    backlog_path = root / ROADMAP_BACKLOG_FILE
+    if not backlog_path.exists():
+        return False
+    backlog = load_yaml(backlog_path) or {}
+    scheduler_policy = backlog.get("scheduler_policy") or {}
+    compiler_policy = backlog.get("compiler_policy") or {}
+    return (
+        str(scheduler_policy.get("dispatch_authority") or "") == "compiled_candidate_graph"
+        and str(compiler_policy.get("mode") or "") == "module_graph_compiler"
+    )
+
+
+def _claim_roadmap_candidate_via_claim_next(root) -> int:
+    args = argparse.Namespace(
+        write_claim=False,
+        promote_task=True,
+        worktree_root=None,
+        worker_owner=None,
+        dispatch_target="worktree_pool",
+        full_clone_slot_id=None,
+        window_id="continue-roadmap",
+        lease_minutes=30,
+        now=None,
+    )
+    selected, blocked = claim_next(root, args)
+    if selected is None:
+        reason = "; ".join(blocked[0]["blockers"]) if blocked else "no roadmap candidates are available"
+        raise GovernanceError(reason)
+    print(
+        f"[OK] continue-roadmap claimed roadmap candidate {selected['candidate_id']} "
+        f"task_id_hint={selected['task_id_hint']} takeover_mode={selected.get('takeover_mode', 'none')}"
+    )
+    return 0
+    return classify_unscoped_dirty_state(root), None
+
+
 def _base_continuation_readiness(dirty: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": "blocked",
@@ -1024,6 +1083,27 @@ def _preview_continuation_successor(
     current_payload: dict[str, Any],
     current_task: dict[str, Any] | None,
 ) -> None:
+    if _compiled_roadmap_dispatch_enabled(root):
+        if current_task is None or (current_payload.get("status") in {"doing", "review"} and not blockers):
+            args = argparse.Namespace(
+                write_claim=False,
+                promote_task=False,
+                worktree_root=None,
+                worker_owner=None,
+                dispatch_target="worktree_pool",
+                full_clone_slot_id=None,
+                window_id="continue-roadmap-preview",
+                lease_minutes=30,
+                now=None,
+            )
+            selected, blocked_candidates = claim_next(root, args)
+            if selected is not None:
+                readiness["next_successor_task_id"] = selected["task_id_hint"]
+                readiness["successor_source"] = "roadmap_candidate_graph"
+                return
+            if blocked_candidates:
+                blockers.append("; ".join(blocked_candidates[0]["blockers"]))
+            return
     current_task_id = current_task["task_id"] if current_task is not None and not is_idle_current_payload(current_payload) else None
     try:
         successor, source = _resolve_roadmap_successor(

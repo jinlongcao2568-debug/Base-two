@@ -123,6 +123,7 @@ def _write_backlog(repo: Path, candidates: list[dict]) -> None:
             "updated_at": "2026-04-08T00:00:00+08:00",
             "authority_source": "docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md",
             "defaults": {"legacy_reserved_paths_map_to": "forbidden_write_paths"},
+            "compiler_policy": {"mode": "inline_candidates"},
             "scheduler_policy": {
                 "entrypoint": "claim-next",
                 "claim_capacity_source": "docs/governance/TASK_POLICY.yaml#roadmap_scheduler.max_active_claims_v1",

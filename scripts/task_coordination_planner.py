@@ -18,6 +18,7 @@ from governance_lib import (
     load_task_policy,
     load_task_registry,
     load_worktree_registry,
+    load_yaml,
     read_roadmap,
     sync_task_artifacts,
     task_parallelism_plan,
@@ -39,6 +40,20 @@ from task_rendering import (
 PLANNER_POLICY_FILE = Path("docs/governance/COORDINATION_PLANNER_POLICY.yaml")
 CANDIDATES_DIR = Path(".codex/local/coordination_candidates")
 INDEX_FILE = "index.yaml"
+ROADMAP_BACKLOG_FILE = Path("docs/governance/ROADMAP_BACKLOG.yaml")
+
+
+def _compiled_roadmap_dispatch_enabled(root: Path) -> bool:
+    backlog_path = root / ROADMAP_BACKLOG_FILE
+    if not backlog_path.exists():
+        return False
+    backlog = load_yaml(backlog_path) or {}
+    scheduler_policy = backlog.get("scheduler_policy") or {}
+    compiler_policy = backlog.get("compiler_policy") or {}
+    return (
+        str(scheduler_policy.get("dispatch_authority") or "") == "compiled_candidate_graph"
+        and str(compiler_policy.get("mode") or "") == "module_graph_compiler"
+    )
 
 
 def load_planner_policy(root: Path) -> dict[str, Any]:
@@ -161,6 +176,9 @@ def _build_blueprint_candidate(
     task_policy: dict[str, Any],
     capability_map: dict[str, Any],
 ) -> dict[str, Any] | None:
+    root = find_repo_root()
+    if _compiled_roadmap_dispatch_enabled(root):
+        return None
     if not _autopilot_capability_open(capability_map):
         return None
     blueprint = next(

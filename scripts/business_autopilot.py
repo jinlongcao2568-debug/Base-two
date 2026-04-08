@@ -9,6 +9,7 @@ from governance_lib import (
     iso_now,
     load_capability_map,
     load_module_map,
+    load_yaml,
     task_required_tests_for_matrix,
     validate_task,
 )
@@ -107,6 +108,19 @@ CONTRACT_INPUTS_BY_MODULE = {
         "docs/contracts/customer_delivery_field_blacklist.yaml",
     ],
 }
+
+
+def _compiled_roadmap_dispatch_enabled(root) -> bool:
+    backlog_path = root / "docs/governance/ROADMAP_BACKLOG.yaml"
+    if not backlog_path.exists():
+        return False
+    backlog = load_yaml(backlog_path) or {}
+    scheduler_policy = backlog.get("scheduler_policy") or {}
+    compiler_policy = backlog.get("compiler_policy") or {}
+    return (
+        str(scheduler_policy.get("dispatch_authority") or "") == "compiled_candidate_graph"
+        and str(compiler_policy.get("mode") or "") == "module_graph_compiler"
+    )
 
 
 def _automatable_stage_ids(scope: str) -> tuple[str, ...]:
@@ -425,6 +439,8 @@ def _build_child_task(
 
 
 def build_business_successor_round(root, registry: dict[str, Any], task_policy: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], str] | None:
+    if _compiled_roadmap_dispatch_enabled(root):
+        return None
     frontmatter = {}
     from governance_lib import read_roadmap
 

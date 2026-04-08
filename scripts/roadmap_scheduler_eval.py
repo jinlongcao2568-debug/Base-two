@@ -18,6 +18,7 @@ from governance_lib import (
     load_yaml,
 )
 from child_execution_flow import transient_child_paths
+from roadmap_candidate_compiler import COMPILED_GRAPH_FILE, GRAPH_VERSION
 
 
 ROADMAP_BACKLOG_FILE = Path("docs/governance/ROADMAP_BACKLOG.yaml")
@@ -132,6 +133,56 @@ def _load_claims(root: Path) -> dict[str, Any]:
     payload = _load_yaml_map(root / CLAIMS_FILE, missing_ok=True)
     payload.setdefault("claims", [])
     return payload
+
+
+def _compiler_policy(backlog: dict[str, Any]) -> dict[str, Any]:
+    policy = backlog.get("compiler_policy") or {}
+    return {
+        "mode": str(policy.get("mode") or "inline_candidates"),
+        "compiled_graph_file": str(policy.get("compiled_graph_file") or COMPILED_GRAPH_FILE.as_posix()),
+        "graph_version": str(policy.get("graph_version") or GRAPH_VERSION),
+    }
+
+
+def _compiled_graph_path(root: Path, backlog: dict[str, Any]) -> Path:
+    raw = Path(_compiler_policy(backlog)["compiled_graph_file"])
+    return raw if raw.is_absolute() else (root / raw)
+
+
+def _source_hashes(root: Path) -> dict[str, str]:
+    return {
+        "roadmap_backlog": __import__("hashlib").sha256((root / ROADMAP_BACKLOG_FILE).read_bytes()).hexdigest(),
+        "module_map": __import__("hashlib").sha256((root / "docs/governance/MODULE_MAP.yaml").read_bytes()).hexdigest(),
+        "task_policy": __import__("hashlib").sha256((root / "docs/governance/TASK_POLICY.yaml").read_bytes()).hexdigest(),
+    }
+
+
+def _load_candidate_source(root: Path, backlog: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    policy = _compiler_policy(backlog)
+    if policy["mode"] == "inline_candidates":
+        return list(backlog.get("candidates") or []), {
+            "graph_version": GRAPH_VERSION,
+            "compiled_mode": "inline_candidates",
+            "compiled_at": None,
+            "module_map_version": None,
+            "policy_version": None,
+        }
+    path = _compiled_graph_path(root, backlog)
+    if not path.exists():
+        raise GovernanceError(f"compiled roadmap candidate graph missing: {path.as_posix()}")
+    payload = _load_yaml_map(path)
+    if str(payload.get("graph_version")) != policy["graph_version"]:
+        raise GovernanceError("compiled roadmap candidate graph version drift detected")
+    if payload.get("source_hashes") != _source_hashes(root):
+        raise GovernanceError("compiled roadmap candidate graph is stale; re-run compile-roadmap-candidates")
+    candidates = list(payload.get("candidates") or [])
+    return candidates, {
+        "graph_version": payload.get("graph_version"),
+        "compiled_mode": payload.get("mode"),
+        "compiled_at": payload.get("compiled_at"),
+        "module_map_version": payload.get("module_map_version"),
+        "policy_version": payload.get("policy_version"),
+    }
 
 
 def _required_list(schema: dict[str, Any], key: str) -> set[str]:
@@ -693,7 +744,10 @@ def evaluate_roadmap_candidates(root: Path, *, now: datetime | None = None) -> d
     backlog = _load_backlog(root)
     schema = _load_schema(root)
     claims = _load_claims(root)
-    candidates = _validate_backlog_shape(backlog, schema)
+    candidate_source, compile_meta = _load_candidate_source(root, backlog)
+    backlog_with_candidates = dict(backlog)
+    backlog_with_candidates["candidates"] = candidate_source
+    candidates = _validate_backlog_shape(backlog_with_candidates, schema)
     evaluator = CandidateEvaluator(root=root, backlog=backlog, candidates=candidates, claims=claims, now=now or _now())
     indexed = [evaluator.evaluate(candidate["candidate_id"]) for candidate in candidates]
     indexed.sort(
@@ -723,6 +777,11 @@ def evaluate_roadmap_candidates(root: Path, *, now: datetime | None = None) -> d
         "generated_at": iso_now(),
         "source": str(ROADMAP_BACKLOG_FILE).replace("\\", "/"),
         "schema_source": str(ROADMAP_BACKLOG_SCHEMA_FILE).replace("\\", "/"),
+        "graph_version": compile_meta.get("graph_version"),
+        "compiled_mode": compile_meta.get("compiled_mode"),
+        "compiled_at": compile_meta.get("compiled_at"),
+        "module_map_version": compile_meta.get("module_map_version"),
+        "policy_version": compile_meta.get("policy_version"),
         "candidate_count": len(indexed),
         "status_counts": status_counts,
         "candidate_ids": [item["candidate_id"] for item in indexed],
