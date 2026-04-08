@@ -35,6 +35,7 @@ from task_handoff import build_recovery_pack
 from task_publish_ops import PUBLISH_ACTIONS, publish_preflight
 from task_rendering import find_task
 from roadmap_claim_next import claim_next
+from worker_self_loop import preview_worker_action
 
 
 INTENTS_FILE = Path("docs/governance/AUTOMATION_INTENTS.yaml")
@@ -344,6 +345,23 @@ def _preflight_claim_next(root: Path, intent: dict[str, Any], matched_phrase: st
     }
 
 
+def _preflight_worker_self_loop(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
+    decision = preview_worker_action(root)
+    return {
+        "status": decision["status"],
+        "matched_phrase": matched_phrase,
+        "intent_id": intent["intent_id"],
+        "mapped_command": intent["mapped_command"],
+        "explanation": decision["explanation"],
+        "blockers": list(decision.get("blockers") or []),
+        "closeout_recommendation": None,
+        "recovery_pack": None,
+        "recovery_source": None,
+        "recovery_warnings": [],
+        "worker_loop_decision": decision,
+    }
+
+
 def _preflight_publish_action(root: Path, intent: dict[str, Any], matched_phrase: str | None) -> dict[str, Any]:
     action = intent["intent_id"]
     if action not in PUBLISH_ACTIONS:
@@ -381,6 +399,8 @@ def preflight(root: Path, utterance: str) -> dict[str, Any]:
         }
     if intent["intent_id"] == "continue-current":
         return _preflight_continue_current(root, intent, matched_phrase)
+    if intent["intent_id"] == "worker-self-loop":
+        return _preflight_worker_self_loop(root, intent, matched_phrase)
     if intent["intent_id"] == "claim-next":
         return _preflight_claim_next(root, intent, matched_phrase)
     if intent["intent_id"] in {"continue-roadmap", "continue-roadmap-loop"}:

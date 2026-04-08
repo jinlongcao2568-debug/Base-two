@@ -22,6 +22,7 @@ from governance_lib import (
     load_yaml,
     validate_task,
 )
+from control_plane_root import FULL_CLONE_POOL_FILE, default_full_clone_idle_branch, load_full_clone_pool, slot_by_id
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
 from child_execution_flow import transient_child_paths
 from task_handoff import ensure_handoff_file
@@ -109,6 +110,11 @@ def _load_worktree_pool(root: Path) -> dict[str, Any]:
 def _write_worktree_pool(root: Path, pool: dict[str, Any]) -> None:
     pool["updated_at"] = iso_now()
     dump_yaml(root / WORKTREE_POOL_FILE, pool)
+
+
+def _write_full_clone_pool(root: Path, pool: dict[str, Any]) -> None:
+    pool["updated_at"] = iso_now()
+    dump_yaml(root / FULL_CLONE_POOL_FILE, pool)
 
 
 def _stale_after_minutes(root: Path) -> int:
@@ -370,6 +376,7 @@ def _record_claim(claims: dict[str, Any], candidate: dict[str, Any], *, args: ar
         "candidate_branch": candidate.get("candidate_branch"),
         "candidate_worktree": candidate.get("candidate_worktree"),
         "pool_slot_id": candidate.get("pool_slot_id"),
+        "dispatch_target": getattr(args, "dispatch_target", "worktree_pool"),
         "planned_write_paths": list(candidate.get("planned_write_paths") or []),
     }
     existing = [claim for claim in claims.get("claims", []) if claim.get("candidate_id") != candidate["candidate_id"]]
@@ -445,6 +452,7 @@ def _update_claim_after_promotion(
         claim["candidate_worktree"] = str(destination).replace("\\", "/")
         if candidate.get("pool_slot_id"):
             claim["pool_slot_id"] = candidate["pool_slot_id"]
+        claim["dispatch_target"] = candidate.get("dispatch_target", claim.get("dispatch_target", "worktree_pool"))
         return
 
 
@@ -467,7 +475,86 @@ def _update_claim_after_takeover(
         claim["candidate_worktree"] = str(destination).replace("\\", "/")
         if candidate.get("pool_slot_id"):
             claim["pool_slot_id"] = candidate["pool_slot_id"]
+        claim["dispatch_target"] = candidate.get("dispatch_target", claim.get("dispatch_target", "worktree_pool"))
         return
+
+
+def _assign_full_clone_slot(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> dict[str, Any]:
+    pool = load_full_clone_pool(root)
+    if not pool.get("slots"):
+        raise GovernanceError(f"full clone pool is missing or empty: {FULL_CLONE_POOL_FILE}")
+    slot_id = getattr(args, "full_clone_slot_id", None)
+    if not slot_id:
+        raise GovernanceError("full clone dispatch requires --full-clone-slot-id")
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        raise GovernanceError(f"unknown full clone slot: {slot_id}")
+    if slot.get("status") != "ready":
+        raise GovernanceError(f"full clone slot is not ready: {slot_id}")
+    slot["status"] = "active"
+    slot["current_task_id"] = candidate["task_id_hint"]
+    slot["branch"] = candidate["candidate_branch"]
+    slot["last_claimed_at"] = _iso(now)
+    _write_full_clone_pool(root, pool)
+    candidate["pool_slot_id"] = slot_id
+    candidate["candidate_worktree"] = slot["path"]
+    candidate["dispatch_target"] = "full_clone"
+    return slot
+
+
+def _sync_full_clone_slot_ready(root: Path, slot_id: str | None, *, now: datetime) -> None:
+    if not slot_id:
+        return
+    pool = load_full_clone_pool(root)
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        return
+    slot["status"] = "ready"
+    slot["current_task_id"] = None
+    slot["branch"] = slot.get("idle_branch") or default_full_clone_idle_branch(slot_id)
+    slot["last_released_at"] = _iso(now)
+    _write_full_clone_pool(root, pool)
+
+
+def _sync_full_clone_slot_active(root: Path, slot_id: str | None, *, task_id: str, branch: str, now: datetime) -> None:
+    if not slot_id:
+        return
+    pool = load_full_clone_pool(root)
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        raise GovernanceError(f"assigned full clone slot missing: {slot_id}")
+    slot["status"] = "active"
+    slot["current_task_id"] = task_id
+    slot["branch"] = branch
+    slot["last_claimed_at"] = _iso(now)
+    _write_full_clone_pool(root, pool)
+
+
+def _upsert_full_clone_execution_entry(root: Path, task: dict[str, Any], slot_id: str, clone_path: str) -> None:
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    entry = next((item for item in worktrees.get("entries", []) if item.get("task_id") == task["task_id"]), None)
+    payload = {
+        "task_id": task["task_id"],
+        "work_mode": "execution",
+        "parent_task_id": task.get("parent_task_id"),
+        "branch": task["branch"],
+        "path": clone_path,
+        "status": "active",
+        "cleanup_state": "not_needed",
+        "cleanup_attempts": 0,
+        "last_cleanup_error": None,
+        "worker_owner": slot_id,
+        "pool_kind": "full_clone",
+    }
+    if entry is None:
+        worktrees.setdefault("entries", []).append(payload)
+    else:
+        entry.update(payload)
+    worktrees["updated_at"] = iso_now()
+    registry["updated_at"] = iso_now()
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
 
 
 def _assign_pool_slot(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> dict[str, Any] | None:
@@ -541,6 +628,15 @@ def _takeover_stale_claim(root: Path, candidate: dict[str, Any], claim: dict[str
     if not formal_task_id:
         raise GovernanceError("stale claim takeover requires a formal task id")
     destination = Path(str(claim.get("candidate_worktree") or "")).resolve()
+    if claim.get("dispatch_target") == "full_clone":
+        _sync_full_clone_slot_active(
+            root,
+            claim.get("pool_slot_id"),
+            task_id=formal_task_id,
+            branch=claim.get("candidate_branch") or candidate["candidate_branch"],
+            now=now,
+        )
+        return destination
     if not destination.exists():
         cmd_worktree_create(argparse.Namespace(task_id=formal_task_id, path=str(destination), worker_owner=args.worker_owner))
     _sync_pool_slot_active(
@@ -566,6 +662,13 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
     update_task_file(root, task)
     update_runlog_file(root, task)
     ensure_handoff_file(root, task)
+
+    if getattr(args, "dispatch_target", "worktree_pool") == "full_clone":
+        slot = _assign_full_clone_slot(root, candidate, args, now)
+        destination = Path(str(slot["path"])).resolve()
+        _upsert_full_clone_execution_entry(root, task, slot["slot_id"], str(destination).replace("\\", "/"))
+        _sync_full_clone_slot_active(root, slot["slot_id"], task_id=task["task_id"], branch=task["branch"], now=now)
+        return destination
 
     pool_slot = _assign_pool_slot(root, candidate, args, now)
     if pool_slot is not None:
@@ -653,6 +756,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--promote-task", action="store_true")
     parser.add_argument("--worktree-root")
     parser.add_argument("--worker-owner")
+    parser.add_argument("--dispatch-target", choices=["worktree_pool", "full_clone"], default="worktree_pool")
+    parser.add_argument("--full-clone-slot-id")
     parser.add_argument("--window-id", default="window-local")
     parser.add_argument("--lease-minutes", type=int, default=30)
     parser.add_argument("--now")

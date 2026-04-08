@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-07T21:35:57+08:00'
+updated_at: '2026-04-08T08:26:09+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 slot_status_values:
@@ -14,7 +14,7 @@ slots:
   status: active
   current_task_id: TASK-RM-STAGE1-CORE-CONTRACT
   branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
-  last_claimed_at: '2026-04-07T21:20:11+08:00'
+  last_claimed_at: '2026-04-08T08:26:07+08:00'
   last_released_at: null
 - slot_id: worker-02
   worker_owner: worker-02

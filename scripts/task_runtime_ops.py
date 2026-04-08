@@ -33,6 +33,8 @@ from task_orchestration_ops import cmd_orchestration_status
 from roadmap_candidate_index import cmd_plan_roadmap_candidates
 from roadmap_claim_next import cmd_claim_next
 from full_clone_pool import cmd_provision_full_clone_pool
+from roadmap_candidate_maintainer import cmd_refresh
+from worker_self_loop import cmd_once as cmd_worker_self_loop_once, cmd_loop as cmd_worker_self_loop_loop
 from task_worker_ops import (
     cmd_auto_close_children,
     cmd_worker_design_confirm,
@@ -63,11 +65,19 @@ def add_coordination_commands(subparsers) -> None:
     roadmap_candidates_parser.add_argument("--output", default=".codex/local/roadmap_candidates/index.yaml")
     roadmap_candidates_parser.set_defaults(func=cmd_plan_roadmap_candidates)
 
+    refresh_candidates_parser = subparsers.add_parser("refresh-roadmap-candidates")
+    refresh_candidates_parser.add_argument("--loop", action="store_true")
+    refresh_candidates_parser.add_argument("--interval-seconds", type=int, default=60)
+    refresh_candidates_parser.add_argument("--cycles", type=int, default=0)
+    refresh_candidates_parser.set_defaults(func=cmd_refresh)
+
     claim_next_parser = subparsers.add_parser("claim-next")
     claim_next_parser.add_argument("--write-claim", action="store_true")
     claim_next_parser.add_argument("--promote-task", action="store_true")
     claim_next_parser.add_argument("--worktree-root")
     claim_next_parser.add_argument("--worker-owner", choices=list(EXECUTION_WORKER_OWNERS))
+    claim_next_parser.add_argument("--dispatch-target", choices=["worktree_pool", "full_clone"], default="worktree_pool")
+    claim_next_parser.add_argument("--full-clone-slot-id")
     claim_next_parser.add_argument("--window-id", default="window-local")
     claim_next_parser.add_argument("--lease-minutes", type=int, default=30)
     claim_next_parser.add_argument("--now")
@@ -272,6 +282,16 @@ def add_worktree_commands(subparsers) -> None:
     cleanup_parser = subparsers.add_parser("cleanup-orphans")
     cleanup_parser.add_argument("--task-id")
     cleanup_parser.set_defaults(func=cmd_cleanup_orphans)
+
+    worker_loop_once = subparsers.add_parser("worker-self-loop-once")
+    worker_loop_once.add_argument("--task-id")
+    worker_loop_once.set_defaults(func=cmd_worker_self_loop_once)
+
+    worker_loop = subparsers.add_parser("worker-self-loop-loop")
+    worker_loop.add_argument("--task-id")
+    worker_loop.add_argument("--interval-seconds", type=int, default=60)
+    worker_loop.add_argument("--cycles", type=int, default=0)
+    worker_loop.set_defaults(func=cmd_worker_self_loop_loop)
 
 
 def _add_worker_state_commands(subparsers) -> None:

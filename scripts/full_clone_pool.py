@@ -16,17 +16,20 @@ def _load_pool(root: Path) -> dict[str, Any]:
         raise GovernanceError(f"full clone pool missing: {FULL_CLONE_POOL_FILE}")
     payload = load_yaml(path) or {}
     payload.setdefault("slots", [])
+    payload.setdefault("control_plane_root", str(root).replace("\\", "/"))
     return payload
 
 
 def _write_pool(root: Path, pool: dict[str, Any]) -> None:
     pool["updated_at"] = iso_now()
+    pool.setdefault("control_plane_root", str(root).replace("\\", "/"))
     dump_yaml(root / FULL_CLONE_POOL_FILE, pool)
 
 
 def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
     destination = Path(str(slot["path"])).resolve()
     branch = str(slot["branch"])
+    idle_branch = str(slot.get("idle_branch") or branch)
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
         git(root, "clone", "--local", str(root), str(destination))
@@ -38,6 +41,10 @@ def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
         if create.returncode != 0:
             raise GovernanceError(create.stderr.strip() or create.stdout.strip() or f"unable to switch clone slot to {branch}")
     slot["status"] = "ready"
+    slot["idle_branch"] = idle_branch
+    slot.setdefault("current_task_id", None)
+    slot.setdefault("last_claimed_at", None)
+    slot.setdefault("last_released_at", None)
     slot["last_provisioned_at"] = iso_now()
 
 

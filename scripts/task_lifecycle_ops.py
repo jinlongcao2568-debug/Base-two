@@ -36,6 +36,7 @@ from governance_lib import (
 )
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
+from control_plane_root import default_full_clone_idle_branch, load_full_clone_pool, slot_by_id
 from task_closeout import assess_live_closeout
 from task_coordination_lease import (
     claim_coordination_lease,
@@ -328,7 +329,20 @@ def cmd_close(args: argparse.Namespace) -> int:
     if entry is not None:
         entry["status"] = "closed"
         if entry["work_mode"] == "execution":
-            entry["cleanup_state"] = "pending"
+            if entry.get("pool_kind") == "full_clone":
+                entry["cleanup_state"] = "not_needed"
+                pool = load_full_clone_pool(root)
+                slot = slot_by_id(pool, str(entry.get("worker_owner") or ""))
+                if slot is not None:
+                    slot["status"] = "ready"
+                    slot["current_task_id"] = None
+                    slot["branch"] = slot.get("idle_branch") or default_full_clone_idle_branch(slot["slot_id"])
+                    slot["last_released_at"] = iso_now()
+                    from governance_lib import dump_yaml as _dump_yaml
+
+                    _dump_yaml(root / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+            else:
+                entry["cleanup_state"] = "pending"
     worktrees["updated_at"] = iso_now()
     touched_task_ids = [task["task_id"]]
     if is_live_top_level_current:

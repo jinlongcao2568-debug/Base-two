@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-07T22:18:58+08:00'
+updated_at: '2026-04-08T08:31:43+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -813,6 +813,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-046-full-clone-worker-pool
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-047
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-047-roadmap-candidate-refresh-worker-loop
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

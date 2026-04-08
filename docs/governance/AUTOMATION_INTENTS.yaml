@@ -1,5 +1,5 @@
-version: "1.1"
-updated_at: "2026-04-06T13:10:00+08:00"
+version: "1.2"
+updated_at: "2026-04-08T08:00:00+08:00"
 authority_source: docs/governance/OPERATOR_MANUAL.md
 recognition_mode: heuristic_free_form
 ambiguity_policy: block_on_successor_switch_ambiguity
@@ -7,11 +7,7 @@ generic_continue_signals:
   - 继续
   - 接着
   - 恢复
-  - 继续做
-  - 接着做
   - 继续开发
-  - 接着开发
-  - 恢复开发
   - 继续推进
 supported_intents:
   - intent_id: continue-current
@@ -21,35 +17,50 @@ supported_intents:
       - python
       - scripts/task_ops.py
       - continue-current
-    description: Resume only the live current task and never pick a successor.
+    description: Resume only the current live coordination task.
     examples:
       - 继续当前任务
-      - 回到现在这个任务继续做
-      - 继续手头这个任务
+      - 恢复当前任务
+      - 继续手头任务
     action_any:
       - 继续
       - 接着
       - 恢复
-      - 回到
-      - 继续开发
-      - 继续做
     context_any:
-      - 当前
       - 当前任务
-      - 手头
       - 手头任务
       - 本任务
       - 这个任务
-      - 现有任务
-      - 现在这个任务
     disallow_any:
       - 路线图
-      - roadmap
-      - 下一步
+      - 总路线图
+      - 候选池
       - 下一个任务
-      - 后续任务
-      - 按计划
-      - 按路线
+  - intent_id: worker-self-loop
+    canonical_phrase: 恢复当前窗口任务
+    mapped_command: python scripts/worker_self_loop.py once
+    command_argv:
+      - python
+      - scripts/worker_self_loop.py
+      - once
+    description: Resume or advance the task bound to the current full clone worker window.
+    examples:
+      - 恢复当前窗口任务
+      - 继续当前窗口任务
+      - 当前窗口持续开发
+    action_any:
+      - 恢复
+      - 继续
+      - 持续开发
+    context_any:
+      - 当前窗口
+      - 当前窗口任务
+      - worker
+      - clone
+    disallow_any:
+      - 路线图
+      - 总路线图
+      - 候选池
   - intent_id: continue-roadmap
     canonical_phrase: 按路线图继续推进
     mapped_command: python scripts/automation_runner.py once --continue-roadmap --prepare-worktrees
@@ -59,29 +70,24 @@ supported_intents:
       - once
       - --continue-roadmap
       - --prepare-worktrees
-    description: Continue by roadmap, allowing review closeout and successor activation when governance gates pass.
-    planner_preflight_hint: Use plan-coordination when no unique successor is available or when the next coordination package must be generated first.
+    description: Continue by roadmap with the legacy coordination runner.
     examples:
       - 按路线图继续推进
-      - 继续按照路线图开发
+      - 继续按路线图开发
       - 按计划推进到下一步
     action_any:
       - 继续
-      - 接着
       - 恢复
       - 推进
       - 按计划
-      - 按路线
+      - 按路线图
     context_any:
       - 路线图
       - roadmap
       - 下一步
       - 下一个任务
       - 后续任务
-      - 后面的任务
       - 按计划
-      - 按路线
-      - 继续推进
   - intent_id: claim-next
     canonical_phrase: 持续按路线图开发
     mapped_command: python scripts/task_ops.py claim-next --promote-task
@@ -90,7 +96,7 @@ supported_intents:
       - scripts/task_ops.py
       - claim-next
       - --promote-task
-    description: Highest-priority roadmap task claim. It reads the roadmap candidate pool and locally claims the best safe route.
+    description: Highest-priority roadmap claim for the coordination window.
     planner_preflight_hint: Use claim-next before free-form successor inference when the user asks to keep developing by roadmap.
     examples:
       - 持续按路线图开发
@@ -113,9 +119,10 @@ supported_intents:
       - 多窗口
     disallow_any:
       - 当前任务
-      - 手头任务
+      - 当前窗口
+      - 当前窗口任务
   - intent_id: continue-roadmap-loop
-    canonical_phrase: 持续按路线图开发
+    canonical_phrase: 持续按路线图循环推进
     mapped_command: python scripts/automation_runner.py loop --continue-roadmap --prepare-worktrees
     command_argv:
       - python
@@ -123,26 +130,21 @@ supported_intents:
       - loop
       - --continue-roadmap
       - --prepare-worktrees
-    description: Continue by roadmap in loop mode until a governed stop condition is hit.
-    planner_preflight_hint: Use plan-coordination when no unique successor is available or when the next coordination package must be generated first.
+    description: Continue by roadmap in loop mode until stopped.
     examples:
-      - 持续按路线图开发
-      - 持续按路线图推进
+      - 持续按路线图循环推进
       - 一直按路线图开发
+      - 路线图循环推进
     action_any:
       - 持续
       - 一直
       - 循环
-      - 连续
       - 推进
-      - 开发
     context_any:
       - 路线图
       - roadmap
-      - 按路线图
       - 后续任务
       - 下一个任务
-      - 持续开发
   - intent_id: commit-task-results
     canonical_phrase: 提交当前任务成果
     mapped_command: python scripts/task_ops.py commit-task-results
@@ -150,7 +152,7 @@ supported_intents:
       - python
       - scripts/task_ops.py
       - commit-task-results
-    description: Commit task-scoped results only when the governed publish preflight passes.
+    description: Commit task-scoped results when publish preflight passes.
     examples:
       - 提交当前任务成果
       - 提交当前成果
@@ -161,7 +163,7 @@ supported_intents:
       - python
       - scripts/task_ops.py
       - push-task-branch
-    description: Push the current task branch when the publish preflight passes.
+    description: Push the current task branch when publish preflight passes.
     examples:
       - 推送当前任务分支
       - 推送当前分支
@@ -172,7 +174,7 @@ supported_intents:
       - python
       - scripts/task_ops.py
       - create-task-pr
-    description: Create a draft PR for the current task branch after publish preflight passes.
+    description: Create a draft PR for the current task branch after preflight passes.
     examples:
       - 为当前任务开PR
       - 为当前分支开PR

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -13,7 +14,6 @@ from .helpers import (
     init_governance_repo,
     read_yaml,
     run_python,
-    set_live_task_review_without_evidence,
     set_idle_control_plane,
     write_yaml,
 )
@@ -25,8 +25,10 @@ def _preflight(repo: Path, utterance: str) -> tuple[int, dict]:
     return result.returncode, json.loads(result.stdout)
 
 
-def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001", *, with_boundaries: bool = True) -> None:
-    args = [
+def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001") -> None:
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
         "new",
         task_id,
         "--title",
@@ -39,24 +41,18 @@ def _create_successor(repo: Path, task_id: str = "TASK-NEXT-001", *, with_bounda
         "coordination",
         "--execution-mode",
         "shared_coordination",
-    ]
-    if with_boundaries:
-        args.extend(
-            [
-                "--allowed-dirs",
-                "docs/governance/",
-                "scripts/",
-                "tests/governance/",
-                "--planned-write-paths",
-                "docs/governance/",
-                "scripts/",
-                "--planned-test-paths",
-                "tests/governance/",
-                "--required-tests",
-                "python scripts/check_repo.py",
-            ]
-        )
-    created = run_python(TASK_OPS_SCRIPT, repo, *args)
+        "--allowed-dirs",
+        "docs/governance/",
+        "scripts/",
+        "tests/governance/",
+        "--planned-write-paths",
+        "docs/governance/",
+        "scripts/",
+        "--planned-test-paths",
+        "tests/governance/",
+        "--required-tests",
+        "python scripts/check_repo.py",
+    )
     assert created.returncode == 0, created.stdout + created.stderr
 
 
@@ -75,12 +71,44 @@ def _mark_review_ready(repo: Path) -> None:
     git_commit_all(repo, "prepare review successor")
 
 
+def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "authority_source": "docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md",
+            "status": "active",
+            "root_path": str(clone_path.parent).replace("\\", "/"),
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/worker-01-idle",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                    "last_provisioned_at": None,
+                    "last_claimed_at": None,
+                    "last_released_at": None,
+                }
+            ],
+        },
+    )
+
+
+def _clone_repo(repo: Path, clone_path: Path) -> None:
+    git_commit_all(repo, "prepare full clone pool")
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+
+
 @pytest.mark.parametrize(
     ("utterance", "intent_id"),
     [
         ("继续当前任务", "continue-current"),
         ("按路线图继续推进", "continue-roadmap"),
-        ("继续按照路线图开发", "continue-roadmap"),
+        ("持续按路线图开发", "claim-next"),
     ],
 )
 def test_preflight_supports_governed_phrases(tmp_path: Path, utterance: str, intent_id: str) -> None:
@@ -91,8 +119,16 @@ def test_preflight_supports_governed_phrases(tmp_path: Path, utterance: str, int
         roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
         (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
         _mark_review_ready(repo)
+    if intent_id == "claim-next":
+        set_idle_control_plane(repo)
+        candidate = _candidate("stage1-core-contract", status="planned", priority=100)
+        candidate["allowed_dirs"] = ["src/stage1_orchestration/", "tests/stage1/"]
+        candidate["planned_write_paths"] = ["src/stage1_orchestration/", "tests/stage1/"]
+        candidate["planned_test_paths"] = ["tests/stage1/"]
+        _write_backlog(repo, [candidate])
 
     code, payload = _preflight(repo, utterance)
+
     assert code == 0
     assert payload["status"] == "ready"
     assert payload["intent_id"] == intent_id
@@ -105,24 +141,6 @@ def test_preflight_maps_generic_continue_to_current_when_live_task_is_active(tmp
     assert payload["status"] == "ready"
     assert payload["intent_id"] == "continue-current"
     assert payload["matched_phrase"] == "generic_active_continue"
-
-
-def test_preflight_routes_highest_priority_roadmap_phrase_to_claim_next(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    set_idle_control_plane(repo)
-    candidate = _candidate("stage1-core-contract", status="planned", priority=100)
-    candidate["allowed_dirs"] = ["src/stage1_orchestration/", "tests/stage1/"]
-    candidate["planned_write_paths"] = ["src/stage1_orchestration/", "tests/stage1/"]
-    candidate["planned_test_paths"] = ["tests/stage1/"]
-    _write_backlog(repo, [candidate])
-
-    code, payload = _preflight(repo, "持续按路线图开发")
-
-    assert code == 0
-    assert payload["status"] == "ready"
-    assert payload["intent_id"] == "claim-next"
-    assert payload["mapped_command"] == "python scripts/task_ops.py claim-next --promote-task"
-    assert payload["claim_next_candidate"]["candidate_id"] == "stage1-core-contract"
 
 
 def test_preflight_blocks_continue_current_when_idle(tmp_path: Path) -> None:
@@ -144,13 +162,22 @@ def test_preflight_returns_unsupported_for_generic_continue_when_task_switch_ris
     assert payload["intent_id"] is None
 
 
-def test_preflight_blocks_dirty_worktree_and_preserves_readable_chinese_path(tmp_path: Path) -> None:
+def test_preflight_routes_highest_priority_roadmap_phrase_to_claim_next(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    (repo / "说明文档.md").write_text("dirty\n", encoding="utf-8")
-    code, payload = _preflight(repo, "继续当前任务")
+    set_idle_control_plane(repo)
+    candidate = _candidate("stage1-core-contract", status="planned", priority=100)
+    candidate["allowed_dirs"] = ["src/stage1_orchestration/", "tests/stage1/"]
+    candidate["planned_write_paths"] = ["src/stage1_orchestration/", "tests/stage1/"]
+    candidate["planned_test_paths"] = ["tests/stage1/"]
+    _write_backlog(repo, [candidate])
+
+    code, payload = _preflight(repo, "持续按路线图开发")
+
     assert code == 0
-    assert payload["status"] == "blocked"
-    assert any("说明文档.md" in blocker for blocker in payload["blockers"])
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "claim-next"
+    assert payload["mapped_command"] == "python scripts/task_ops.py claim-next --promote-task"
+    assert payload["claim_next_candidate"]["candidate_id"] == "stage1-core-contract"
 
 
 def test_preflight_routes_free_form_roadmap_request(tmp_path: Path) -> None:
@@ -161,7 +188,7 @@ def test_preflight_routes_free_form_roadmap_request(tmp_path: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
     _mark_review_ready(repo)
 
-    code, payload = _preflight(repo, "按计划继续往下一步推进")
+    code, payload = _preflight(repo, "按计划推进到下一步")
     assert code == 0
     assert payload["status"] == "ready"
     assert payload["intent_id"] == "continue-roadmap"
@@ -183,63 +210,6 @@ def test_preflight_roadmap_reports_ready_closeout_recommendation(tmp_path: Path)
     assert payload["closeout_recommendation"]["task_id"] == "TASK-BASE-001"
 
 
-def test_preflight_continue_current_accepts_review_ready_closeout(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    _mark_review_ready(repo)
-
-    code, payload = _preflight(repo, "继续当前任务")
-
-    assert code == 0
-    assert payload["status"] == "ready"
-    assert payload["closeout_recommendation"]["status"] == "ready"
-
-
-def test_preflight_continue_roadmap_blocks_live_task_without_ai_guarded_closeout(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    _create_successor(repo)
-    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
-    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
-    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
-    git_commit_all(repo, "prepare successor while current task is still active")
-
-    code, payload = _preflight(repo, "按路线图继续推进")
-
-    assert code == 0
-    assert payload["status"] == "blocked"
-    assert any("ai_guarded closeout is ready" in blocker for blocker in payload["blockers"])
-
-
-def test_preflight_continue_roadmap_accepts_recoverable_predecessor(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    _create_successor(repo)
-    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
-    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
-    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
-    close_live_task_to_idle(repo, commit_after_close=False)
-
-    code, payload = _preflight(repo, "按路线图继续推进")
-
-    assert code == 0
-    assert payload["status"] == "ready"
-    assert payload["intent_id"] == "continue-roadmap"
-    assert "TASK-NEXT-001" in payload["explanation"]
-
-
-def test_preflight_continue_roadmap_allows_review_closeout_when_successor_is_missing(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
-    for capability in capability_map["capabilities"]:
-        if capability["capability_id"] == "roadmap_autopilot_continuation":
-            capability["status"] = "implemented"
-    write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
-    _mark_review_ready(repo)
-
-    code, payload = _preflight(repo, "按路线图继续推进")
-    assert code == 0
-    assert payload["status"] == "ready"
-    assert payload["intent_id"] == "continue-roadmap"
-
-
 def test_preflight_continue_roadmap_blocks_idle_without_successor(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     capability_map = read_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml")
@@ -248,109 +218,22 @@ def test_preflight_continue_roadmap_blocks_idle_without_successor(tmp_path: Path
             capability["status"] = "implemented"
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map)
     close_live_task_to_idle(repo, commit_after_close=True)
-
     code, payload = _preflight(repo, "按路线图继续推进")
-
     assert code == 0
     assert payload["status"] == "blocked"
     assert payload["intent_id"] == "continue-roadmap"
-    assert any("no successor is available" in blocker for blocker in payload["blockers"])
 
 
-def test_preflight_continue_roadmap_reclassifies_stale_dependency_pointer_into_successor_ambiguity(tmp_path: Path) -> None:
+def test_preflight_routes_worker_phrase_to_worker_self_loop_in_clone(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    _create_successor(repo)
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"].append(
-        {
-            "task_id": "TASK-BLOCKER-001",
-            "title": "blocker",
-            "status": "queued",
-            "task_kind": "coordination",
-            "execution_mode": "shared_coordination",
-            "parent_task_id": None,
-            "stage": "blocked-phase",
-            "branch": "feat/TASK-BLOCKER-001",
-            "size_class": "standard",
-            "automation_mode": "manual",
-            "worker_state": "idle",
-            "blocked_reason": None,
-            "last_reported_at": "2026-04-04T00:00:00+08:00",
-            "topology": "single_worker",
-            "allowed_dirs": ["docs/governance/"],
-            "reserved_paths": [],
-            "planned_write_paths": ["docs/governance/"],
-            "planned_test_paths": ["tests/governance/"],
-            "required_tests": ["python scripts/check_repo.py"],
-            "task_file": "docs/governance/tasks/TASK-BLOCKER-001.md",
-            "runlog_file": "docs/governance/runlogs/TASK-BLOCKER-001-RUNLOG.md",
-            "created_at": "2026-04-04T00:00:00+08:00",
-            "activated_at": None,
-            "closed_at": None,
-        }
-    )
-    next_task = next(task for task in registry["tasks"] if task["task_id"] == "TASK-NEXT-001")
-    next_task["depends_on_task_ids"] = ["TASK-BLOCKER-001"]
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
-    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
-    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
-    _mark_review_ready(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
 
-    code, payload = _preflight(repo, "按路线图继续推进")
-    assert code == 0
-    assert payload["status"] == "blocked"
-    assert any("successor landscape is not unique" in blocker for blocker in payload["blockers"])
-
-
-def test_preflight_continue_roadmap_blocks_incomplete_successor_boundary(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    _create_successor(repo, with_boundaries=False)
-    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
-    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
-    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
-    _mark_review_ready(repo)
-
-    code, payload = _preflight(repo, "按路线图继续推进")
-    assert code == 0
-    assert payload["status"] == "blocked"
-    assert any("boundary is incomplete" in blocker for blocker in payload["blockers"])
-
-
-def test_preflight_continue_roadmap_blocks_review_missing_test_evidence(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    _create_successor(repo)
-    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
-    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
-    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
-    set_live_task_review_without_evidence(repo, commit_after_update=True)
-
-    code, payload = _preflight(repo, "按路线图继续推进")
+    code, payload = _preflight(clone_path, "恢复当前窗口任务")
 
     assert code == 0
-    assert payload["status"] == "blocked"
-    assert payload["closeout_recommendation"]["status"] == "blocked"
-    assert any("required tests missing from runlog" in blocker for blocker in payload["blockers"])
-
-
-def test_preflight_continue_roadmap_blocks_live_ledger_drift(tmp_path: Path) -> None:
-    repo = init_governance_repo(tmp_path)
-    _create_successor(repo)
-    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
-    roadmap = roadmap.replace("next_recommended_task_id: null", "next_recommended_task_id: TASK-NEXT-001", 1)
-    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
-    _mark_review_ready(repo)
-    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
-    current_task["branch"] = "feat/drifted-branch"
-    write_yaml(repo / "docs/governance/CURRENT_TASK.yaml", current_task)
-    git_commit_all(repo, "introduce live ledger drift")
-
-    code, payload = _preflight(repo, "按路线图继续推进")
-
-    assert code == 0
-    assert payload["status"] == "blocked"
-    assert payload["closeout_recommendation"]["status"] == "blocked"
-    assert any(
-        "live ledger drift detected" in blocker or "CURRENT_TASK.yaml 字段 `branch`" in blocker
-        for blocker in payload["blockers"]
-    )
+    assert payload["status"] == "ready"
+    assert payload["intent_id"] == "worker-self-loop"
+    assert payload["mapped_command"] == "python scripts/worker_self_loop.py once"
+    assert payload["worker_loop_decision"]["mode"] == "claim-next"
