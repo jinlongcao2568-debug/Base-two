@@ -165,6 +165,9 @@ def declared_path(value: str) -> DeclaredPath:
 
 
 def git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    creationflags = 0
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        creationflags = subprocess.CREATE_NO_WINDOW
     result = subprocess.run(
         ["git", *args],
         cwd=root,
@@ -172,6 +175,7 @@ def git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProce
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        creationflags=creationflags,
     )
     if check and result.returncode != 0:
         stderr = result.stderr.strip() or result.stdout.strip() or "git command failed"

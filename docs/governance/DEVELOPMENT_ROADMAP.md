@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-console-refresh-fix-v1
+current_task_id: TASK-GOV-063
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -35,7 +35,7 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-GOV-063`: `Governance console refresh and git no-window fix` is the live coordination task for `governance-console-refresh-fix-v1`.
 ## Recently Closed
 
 - `TASK-GOV-037`: blocked idle/no-successor roadmap continuation with a deterministic governance error instead of a ready/no-op mismatch.

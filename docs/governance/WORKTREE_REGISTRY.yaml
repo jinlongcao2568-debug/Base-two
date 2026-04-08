@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-08T17:29:55+08:00'
+updated_at: '2026-04-08T17:37:44+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -936,6 +936,16 @@ entries:
   branch: codex/TASK-GOV-062-console-no-window-hardening
   path: D:/Base One/Base-two/AX9
   status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-063
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-063-console-refresh-no-window-fix
+  path: D:/Base One/Base-two/AX9
+  status: active
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null

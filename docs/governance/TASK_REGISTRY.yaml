@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-08T17:29:55+08:00'
+updated_at: '2026-04-08T17:37:44+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -3089,7 +3089,7 @@ tasks:
   parent_task_id: null
   stage: governance-roadmap-scheduler-transition-record-v1
   branch: codex/TASK-GOV-057-roadmap-governance-transition
-  size_class: micro
+  size_class: standard
   automation_mode: manual
   worker_state: completed
   blocked_reason: null
@@ -3194,7 +3194,7 @@ tasks:
   parent_task_id: null
   stage: governance-roadmap-explain-commands-v1
   branch: codex/TASK-GOV-059-roadmap-explain-commands
-  size_class: micro
+  size_class: standard
   automation_mode: manual
   worker_state: completed
   blocked_reason: null
@@ -3415,3 +3415,66 @@ tasks:
   created_at: '2026-04-08T17:17:50+08:00'
   activated_at: '2026-04-08T17:17:50+08:00'
   closed_at: '2026-04-08T17:29:55+08:00'
+- task_id: TASK-GOV-063
+  title: Governance console refresh, localization, and action verification
+  status: doing
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-console-refresh-fix-v1
+  branch: codex/TASK-GOV-063-console-refresh-no-window-fix
+  size_class: standard
+  automation_mode: manual
+  worker_state: running
+  blocked_reason: null
+  last_reported_at: '2026-04-08T17:37:44+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - README.md
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage1/
+  - tests/stage2/
+  - tests/stage3/
+  - tests/stage4/
+  - tests/stage5/
+  - tests/stage6/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-063.md
+  - docs/governance/runlogs/TASK-GOV-063-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-063.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/AUTOMATION_INTENTS.yaml
+  - docs/governance/CONTROL_PLANE_SINGLE_LEDGER_PRINCIPLES.md
+  - docs/governance/tasks/TASK-GOV-064.md
+  - scripts/governance_console.py
+  - scripts/governance_runtime.py
+  - tests/governance/test_governance_console.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_governance_console.py -q
+  - python scripts/check_repo.py
+  task_file: docs/governance/tasks/TASK-GOV-063.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-063-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-08T17:37:43+08:00'
+  activated_at: '2026-04-08T17:37:44+08:00'
+  closed_at: null

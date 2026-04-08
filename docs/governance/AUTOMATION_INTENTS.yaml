@@ -41,7 +41,7 @@ supported_intents:
       - loop
       - --interval-seconds
       - "60"
-    description: Task window loop: continue current task, close when ready, then claim the next task.
+    description: "Task window loop: continue current task, close when ready, then claim the next task."
     examples:
       - 任务窗口：领取任务执行完毕持续领取持续开发
       - 任务窗口：持续干活
