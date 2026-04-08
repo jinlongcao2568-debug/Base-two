@@ -27,6 +27,8 @@ size_classes:
     required_tests_complete: true
     reserved_path_conflict_policy: block_parallelism
     auto_downgrade_to_single_worker_on_conflict: true
+roadmap_scheduler:
+  max_active_claims_v1: 4
 automation_modes:
   manual:
     description: Human approval remains required for worktree preparation and closeout

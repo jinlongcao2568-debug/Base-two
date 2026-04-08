@@ -34,12 +34,29 @@ def refresh_once(root: Path) -> dict[str, Any]:
     worktree_pool = _load_optional(root / WORKTREE_POOL_FILE)
     full_clone_pool = load_full_clone_pool(root)
     top_candidate = index["candidates"][0] if index.get("candidates") else None
+    idle_worktree_slots = sum(1 for slot in worktree_pool.get("slots", []) if slot.get("status") == "idle")
+    idle_full_clone_slots = sum(1 for slot in full_clone_pool.get("slots", []) if slot.get("status") == "ready")
+    idle_slot_count = max(idle_worktree_slots, idle_full_clone_slots)
+    fresh_claimable_count = len(index.get("fresh_claimable_candidate_ids", []))
+    takeover_claimable_count = len(index.get("takeover_candidate_ids", []))
+    claimable_count = len(index.get("claimable_candidate_ids", []))
+    useful_parallel_supply = fresh_claimable_count + takeover_claimable_count
+    parallelism_deficit = max(0, min(idle_slot_count, int(index.get("roadmap_claim_capacity") or 1)) - useful_parallel_supply)
     summary = {
         "generated_at": index["generated_at"],
+        "format_version": index.get("format_version"),
+        "evaluator_version": index.get("evaluator_version"),
         "control_plane_root": str(root).replace("\\", "/"),
         "candidate_count": index["candidate_count"],
         "ready_count": len(index.get("ready_candidate_ids", [])),
         "waiting_count": len(index.get("waiting_candidate_ids", [])),
+        "claimable_count": claimable_count,
+        "fresh_claimable_count": fresh_claimable_count,
+        "takeover_claimable_count": takeover_claimable_count,
+        "roadmap_claim_capacity": index.get("roadmap_claim_capacity"),
+        "active_claim_count": index.get("active_claim_count"),
+        "idle_slot_count": idle_slot_count,
+        "parallelism_deficit": parallelism_deficit,
         "top_candidate_id": None if top_candidate is None else top_candidate["candidate_id"],
         "top_candidate_status": None if top_candidate is None else top_candidate["status"],
         "claim_status_counts": _count_status(list(claims.get("claims", []))),
@@ -57,7 +74,7 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         summary = refresh_once(control_root)
         print(
             f"[OK] refreshed roadmap candidates ready={summary['ready_count']} "
-            f"waiting={summary['waiting_count']} top={summary['top_candidate_id']}"
+            f"waiting={summary['waiting_count']} claimable={summary['claimable_count']} top={summary['top_candidate_id']}"
         )
         return 0
 
@@ -69,7 +86,7 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         summary = refresh_once(control_root)
         print(
             f"[OK] refresh-roadmap-candidates cycle={count} ready={summary['ready_count']} "
-            f"waiting={summary['waiting_count']} top={summary['top_candidate_id']}"
+            f"waiting={summary['waiting_count']} claimable={summary['claimable_count']} top={summary['top_candidate_id']}"
         )
         if cycles and count >= cycles:
             return 0

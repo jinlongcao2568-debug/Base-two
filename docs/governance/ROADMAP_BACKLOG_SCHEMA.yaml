@@ -55,7 +55,6 @@ required_candidate_fields:
 - depends_on
 - unlocks
 - allowed_dirs
-- reserved_paths
 - planned_write_paths
 - planned_test_paths
 - required_tests
@@ -64,6 +63,11 @@ required_candidate_fields:
 - integration_gate
 - claim_policy
 - takeover_policy
+
+candidate_kind_values:
+- lane_group
+- lane_slice
+- integration_gate
 
 candidate_field_rules:
   candidate_id:
@@ -78,6 +82,19 @@ candidate_field_rules:
   module_id:
     type: string
     requirement: must match MODULE_MAP module_id when business-facing
+  candidate_kind:
+    type: enum
+    values:
+    - lane_group
+    - lane_slice
+    - integration_gate
+    requirement: optional during migration, but new or updated candidates must declare it explicitly
+  claimable:
+    type: boolean
+    requirement: optional during migration, but lane_group must resolve to false
+  parent_candidate_id:
+    type: string_or_null
+    requirement: optional during migration, identifies lane group parent when materialized
   lane_type:
     type: enum
     values:
@@ -113,8 +130,20 @@ candidate_field_rules:
     type: list
     requirement: directories or files allowed by the task package
   reserved_paths:
+    type: deprecated_list
+    requirement: legacy compatibility only; must map explicitly to forbidden_write_paths or protected_paths
+  legacy_reserved_paths_map_to:
+    type: enum_or_null
+    values:
+    - forbidden_write_paths
+    - protected_paths
+    requirement: required whenever legacy reserved_paths are still present
+  forbidden_write_paths:
     type: list
-    requirement: directories or files this task must not touch
+    requirement: directories or files the candidate itself must not write
+  protected_paths:
+    type: list
+    requirement: directories or files other active candidates must not write while this candidate is active
   planned_write_paths:
     type: list
     requirement: used for write-path lock and dirty-state checks
@@ -133,6 +162,16 @@ candidate_field_rules:
   integration_gate:
     type: string_or_null
     requirement: candidate id of the stage or delivery gate
+  expected_children:
+    type: list
+    requirement: explicit child set used by lane groups and integration gates when completion policy is not none
+  completion_policy:
+    type: enum
+    values:
+    - none
+    - all_expected_children_done
+    - all_expected_claimable_children_done
+    requirement: defaults to none when no child completion gate is required
   claim_policy:
     type: map
     required_fields:
@@ -151,7 +190,7 @@ hard_gate_rules:
 - dependency_gate
 - active_claim_gate
 - write_path_overlap_gate
-- reserved_path_gate
+- protected_path_gate
 - single_writer_root_gate
 - branch_lock_gate
 - worktree_lock_gate
@@ -173,3 +212,9 @@ default_takeover_policy:
   out_of_scope_dirty_policy: block_for_human_decision
   remote_divergence_policy: block
 
+legacy_field_policy:
+  reserved_paths:
+    read_compat: true
+    write_new: false
+    require_explicit_mapping: true
+    sunset_after: TASK-GOV-053

@@ -12,7 +12,8 @@ def _stage_candidate(candidate_id: str, *, priority: int, paths: list[str]) -> d
     candidate["planned_write_paths"] = paths
     candidate["planned_test_paths"] = ["tests/stage1/"]
     candidate["required_tests"] = ["pytest tests/stage1 -q"]
-    candidate["reserved_paths"] = ["src/stage6_facts/"]
+    candidate["forbidden_write_paths"] = ["src/stage6_facts/"]
+    candidate["protected_paths"] = []
     candidate["branch_template"] = f"codex/{{task_id}}-{candidate_id}"
     candidate["worktree_template"] = "../AX9.worktrees/{task_id}"
     return candidate

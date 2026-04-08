@@ -459,6 +459,17 @@ def dynamic_parallelism_policy(task_policy: dict[str, Any] | None = None) -> dic
     }
 
 
+def roadmap_scheduler_policy(task_policy: dict[str, Any] | None = None) -> dict[str, Any]:
+    scheduler = (task_policy or {}).get("roadmap_scheduler") or {}
+    return {
+        "max_active_claims_v1": max(1, int(scheduler.get("max_active_claims_v1", 4))),
+    }
+
+
+def roadmap_claim_capacity(task_policy: dict[str, Any] | None = None) -> int:
+    return roadmap_scheduler_policy(task_policy)["max_active_claims_v1"]
+
+
 def dynamic_lane_ceiling(task_policy: dict[str, Any] | None = None) -> int:
     return max(1, dynamic_parallelism_policy(task_policy)["dynamic_lane_ceiling_v1"])
 

@@ -56,7 +56,12 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         if slot.get("status") == "ready" and slot.get("current_task_id"):
             slot_issues.append(f"{slot['slot_id']} ready but still points at {slot['current_task_id']}")
     issues = [*slot_issues]
-    status = "blocked" if stale_claims or slot_issues else "ready"
+    if slot_issues:
+        status = "blocked"
+    elif stale_claims or int(summary.get("parallelism_deficit") or 0) > 0:
+        status = "degraded"
+    else:
+        status = "ready"
     return {
         "status": status,
         "control_plane_root": str(control_root).replace("\\", "/"),

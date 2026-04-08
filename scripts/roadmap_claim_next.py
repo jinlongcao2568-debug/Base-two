@@ -401,7 +401,8 @@ def _build_execution_task(candidate: dict[str, Any], *, now: str) -> dict[str, A
         "last_reported_at": now,
         "topology": "single_task",
         "allowed_dirs": list(candidate.get("allowed_dirs") or []),
-        "reserved_paths": list(candidate.get("reserved_paths") or []),
+        "reserved_paths": list(candidate.get("forbidden_write_paths") or candidate.get("reserved_paths") or []),
+        "protected_paths": list(candidate.get("protected_paths") or []),
         "planned_write_paths": list(candidate.get("planned_write_paths") or []),
         "planned_test_paths": list(candidate.get("planned_test_paths") or []),
         "required_tests": list(candidate.get("required_tests") or []),
@@ -698,13 +699,26 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
         index = build_roadmap_candidate_index(root)
         dump_yaml(root / ROADMAP_CANDIDATES_FILE, index)
         claims = _load_claims(root)
-        safe, blocked = _ranked_safe_candidates(
-            root,
-            index=index,
-            claims=claims,
-            single_writer_roots=_single_writer_roots(index),
-            now=now,
-        )
+        takeover_safe = [
+            candidate
+            for candidate in index.get("candidates", [])
+            if candidate.get("claimable") and candidate.get("takeover_mode") not in {None, "none"}
+        ]
+        fresh_safe = [candidate for candidate in index.get("candidates", []) if candidate.get("fresh_claimable")]
+        resumable_safe = [
+            candidate
+            for candidate in index.get("candidates", [])
+            if candidate.get("claimable") and not candidate.get("fresh_claimable") and candidate.get("takeover_mode") in {None, "none"}
+        ]
+        safe = [*takeover_safe, *fresh_safe, *resumable_safe]
+        blocked = [
+            {
+                "candidate_id": candidate["candidate_id"],
+                "blockers": list(candidate.get("blockers") or candidate.get("wait_reasons") or [f"status={candidate.get('status')}"]),
+            }
+            for candidate in index.get("candidates", [])
+            if not candidate.get("claimable")
+        ]
         if not safe:
             return None, blocked
         selected = safe[0]
@@ -739,13 +753,15 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
             f"top_candidate={first_blocker['candidate_id']} reason={'; '.join(first_blocker['blockers'])}"
         )
         return 1
-    claims = _load_claims(root)
-    selected_claim = _claim_by_candidate(claims).get(selected["candidate_id"])
-    takeover_mode = bool(selected_claim and selected_claim.get("status") == "taken_over")
-    mode = "taken-over" if takeover_mode else ("promoted" if args.promote_task else ("claimed" if args.write_claim else "dry-run"))
+    mode = (
+        "taken-over"
+        if args.promote_task and selected.get("takeover_mode") not in {None, "none"}
+        else ("promoted" if args.promote_task else ("claimed" if args.write_claim else "dry-run"))
+    )
     print(
         f"[OK] claim-next {mode} candidate_id={selected['candidate_id']} "
-        f"task_id_hint={selected['task_id_hint']} branch={selected['candidate_branch']}"
+        f"task_id_hint={selected['task_id_hint']} branch={selected['candidate_branch']} "
+        f"takeover_mode={selected.get('takeover_mode', 'none')}"
     )
     return 0
 

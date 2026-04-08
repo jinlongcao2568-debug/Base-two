@@ -42,7 +42,6 @@ REQUIRED_CANDIDATE_FIELDS = [
     "depends_on",
     "unlocks",
     "allowed_dirs",
-    "reserved_paths",
     "planned_write_paths",
     "planned_test_paths",
     "required_tests",
@@ -56,8 +55,8 @@ REQUIRED_CANDIDATE_FIELDS = [
 
 def _schema() -> dict:
     return {
-        "version": "1.0",
-        "updated_at": "2026-04-07T00:00:00+08:00",
+        "version": "1.1",
+        "updated_at": "2026-04-08T00:00:00+08:00",
         "authority_source": "docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md",
         "status": "draft",
         "lane_types": LANE_TYPES,
@@ -67,25 +66,40 @@ def _schema() -> dict:
     }
 
 
-def _candidate(candidate_id: str, *, status: str, priority: int, depends_on: list[str] | None = None) -> dict:
+def _candidate(
+    candidate_id: str,
+    *,
+    status: str,
+    priority: int,
+    depends_on: list[str] | None = None,
+    candidate_kind: str = "lane_slice",
+    claimable: bool = True,
+) -> dict:
+    scope_path = f"src/governance_test/{candidate_id}/"
     return {
         "candidate_id": candidate_id,
         "title": candidate_id,
         "stage": "stage1",
         "module_id": "stage1_orchestration",
-        "lane_type": "core_contract" if "core" in candidate_id else "stage_internal_parallel",
+        "candidate_kind": candidate_kind,
+        "claimable": claimable,
+        "parent_candidate_id": None,
+        "lane_type": "integration_gate" if "integration" in candidate_id else ("core_contract" if "core" in candidate_id else "stage_internal_parallel"),
         "status": status,
         "priority": priority,
         "depends_on": list(depends_on or []),
         "unlocks": [],
-        "allowed_dirs": ["docs/governance/"],
-        "reserved_paths": ["src/"],
-        "planned_write_paths": ["docs/governance/"],
+        "allowed_dirs": [scope_path],
+        "forbidden_write_paths": ["src/stage6_facts/"],
+        "protected_paths": [],
+        "planned_write_paths": [scope_path],
         "planned_test_paths": ["tests/governance/"],
         "required_tests": ["python scripts/check_repo.py"],
         "branch_template": "codex/{task_id}",
         "worktree_template": "../AX9.worktrees/{task_id}",
         "integration_gate": None,
+        "expected_children": [],
+        "completion_policy": "none",
         "claim_policy": {
             "one_window_one_candidate": True,
             "conflict_policy": "choose_next_safe_candidate",
@@ -105,10 +119,15 @@ def _write_backlog(repo: Path, candidates: list[dict]) -> None:
     write_yaml(
         repo / "docs/governance/ROADMAP_BACKLOG.yaml",
         {
-            "version": "0.1",
-            "updated_at": "2026-04-07T00:00:00+08:00",
+            "version": "0.2",
+            "updated_at": "2026-04-08T00:00:00+08:00",
             "authority_source": "docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md",
-            "scheduler_policy": {"entrypoint": "claim-next"},
+            "defaults": {"legacy_reserved_paths_map_to": "forbidden_write_paths"},
+            "scheduler_policy": {
+                "entrypoint": "claim-next",
+                "claim_capacity_source": "docs/governance/TASK_POLICY.yaml#roadmap_scheduler.max_active_claims_v1",
+                "single_writer_roots": [],
+            },
             "stages": [{"stage": "stage1", "module_id": "stage1_orchestration"}],
             "candidates": candidates,
         },
@@ -139,6 +158,7 @@ def test_plan_roadmap_candidates_derives_ready_waiting_and_controlled_statuses(t
     assert result.returncode == 0, result.stdout + result.stderr
     assert index["candidate_count"] == 5
     assert index["ready_candidate_ids"] == ["stage1-core-contract"]
+    assert index["fresh_claimable_candidate_ids"] == ["stage1-core-contract"]
     assert _candidate_by_id(index, "stage1-source-family-lanes")["status"] == "waiting"
     assert _candidate_by_id(index, "stage1-blocked-lane")["status"] == "blocked"
     assert _candidate_by_id(index, "stage1-claimed-lane")["status"] == "claimed"
@@ -163,6 +183,74 @@ def test_plan_roadmap_candidates_unlocks_dependency_after_candidate_done(tmp_pat
     assert _candidate_by_id(index, "stage1-core-contract")["status"] == "done"
     assert _candidate_by_id(index, "stage1-source-family-lanes")["status"] == "ready"
     assert _candidate_by_id(index, "stage1-source-family-lanes")["wait_reasons"] == []
+
+
+def test_plan_roadmap_candidates_marks_expired_promoted_claim_as_takeover_not_ready(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate("stage1-core-contract", status="planned", priority=100)])
+    write_yaml(
+        repo / ".codex/local/roadmap_candidates/claims.yaml",
+        {
+            "version": "0.1",
+            "claims": [
+                {
+                    "candidate_id": "stage1-core-contract",
+                    "status": "promoted",
+                    "formal_task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "candidate_worktree": str((repo / "missing-worktree").resolve()).replace("\\", "/"),
+                    "expires_at": "2026-04-08T00:00:00+08:00",
+                }
+            ],
+        },
+    )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+            "title": "stage1 contract",
+            "status": "paused",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage1",
+            "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "idle",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-08T00:00:00+08:00",
+            "topology": "single_task",
+                "allowed_dirs": ["src/governance_test/stage1-core-contract/"],
+                "reserved_paths": [],
+                "planned_write_paths": ["src/governance_test/stage1-core-contract/"],
+            "planned_test_paths": ["tests/governance/"],
+            "required_tests": ["python scripts/check_repo.py"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "successor_state": None,
+            "created_at": "2026-04-08T00:00:00+08:00",
+            "activated_at": "2026-04-08T00:00:00+08:00",
+            "closed_at": None,
+            "roadmap_candidate_id": "stage1-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "plan-roadmap-candidates")
+    index = read_yaml(repo / ".codex/local/roadmap_candidates/index.yaml")
+    candidate = _candidate_by_id(index, "stage1-core-contract")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert index["ready_candidate_ids"] == []
+    assert index["fresh_claimable_candidate_ids"] == []
+    assert index["takeover_candidate_ids"] == ["stage1-core-contract"]
+    assert candidate["status"] == "stale"
+    assert candidate["takeover_mode"] == "expired_promoted_takeover"
 
 
 def test_plan_roadmap_candidates_rejects_unknown_stage_candidate_reference(tmp_path: Path) -> None:
