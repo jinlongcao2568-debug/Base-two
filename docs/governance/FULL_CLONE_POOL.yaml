@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-07T22:17:02+08:00'
+updated_at: '2026-04-08T09:45:50+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 root_path: D:/Base One/Base-two/AX9.clones
@@ -12,10 +12,10 @@ slots:
 - slot_id: worker-01
   path: D:/Base One/Base-two/AX9.clones/worker-01
   branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
-  status: ready
+  status: active
   current_task_id: TASK-RM-STAGE1-CORE-CONTRACT
   idle_branch: codex/worker-01-idle
-  last_provisioned_at: '2026-04-07T22:16:52+08:00'
+  last_provisioned_at: '2026-04-08T09:45:45+08:00'
   last_claimed_at: '2026-04-07T21:20:11+08:00'
   last_released_at: null
 - slot_id: worker-02
@@ -24,7 +24,7 @@ slots:
   status: ready
   current_task_id: null
   idle_branch: codex/worker-02-idle
-  last_provisioned_at: '2026-04-07T22:16:55+08:00'
+  last_provisioned_at: '2026-04-08T09:45:47+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-03
@@ -33,7 +33,7 @@ slots:
   status: ready
   current_task_id: null
   idle_branch: codex/worker-03-idle
-  last_provisioned_at: '2026-04-07T22:16:58+08:00'
+  last_provisioned_at: '2026-04-08T09:45:48+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-04
@@ -42,6 +42,6 @@ slots:
   status: ready
   current_task_id: null
   idle_branch: codex/worker-04-idle
-  last_provisioned_at: '2026-04-07T22:17:02+08:00'
+  last_provisioned_at: '2026-04-08T09:45:50+08:00'
   last_claimed_at: null
   last_released_at: null

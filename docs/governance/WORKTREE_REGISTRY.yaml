@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-08T09:24:52+08:00'
+updated_at: '2026-04-08T09:48:30+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -747,9 +747,9 @@ entries:
   work_mode: execution
   parent_task_id: null
   branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
-  path: D:/Base One/Base-two/AX9.worktrees/worker-01
+  path: D:/Base One/Base-two/AX9.clones/worker-01
   status: active
-  cleanup_state: pending
+  cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: worker-01
@@ -799,6 +799,7 @@ entries:
       status: pending
       recorded_at: null
       merged_into_parent_at: null
+  pool_kind: full_clone
 - task_id: TASK-GOV-045
   work_mode: coordination
   parent_task_id: null
@@ -833,6 +834,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-048-command-phrase-standardization
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-050
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-050-worker-runtime-drift-repair
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed
