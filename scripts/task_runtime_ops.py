@@ -32,6 +32,12 @@ from task_lifecycle_ops import (
 from task_orchestration_ops import cmd_orchestration_status
 from roadmap_candidate_index import cmd_plan_roadmap_candidates
 from roadmap_candidate_compiler import cmd_compile as cmd_compile_roadmap_candidates
+from roadmap_explain import (
+    cmd_explain_candidate,
+    cmd_explain_claim_decision,
+    cmd_explain_pool,
+    cmd_explain_release_chain,
+)
 from roadmap_claim_next import cmd_claim_next
 from roadmap_execution_closeout import main as roadmap_closeout_main, close_ready_execution_tasks
 from full_clone_pool import cmd_provision_full_clone_pool
@@ -79,6 +85,20 @@ def add_coordination_commands(subparsers) -> None:
 
     review_pool_parser = subparsers.add_parser("review-candidate-pool")
     review_pool_parser.set_defaults(func=cmd_review)
+
+    explain_candidate_parser = subparsers.add_parser("explain-candidate")
+    explain_candidate_parser.add_argument("candidate_id")
+    explain_candidate_parser.set_defaults(func=cmd_explain_candidate)
+
+    explain_pool_parser = subparsers.add_parser("explain-candidate-pool")
+    explain_pool_parser.set_defaults(func=cmd_explain_pool)
+
+    explain_claim_parser = subparsers.add_parser("explain-claim-decision")
+    explain_claim_parser.set_defaults(func=cmd_explain_claim_decision)
+
+    explain_release_parser = subparsers.add_parser("explain-release-chain")
+    explain_release_parser.add_argument("candidate_id")
+    explain_release_parser.set_defaults(func=cmd_explain_release_chain)
 
     close_ready_execution_parser = subparsers.add_parser("close-ready-execution-tasks")
     close_ready_execution_parser.set_defaults(func=lambda args: roadmap_closeout_main())

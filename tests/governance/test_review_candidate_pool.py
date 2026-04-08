@@ -97,3 +97,26 @@ def test_review_candidate_pool_is_ready_when_parallel_supply_is_sufficient(tmp_p
     assert payload["slot_issues"] == []
     assert payload["candidate_summary"]["claimable_count"] >= 4
     assert payload["candidate_summary"]["parallelism_deficit"] == 0
+
+
+def test_review_candidate_pool_reports_root_and_closeout_radar_fields(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(
+        repo,
+        [
+            _candidate("stage1-core-contract", status="planned", priority=100),
+            _candidate("stage1-source-family-cn", status="planned", priority=110),
+        ],
+    )
+
+    result = run_python(SCRIPT, repo)
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 0
+    assert "root_candidate_count" in payload
+    assert "formal_root_count" in payload
+    assert "preview_root_count" in payload
+    assert "closeout_ready_execution_count" in payload
+    assert "top_unlock_value_candidates" in payload
+    assert "hard_gate_backlog" in payload

@@ -1,0 +1,31 @@
+task_id: TASK-GOV-058
+summary_status: doing
+last_handoff_at: '2026-04-08T16:22:36+08:00'
+completed_items:
+- Extended evaluator output with reason taxonomy, release evidence, release forecast,
+  source authority, and legacy mode
+- Added explain commands for candidate, candidate pool, claim decision, and release
+  chain
+- Upgraded review-candidate-pool with root coverage, closeout backlog, blocker radar,
+  and hard-gate visibility
+remaining_items:
+- Commit the governed task-scoped changes on the task branch
+next_step: Close TASK-GOV-058 as the explainability bundle commit, then record TASK-GOV-059
+  and TASK-GOV-060 as delivered follow-on records.
+next_tests:
+- All required tests already executed and recorded in the runlog.
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+- scripts/
+- tests/governance/
+- tests/automation/
+- .codex/local/roadmap_candidates/
+candidate_test_paths:
+- tests/governance/
+- tests/automation/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=current.
+- Handoff recorded by session `019d6b2c-8952-7a63-a3bc-0c8506875a95`.
+- ai_guarded closeout candidate

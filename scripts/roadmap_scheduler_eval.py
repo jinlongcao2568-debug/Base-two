@@ -45,6 +45,23 @@ ACTIVE_TASK_CONFLICT_STATUSES = {"doing", "review"}
 OPEN_FORMAL_TASK_STATUSES = {"doing", "paused", "review", "blocked"}
 CLAIM_ACTIVE_STATUSES = {"claimed", "promoted", "taken_over"}
 
+REASON_CODES = {
+    "dependency_wait",
+    "expected_children_wait",
+    "expected_claimable_children_wait",
+    "formal_task_blocked",
+    "active_claim",
+    "capacity_limit",
+    "write_path_overlap",
+    "protected_path_conflict",
+    "single_writer_root_conflict",
+    "branch_conflict",
+    "worktree_conflict",
+    "candidate_not_claimable",
+    "stale_takeover_ready",
+    "stale_takeover_blocked",
+}
+
 
 def _parse_iso(value: str | None) -> datetime | None:
     if not value:
@@ -72,6 +89,13 @@ def _dedupe(values: list[str]) -> list[str]:
         if value not in ordered:
             ordered.append(value)
     return ordered
+
+
+def _append_reason(reason_codes: list[str], code: str) -> None:
+    if code not in REASON_CODES:
+        raise GovernanceError(f"unknown roadmap scheduler reason code: {code}")
+    if code not in reason_codes:
+        reason_codes.append(code)
 
 
 def _paths_overlap(left: str, right: str) -> bool:
@@ -551,11 +575,14 @@ class CandidateEvaluator:
             _dependency_result(str(dependency_id), candidates_by_id=self.candidates_by_id, evaluator=self)
             for dependency_id in candidate.get("depends_on") or []
         ]
+        reason_codes: list[str] = []
         wait_reasons = [
             f"waiting for {dependency['dependency_id']} ({dependency['status']})"
             for dependency in dependency_status
             if not dependency["satisfied"]
         ]
+        if any(not dependency["satisfied"] for dependency in dependency_status):
+            _append_reason(reason_codes, "dependency_wait")
         expected_children = list(candidate.get("expected_children") or [])
         completion_policy = str(candidate.get("completion_policy") or "none")
         child_statuses = [self.evaluate(child_id) for child_id in expected_children]
@@ -563,12 +590,19 @@ class CandidateEvaluator:
             for child in child_statuses:
                 if child["effective_status"] not in TERMINAL_STATUSES:
                     wait_reasons.append(f"waiting for expected child {child['candidate_id']} ({child['effective_status']})")
+            if any(child["effective_status"] not in TERMINAL_STATUSES for child in child_statuses):
+                _append_reason(reason_codes, "expected_children_wait")
         elif completion_policy == "all_expected_claimable_children_done":
             for child in child_statuses:
                 if child.get("claimable_declared", False) and child["effective_status"] not in TERMINAL_STATUSES:
                     wait_reasons.append(
                         f"waiting for expected claimable child {child['candidate_id']} ({child['effective_status']})"
                     )
+            if any(
+                child.get("claimable_declared", False) and child["effective_status"] not in TERMINAL_STATUSES
+                for child in child_statuses
+            ):
+                _append_reason(reason_codes, "expected_claimable_children_wait")
 
         primary_task = _primary_task(self.tasks_by_candidate.get(candidate_id, []))
         claim = self.claims_by_candidate.get(candidate_id)
@@ -580,22 +614,27 @@ class CandidateEvaluator:
             stale_blockers = _takeover_blockers(self.root, candidate, claim, primary_task)
             if stale_blockers:
                 blockers.extend(stale_blockers)
+                _append_reason(reason_codes, "stale_takeover_blocked")
             else:
                 takeover_mode = (
                     "expired_promoted_takeover"
                     if str(claim.get("status")) == "promoted" and _parse_iso(str(claim.get("expires_at") or "")) is not None
                     else "stale_claim_takeover"
                 )
+                _append_reason(reason_codes, "stale_takeover_ready")
 
         if primary_task is not None and primary_task.get("status") == "blocked" and takeover_mode == "none":
             blockers.append(f"formal task blocked: {primary_task['task_id']}")
+            _append_reason(reason_codes, "formal_task_blocked")
 
         if claim and _claim_is_fresh(claim, self.now) and takeover_mode == "none":
             blockers.append(f"active claim by {claim.get('window_id')}")
             active_conflict_set.append(str(claim.get("window_id") or candidate_id))
+            _append_reason(reason_codes, "active_claim")
 
         if not wait_reasons and candidate.get("claimable", True) and takeover_mode == "none" and self.active_claim_count >= self.max_active_claims:
             blockers.append(f"roadmap claim capacity reached ({self.active_claim_count}/{self.max_active_claims})")
+            _append_reason(reason_codes, "capacity_limit")
 
         candidate_paths = list(candidate.get("planned_write_paths") or [])
         protected_paths = list(candidate.get("protected_paths") or [])
@@ -606,6 +645,7 @@ class CandidateEvaluator:
             if _any_path_overlaps(candidate_paths, list(task.get("planned_write_paths") or [])):
                 blockers.append(f"write-path overlap with {task['task_id']}")
                 active_conflict_set.append(str(task["task_id"]))
+                _append_reason(reason_codes, "write_path_overlap")
                 break
         for task in self.active_conflict_tasks:
             if same_formal_task_id and task.get("task_id") == same_formal_task_id:
@@ -613,10 +653,12 @@ class CandidateEvaluator:
             if _any_path_overlaps(candidate_paths, list(task.get("protected_paths") or [])):
                 blockers.append(f"protected-path conflict with {task['task_id']}")
                 active_conflict_set.append(str(task["task_id"]))
+                _append_reason(reason_codes, "protected_path_conflict")
                 break
             if _any_path_overlaps(list(task.get("planned_write_paths") or []), protected_paths):
                 blockers.append(f"protected-path conflict with {task['task_id']}")
                 active_conflict_set.append(str(task["task_id"]))
+                _append_reason(reason_codes, "protected_path_conflict")
                 break
 
         for root in self.single_writer_roots:
@@ -634,6 +676,7 @@ class CandidateEvaluator:
             if conflict is not None:
                 blockers.append("single-writer root conflict")
                 active_conflict_set.append(str(conflict["task_id"]))
+                _append_reason(reason_codes, "single_writer_root_conflict")
                 break
 
         if branch and any(
@@ -641,8 +684,10 @@ class CandidateEvaluator:
             for task in self.active_conflict_tasks
         ):
             blockers.append("branch already owned by active task")
+            _append_reason(reason_codes, "branch_conflict")
         if branch and branch_exists(self.root, branch) and takeover_mode == "none" and primary_task is None:
             blockers.append("branch already exists")
+            _append_reason(reason_codes, "branch_conflict")
 
         worktree_entries = load_worktree_registry(self.root).get("entries", [])
         if worktree and any(
@@ -650,6 +695,7 @@ class CandidateEvaluator:
             for entry in worktree_entries
         ):
             blockers.append("worktree path already owned")
+            _append_reason(reason_codes, "worktree_conflict")
 
         declared_status = str(candidate.get("status"))
         claimable_declared = bool(candidate.get("claimable", True))
@@ -686,9 +732,39 @@ class CandidateEvaluator:
         else:
             effective_status = "waiting"
             claimable = False
+        if not claimable_declared:
+            _append_reason(reason_codes, "candidate_not_claimable")
 
         fresh_claimable = claimable and takeover_mode == "none" and effective_status == "ready"
         takeover_claimable = claimable and takeover_mode != "none"
+        release_evidence_required = list(candidate.get("release_evidence") or [])
+        release_evidence_satisfied = []
+        if not any(not dependency["satisfied"] for dependency in dependency_status):
+            release_evidence_satisfied.append("module_dependencies_satisfied")
+        if completion_policy == "none" or not any("expected child" in reason for reason in wait_reasons):
+            if completion_policy == "all_expected_children_done":
+                release_evidence_satisfied.append("expected_children_done")
+            elif completion_policy == "all_expected_claimable_children_done":
+                release_evidence_satisfied.append("expected_claimable_children_done")
+        if not blockers:
+            release_evidence_satisfied.append("paths_safe")
+        if not any(code == "capacity_limit" for code in reason_codes):
+            release_evidence_satisfied.append("capacity_available")
+        if takeover_mode != "none":
+            release_evidence_satisfied.append("takeover_allowed")
+        upstream_blocker_candidates = _dedupe(
+            [dependency["dependency_id"] for dependency in dependency_status if not dependency["satisfied"]]
+            + [
+                child["candidate_id"]
+                for child in child_statuses
+                if child["effective_status"] not in TERMINAL_STATUSES
+            ]
+        )
+        release_forecast = {
+            "if_completed_candidate_ids": list(candidate.get("unlocks") or []),
+            "unlock_count": len(list(candidate.get("unlocks") or [])),
+            "passes_hard_gate": candidate.get("lane_type") in {"integration_gate", "fact_surface_gate"},
+        }
         selection_score = _selection_score(
             priority=int(candidate.get("priority") or 0),
             lane_type=str(candidate.get("lane_type") or ""),
@@ -714,8 +790,11 @@ class CandidateEvaluator:
             "priority": candidate["priority"],
             "rank": None,
             "wait_reasons": _dedupe(wait_reasons),
+            "blocking_reason_codes": reason_codes,
+            "blocking_reason_text": _dedupe([*wait_reasons, *blockers]),
             "blockers": _dedupe(blockers),
             "active_conflict_set": _dedupe(active_conflict_set),
+            "upstream_blocker_candidates": upstream_blocker_candidates,
             "dependency_status": dependency_status,
             "depends_on": list(candidate.get("depends_on") or []),
             "unlocks": list(candidate.get("unlocks") or []),
@@ -736,6 +815,12 @@ class CandidateEvaluator:
             "expected_children": expected_children,
             "completion_policy": completion_policy,
             "takeover_mode": takeover_mode,
+            "release_evidence_required": release_evidence_required,
+            "release_evidence_satisfied": _dedupe(release_evidence_satisfied),
+            "release_forecast": release_forecast,
+            "unlock_count": release_forecast["unlock_count"],
+            "source_authority": "compiled_graph" if self.backlog.get("compiler_policy", {}).get("mode") == "module_graph_compiler" else "inline_legacy",
+            "legacy_mode": "legacy_candidate_compat" if "candidate_intent" not in candidate else "none",
             "selection_score": selection_score,
         }
 

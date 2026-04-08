@@ -9,6 +9,7 @@ from typing import Any
 from control_plane_root import load_full_clone_pool, resolve_control_plane_root
 from governance_lib import configure_utf8_stdio, find_repo_root, load_task_registry, load_yaml
 from roadmap_candidate_maintainer import SUMMARY_FILE, refresh_once
+from roadmap_execution_closeout import list_closeout_ready_execution_tasks
 from roadmap_claim_next import CLAIMS_FILE
 
 
@@ -27,6 +28,9 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
     full_clone_pool = load_full_clone_pool(control_root)
     tasks = registry.get("tasks", [])
+    candidates = (
+        load_yaml(control_root / ".codex/local/roadmap_candidates/index.yaml") or {}
+    ).get("candidates", [])
     incomplete_tasks = [
         {
             "task_id": task["task_id"],
@@ -55,7 +59,41 @@ def review_pool(control_root: Path) -> dict[str, Any]:
             slot_issues.append(f"{slot['slot_id']} active without current_task_id")
         if slot.get("status") == "ready" and slot.get("current_task_id"):
             slot_issues.append(f"{slot['slot_id']} ready but still points at {slot['current_task_id']}")
+    root_candidates = [candidate for candidate in candidates if candidate.get("candidate_intent") in {"module_root", "module_preview_root"}]
+    formal_roots = [candidate for candidate in root_candidates if candidate.get("root_kind") == "formal_root"]
+    preview_roots = [candidate for candidate in root_candidates if candidate.get("root_kind") == "preview_root"]
+    legacy_candidates = [candidate for candidate in candidates if candidate.get("legacy_mode") not in {None, "none"}]
+    closeout_ready = list_closeout_ready_execution_tasks(control_root)
+    closeout_blocked = [
+        {
+            "task_id": task["task_id"],
+            "blocked_reason": task.get("blocked_reason"),
+        }
+        for task in tasks
+        if task.get("task_kind") == "execution" and task.get("status") == "review" and task["task_id"] not in {item["task_id"] for item in closeout_ready}
+    ]
+    blocker_counts: dict[str, int] = {}
+    for candidate in candidates:
+        for code in candidate.get("blocking_reason_codes") or []:
+            blocker_counts[code] = blocker_counts.get(code, 0) + 1
+    top_unlock = sorted(
+        [
+            {
+                "candidate_id": candidate["candidate_id"],
+                "unlock_count": int(candidate.get("unlock_count") or 0),
+            }
+            for candidate in candidates
+        ],
+        key=lambda item: (-item["unlock_count"], item["candidate_id"]),
+    )[:5]
+    hard_gate_backlog = [
+        candidate["candidate_id"]
+        for candidate in candidates
+        if candidate.get("root_kind") == "hard_gate" and candidate.get("status") in {"waiting", "blocked", "stale"}
+    ]
     issues = [*slot_issues]
+    if legacy_candidates:
+        issues.append(f"legacy candidate compatibility still present: {len(legacy_candidates)}")
     if slot_issues:
         status = "blocked"
     elif stale_claims or int(summary.get("parallelism_deficit") or 0) > 0:
@@ -67,9 +105,20 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "control_plane_root": str(control_root).replace("\\", "/"),
         "summary_file": str(SUMMARY_FILE).replace("\\", "/"),
         "candidate_summary": summary,
+        "root_candidate_count": len(root_candidates),
+        "formal_root_count": len(formal_roots),
+        "preview_root_count": len(preview_roots),
+        "legacy_candidate_count": len(legacy_candidates),
+        "closeout_ready_execution_count": len(closeout_ready),
+        "closeout_blocked_execution_count": len(closeout_blocked),
+        "top_unlock_value_candidates": top_unlock,
+        "top_blocker_codes": blocker_counts,
+        "hard_gate_backlog": hard_gate_backlog,
         "incomplete_tasks": incomplete_tasks,
         "stale_claims": stale_claims,
         "slot_issues": slot_issues,
+        "closeout_ready_execution_tasks": closeout_ready,
+        "closeout_blocked_execution_tasks": closeout_blocked,
         "issues": issues,
     }
 

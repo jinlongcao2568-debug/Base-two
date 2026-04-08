@@ -97,3 +97,21 @@ def test_evaluator_blocks_candidate_when_protected_paths_overlap_active_task(tmp
 
     assert by_id["stage1-source-family-global"]["claimable"] is False
     assert "protected-path conflict" in " ".join(by_id["stage1-source-family-global"]["blockers"])
+    assert "protected_path_conflict" in by_id["stage1-source-family-global"]["blocking_reason_codes"]
+
+
+def test_evaluator_exposes_reason_taxonomy_and_release_forecast(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    parent = _candidate("stage1-core-contract", status="planned", priority=100)
+    parent["unlocks"] = ["stage1-source-family-cn", "stage1-source-family-global"]
+    child = _candidate("stage1-source-family-cn", status="waiting", priority=110, depends_on=["stage1-core-contract"])
+    child_two = _candidate("stage1-source-family-global", status="waiting", priority=120, depends_on=["stage1-core-contract"])
+    _write_backlog(repo, [parent, child, child_two])
+
+    payload = MODULE.evaluate_roadmap_candidates(repo)
+    by_id = {candidate["candidate_id"]: candidate for candidate in payload["candidates"]}
+
+    assert by_id["stage1-core-contract"]["release_forecast"]["unlock_count"] == 2
+    assert by_id["stage1-source-family-cn"]["blocking_reason_codes"] == ["dependency_wait"]
+    assert by_id["stage1-source-family-cn"]["upstream_blocker_candidates"] == ["stage1-core-contract"]

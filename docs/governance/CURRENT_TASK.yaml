@@ -10,7 +10,7 @@ size_class: null
 automation_mode: null
 worker_state: idle
 blocked_reason: null
-last_reported_at: '2026-04-08T16:02:12+08:00'
+last_reported_at: '2026-04-08T16:23:35+08:00'
 topology: null
 allowed_dirs: []
 reserved_paths: []
@@ -25,4 +25,4 @@ parallelism_plan_id: null
 review_bundle_status: null
 next_action: continue-current closed the review-ready task and returned the control
   plane to idle.
-updated_at: '2026-04-08T16:02:12+08:00'
+updated_at: '2026-04-08T16:23:35+08:00'
