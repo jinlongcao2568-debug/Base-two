@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-08T10:01:24+08:00'
+updated_at: '2026-04-08T17:31:00+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 root_path: D:/Base One/Base-two/AX9.clones
@@ -16,7 +16,7 @@ slots:
   current_task_id: TASK-RM-STAGE1-CORE-CONTRACT
   idle_branch: codex/worker-01-idle
   last_provisioned_at: '2026-04-08T10:00:57+08:00'
-  last_claimed_at: '2026-04-07T21:20:11+08:00'
+  last_claimed_at: '2026-04-08T17:30:53+08:00'
   last_released_at: null
 - slot_id: worker-02
   path: D:/Base One/Base-two/AX9.clones/worker-02
