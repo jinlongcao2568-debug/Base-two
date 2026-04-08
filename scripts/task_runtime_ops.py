@@ -32,6 +32,7 @@ from task_lifecycle_ops import (
 from task_orchestration_ops import cmd_orchestration_status
 from roadmap_candidate_index import cmd_plan_roadmap_candidates
 from roadmap_claim_next import cmd_claim_next
+from roadmap_execution_closeout import main as roadmap_closeout_main, close_ready_execution_tasks
 from full_clone_pool import cmd_provision_full_clone_pool
 from roadmap_candidate_maintainer import cmd_refresh
 from worker_self_loop import cmd_once as cmd_worker_self_loop_once, cmd_loop as cmd_worker_self_loop_loop
@@ -74,6 +75,9 @@ def add_coordination_commands(subparsers) -> None:
 
     review_pool_parser = subparsers.add_parser("review-candidate-pool")
     review_pool_parser.set_defaults(func=cmd_review)
+
+    close_ready_execution_parser = subparsers.add_parser("close-ready-execution-tasks")
+    close_ready_execution_parser.set_defaults(func=lambda args: roadmap_closeout_main())
 
     claim_next_parser = subparsers.add_parser("claim-next")
     claim_next_parser.add_argument("--write-claim", action="store_true")

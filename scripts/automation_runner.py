@@ -36,6 +36,7 @@ from orchestration_runtime import (
     update_execution_runtime_entry,
 )
 from task_coordination_lease import coordination_thread_id, current_session_id
+from roadmap_execution_closeout import close_ready_execution_tasks
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -354,6 +355,13 @@ def _maybe_continue_roadmap(
     metrics: dict[str, object],
     continue_roadmap: bool,
 ) -> tuple[int, dict[str, object], dict[str, object]]:
+    closeout = close_ready_execution_tasks(root)
+    if closeout["closed_task_ids"]:
+        print(f"[OK] coordinator closeout closed execution tasks: {', '.join(closeout['closed_task_ids'])}")
+    for item in closeout["blocked"]:
+        print(f"[BLOCKED] coordinator closeout {item}")
+    if closeout["blocked"]:
+        return 1, current_task, metrics
     if not continue_roadmap:
         return 0, current_task, metrics
     continuation = task_ops(root, "continue-roadmap")

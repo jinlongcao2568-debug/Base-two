@@ -5,19 +5,18 @@
 - `task_id`: `TASK-GOV-052`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `planned`
+- `status`: `done`
 - `stage`: `governance-roadmap-live-evaluator-stage1-pilot-v1`
 - `branch`: `codex/TASK-GOV-052-roadmap-live-evaluator-stage1-pilot`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-
 ## Primary Goals
 
 - Introduce one shared live evaluator for roadmap candidates so candidate index, refresh summary, `claim-next`, and `review-candidate-pool` derive status from the same control-plane truth.
@@ -196,22 +195,21 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `planned`
-- `closeout_state`: `not_started`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `full_task_remaining`
-- `next_gate`: `implementation_start`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `planned`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -220,5 +218,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
 - `branch`: `codex/TASK-GOV-052-roadmap-live-evaluator-stage1-pilot`
-- `updated_at`: `2026-04-08T11:52:00+08:00`
+- `updated_at`: `2026-04-08T14:11:28+08:00`
 <!-- generated:task-meta:end -->

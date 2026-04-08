@@ -605,6 +605,9 @@ class CandidateEvaluator:
         effective_status = declared_status
         if declared_status in TERMINAL_STATUSES:
             claimable = False
+        elif primary_task is not None and primary_task.get("status") == "done":
+            effective_status = "done"
+            claimable = False
         elif takeover_mode != "none":
             effective_status = "stale"
             claimable = not blockers and not wait_reasons

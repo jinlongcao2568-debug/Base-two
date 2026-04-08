@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-08T10:03:23+08:00'
+updated_at: '2026-04-08T14:11:27+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -854,6 +854,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-051-worker-capacity-seven
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-052
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-052-roadmap-live-evaluator-stage1-pilot
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

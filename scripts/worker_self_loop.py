@@ -125,10 +125,10 @@ def preview_worker_action(local_root: Path, *, explicit_task_id: str | None = No
         if can_close.returncode == 0:
             return {
                 "status": "ready",
-                "mode": "close-and-claim-next",
+                "mode": "await-coordinator-closeout",
                 "slot_id": slot["slot_id"],
                 "control_root": str(control_root).replace("\\", "/"),
-                "explanation": f"task `{task['task_id']}` can close and then claim next",
+                "explanation": f"task `{task['task_id']}` is review-ready and awaiting coordinator closeout",
                 "task": _task_summary(task),
             }
         return {
@@ -197,32 +197,8 @@ def run_worker_once(local_root: Path, *, explicit_task_id: str | None = None) ->
         return decision
     if mode == "resume-current":
         return decision
-    if mode == "close-and-claim-next":
-        task = decision["task"]
-        closed = _run_task_ops(control_root, "close", task["task_id"])
-        if closed.returncode != 0:
-            return {
-                **decision,
-                "status": "blocked",
-                "mode": "close-blocked",
-                "blockers": [closed.stdout.strip() or closed.stderr.strip() or "close failed"],
-            }
-        idle_branch = _idle_branch(slot)
-        _switch_branch(local_root, idle_branch)
-        claim = _claim_next_for_slot(control_root, slot)
-        if claim.returncode != 0:
-            return {
-                "status": "blocked",
-                "mode": "claim-blocked",
-                "slot_id": slot["slot_id"],
-                "control_root": str(control_root).replace("\\", "/"),
-                "explanation": "closed the review task but could not claim a new task",
-                "blockers": [claim.stdout.strip() or claim.stderr.strip() or "claim-next failed"],
-            }
-        updated = preview_worker_action(local_root)
-        if updated.get("task"):
-            _switch_branch(local_root, updated["task"]["branch"])
-        return updated
+    if mode == "await-coordinator-closeout":
+        return decision
     if mode == "claim-next":
         idle_branch = _idle_branch(slot)
         if _current_branch(local_root) != idle_branch:

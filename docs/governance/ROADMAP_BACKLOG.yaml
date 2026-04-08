@@ -248,8 +248,8 @@ candidates:
   lane_type: core_contract
   status: waiting
   priority: 200
-  depends_on: [stage1-source-family-integration-gate]
-  unlocks: [stage2-source-family-lanes, stage2-integration-gate]
+  depends_on: [stage1-core-contract]
+  unlocks: [stage2-payload-preview-root, stage2-source-family-lanes, stage2-integration-gate, stage3-core-contract]
   allowed_dirs: [src/stage2_ingestion/, tests/stage2/]
   reserved_paths: [src/stage1_orchestration/, src/stage3_parsing/, src/stage6_facts/]
   planned_write_paths: [src/stage2_ingestion/, tests/stage2/]
@@ -259,6 +259,31 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage2-integration-gate
   claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage2-payload-preview-root
+  title: Stage2 raw payload preview root
+  stage: stage2
+  module_id: stage2_ingestion
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 205
+  depends_on: [stage1-core-contract]
+  unlocks: []
+  allowed_dirs: [src/stage2_ingestion/, tests/stage2/]
+  forbidden_write_paths: [src/stage1_orchestration/, src/stage6_facts/]
+  protected_paths: [tests/stage2/preview_root/]
+  planned_write_paths: [tests/stage2/preview_root/]
+  planned_test_paths: [tests/stage2/]
+  required_tests: [pytest tests/stage2 -q]
+  branch_template: codex/{task_id}-stage2-payload-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage2-integration-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy
 - candidate_id: stage2-source-family-lanes
   title: Stage2 source-family ingestion lanes
@@ -305,8 +330,8 @@ candidates:
   lane_type: core_contract
   status: waiting
   priority: 300
-  depends_on: [stage2-integration-gate]
-  unlocks: [stage3-parser-family-lanes, stage3-integration-gate]
+  depends_on: [stage2-core-contract]
+  unlocks: [stage3-normalized-preview-root, stage3-parser-family-lanes, stage3-integration-gate, stage4-core-contract]
   allowed_dirs: [src/stage3_parsing/, tests/stage3/]
   reserved_paths: [src/stage2_ingestion/, src/stage4_validation/, src/stage6_facts/]
   planned_write_paths: [src/stage3_parsing/, tests/stage3/]
@@ -316,6 +341,31 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage3-integration-gate
   claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage3-normalized-preview-root
+  title: Stage3 normalized record preview root
+  stage: stage3
+  module_id: stage3_parsing
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 305
+  depends_on: [stage2-core-contract]
+  unlocks: []
+  allowed_dirs: [src/stage3_parsing/, tests/stage3/]
+  forbidden_write_paths: [src/stage2_ingestion/, src/stage6_facts/]
+  protected_paths: [tests/stage3/preview_root/]
+  planned_write_paths: [tests/stage3/preview_root/]
+  planned_test_paths: [tests/stage3/]
+  required_tests: [pytest tests/stage3 -q]
+  branch_template: codex/{task_id}-stage3-normalized-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage3-integration-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy
 - candidate_id: stage3-parser-family-lanes
   title: Stage3 parser-family lanes
@@ -362,8 +412,8 @@ candidates:
   lane_type: core_contract
   status: waiting
   priority: 400
-  depends_on: [stage3-integration-gate]
-  unlocks: [stage4-rule-topic-lanes, stage4-integration-gate]
+  depends_on: [stage3-core-contract]
+  unlocks: [stage4-validation-preview-root, stage4-rule-topic-lanes, stage4-integration-gate, stage5-core-contract]
   allowed_dirs: [src/stage4_validation/, tests/stage4/]
   reserved_paths: [src/stage3_parsing/, src/stage5_reporting/, src/stage6_facts/]
   planned_write_paths: [src/stage4_validation/, tests/stage4/]
@@ -373,6 +423,31 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage4-integration-gate
   claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage4-validation-preview-root
+  title: Stage4 validation preview root
+  stage: stage4
+  module_id: stage4_validation
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 405
+  depends_on: [stage3-core-contract]
+  unlocks: []
+  allowed_dirs: [src/stage4_validation/, tests/stage4/]
+  forbidden_write_paths: [src/stage3_parsing/, src/stage6_facts/]
+  protected_paths: [tests/stage4/preview_root/]
+  planned_write_paths: [tests/stage4/preview_root/]
+  planned_test_paths: [tests/stage4/]
+  required_tests: [pytest tests/stage4 -q]
+  branch_template: codex/{task_id}-stage4-validation-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage4-integration-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy
 - candidate_id: stage4-rule-topic-lanes
   title: Stage4 rule-topic validation lanes
@@ -419,8 +494,8 @@ candidates:
   lane_type: core_contract
   status: waiting
   priority: 500
-  depends_on: [stage4-integration-gate]
-  unlocks: [stage5-formatter-lanes, stage5-integration-gate]
+  depends_on: [stage4-core-contract]
+  unlocks: [stage5-report-preview-root, stage5-formatter-lanes, stage5-integration-gate]
   allowed_dirs: [src/stage5_reporting/, tests/stage5/]
   reserved_paths: [src/stage4_validation/, src/stage6_facts/]
   planned_write_paths: [src/stage5_reporting/, tests/stage5/]
@@ -430,6 +505,31 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage5-integration-gate
   claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage5-report-preview-root
+  title: Stage5 report artifact preview root
+  stage: stage5
+  module_id: stage5_reporting
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 505
+  depends_on: [stage4-core-contract]
+  unlocks: []
+  allowed_dirs: [src/stage5_reporting/, tests/stage5/]
+  forbidden_write_paths: [src/stage4_validation/, src/stage6_facts/]
+  protected_paths: [tests/stage5/preview_root/]
+  planned_write_paths: [tests/stage5/preview_root/]
+  planned_test_paths: [tests/stage5/]
+  required_tests: [pytest tests/stage5 -q]
+  branch_template: codex/{task_id}-stage5-report-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage5-integration-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy
 - candidate_id: stage5-formatter-lanes
   title: Stage5 formatter and report snapshot lanes
@@ -496,7 +596,7 @@ candidates:
   status: waiting
   priority: 700
   depends_on: [stage6-fact-surface-gate]
-  unlocks: [stage7-sales-parallel-lanes, stage7-integration-gate]
+  unlocks: [stage7-sales-preview-root, stage7-sales-parallel-lanes, stage7-integration-gate, stage9-delivery-preview-root]
   allowed_dirs: [src/stage7_sales/, tests/stage7/]
   reserved_paths: [src/stage6_facts/, src/stage8_contact/, src/stage9_delivery/]
   planned_write_paths: [src/stage7_sales/, tests/stage7/]
@@ -506,6 +606,31 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage7-integration-gate
   claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage7-sales-preview-root
+  title: Stage7 sales context preview root
+  stage: stage7
+  module_id: stage7_sales
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 705
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/stage7_sales/, tests/stage7/]
+  forbidden_write_paths: [src/stage6_facts/, src/stage9_delivery/]
+  protected_paths: [tests/stage7/preview_root/]
+  planned_write_paths: [tests/stage7/preview_root/]
+  planned_test_paths: [tests/stage7/]
+  required_tests: [pytest tests/stage7 -q]
+  branch_template: codex/{task_id}-stage7-sales-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage7-integration-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy
 - candidate_id: stage7-sales-parallel-lanes
   title: Stage7 sales-context parallel lanes
@@ -553,7 +678,7 @@ candidates:
   status: waiting
   priority: 710
   depends_on: [stage6-fact-surface-gate]
-  unlocks: [stage8-contact-parallel-lanes, stage8-integration-gate]
+  unlocks: [stage8-contact-preview-root, stage8-contact-parallel-lanes, stage8-integration-gate, stage9-delivery-preview-root]
   allowed_dirs: [src/stage8_contact/, tests/stage8/]
   reserved_paths: [src/stage6_facts/, src/stage7_sales/, src/stage9_delivery/]
   planned_write_paths: [src/stage8_contact/, tests/stage8/]
@@ -563,6 +688,31 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage8-integration-gate
   claim_policy: *default_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: stage8-contact-preview-root
+  title: Stage8 contact context preview root
+  stage: stage8
+  module_id: stage8_contact
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 715
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/stage8_contact/, tests/stage8/]
+  forbidden_write_paths: [src/stage6_facts/, src/stage9_delivery/]
+  protected_paths: [tests/stage8/preview_root/]
+  planned_write_paths: [tests/stage8/preview_root/]
+  planned_test_paths: [tests/stage8/]
+  required_tests: [pytest tests/stage8 -q]
+  branch_template: codex/{task_id}-stage8-contact-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage8-integration-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy
 - candidate_id: stage8-contact-parallel-lanes
   title: Stage8 contact-context parallel lanes
@@ -602,6 +752,31 @@ candidates:
   integration_gate: stage8-integration-gate
   claim_policy: *single_writer_claim_policy
   takeover_policy: *default_takeover_policy
+- candidate_id: stage9-delivery-preview-root
+  title: Stage9 delivery preview root
+  stage: stage9
+  module_id: stage9_delivery
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 890
+  depends_on: [stage6-fact-surface-gate, stage7-core-contract, stage8-core-contract]
+  unlocks: []
+  allowed_dirs: [src/stage9_delivery/, tests/stage9/, docs/contracts/]
+  forbidden_write_paths: [src/stage6_facts/, db/migrations/]
+  protected_paths: [tests/stage9/preview_root/]
+  planned_write_paths: [tests/stage9/preview_root/]
+  planned_test_paths: [tests/stage9/]
+  required_tests: [pytest tests/stage9 -q]
+  branch_template: codex/{task_id}-stage9-delivery-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: stage9-final-delivery-gate
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
 - candidate_id: stage9-final-delivery-gate
   title: Stage9 final customer-visible delivery gate
   stage: stage9
@@ -620,4 +795,129 @@ candidates:
   worktree_template: ../AX9.worktrees/{task_id}
   integration_gate: stage9-final-delivery-gate
   claim_policy: *single_writer_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: domain-public-chain-preview-root
+  title: Domain public-chain preview root
+  stage: consumer
+  module_id: domain_public_chain
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 805
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/domain/engineering/public_chain/, tests/contracts/, tests/integration/]
+  forbidden_write_paths: [src/stage6_facts/, docs/governance/]
+  protected_paths: [tests/contracts/domain_public_chain_preview/]
+  planned_write_paths: [tests/contracts/domain_public_chain_preview/]
+  planned_test_paths: [tests/contracts/]
+  required_tests: [pytest tests/contracts -q]
+  branch_template: codex/{task_id}-domain-public-chain-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: null
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: domain-project-manager-preview-root
+  title: Domain project-manager preview root
+  stage: consumer
+  module_id: domain_project_manager
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 810
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/domain/engineering/project_manager/, tests/integration/]
+  forbidden_write_paths: [src/stage6_facts/, docs/governance/]
+  protected_paths: [tests/integration/domain_project_manager_preview/]
+  planned_write_paths: [tests/integration/domain_project_manager_preview/]
+  planned_test_paths: [tests/integration/]
+  required_tests: [pytest tests/integration -q]
+  branch_template: codex/{task_id}-domain-project-manager-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: null
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: domain-competitor-analysis-preview-root
+  title: Domain competitor-analysis preview root
+  stage: consumer
+  module_id: domain_competitor_analysis
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 815
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/domain/engineering/competitor_analysis/, tests/integration/]
+  forbidden_write_paths: [src/stage6_facts/, docs/governance/]
+  protected_paths: [tests/integration/domain_competitor_analysis_preview/]
+  planned_write_paths: [tests/integration/domain_competitor_analysis_preview/]
+  planned_test_paths: [tests/integration/]
+  required_tests: [pytest tests/integration -q]
+  branch_template: codex/{task_id}-domain-competitor-analysis-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: null
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: domain-evidence-preview-root
+  title: Domain evidence preview root
+  stage: consumer
+  module_id: domain_evidence
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 820
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/domain/engineering/evidence/, tests/integration/]
+  forbidden_write_paths: [src/stage6_facts/, docs/governance/]
+  protected_paths: [tests/integration/domain_evidence_preview/]
+  planned_write_paths: [tests/integration/domain_evidence_preview/]
+  planned_test_paths: [tests/integration/]
+  required_tests: [pytest tests/integration -q]
+  branch_template: codex/{task_id}-domain-evidence-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: null
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
+  takeover_policy: *default_takeover_policy
+- candidate_id: domain-review-requests-preview-root
+  title: Domain review-requests preview root
+  stage: consumer
+  module_id: domain_review_requests
+  candidate_kind: lane_slice
+  claimable: true
+  parent_candidate_id: null
+  lane_type: downstream_fixture_preview
+  status: waiting
+  priority: 825
+  depends_on: [stage6-fact-surface-gate]
+  unlocks: []
+  allowed_dirs: [src/domain/engineering/review_requests/, tests/integration/]
+  forbidden_write_paths: [src/stage6_facts/, docs/governance/]
+  protected_paths: [tests/integration/domain_review_requests_preview/]
+  planned_write_paths: [tests/integration/domain_review_requests_preview/]
+  planned_test_paths: [tests/integration/]
+  required_tests: [pytest tests/integration -q]
+  branch_template: codex/{task_id}-domain-review-requests-preview-root
+  worktree_template: ../AX9.worktrees/{task_id}
+  integration_gate: null
+  expected_children: []
+  completion_policy: none
+  claim_policy: *parallel_claim_policy
   takeover_policy: *default_takeover_policy

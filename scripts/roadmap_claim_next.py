@@ -25,6 +25,7 @@ from governance_lib import (
 from control_plane_root import FULL_CLONE_POOL_FILE, default_full_clone_idle_branch, load_full_clone_pool, slot_by_id
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
 from child_execution_flow import transient_child_paths
+from roadmap_execution_closeout import close_ready_execution_tasks
 from task_handoff import ensure_handoff_file
 from task_rendering import update_runlog_file, update_task_file
 from task_worktree_ops import cmd_worktree_create, reuse_pool_slot_worktree
@@ -696,6 +697,16 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
 def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     now = _now(args.now)
     with _scheduler_lock(root):
+        if args.write_claim or getattr(args, "promote_task", False):
+            closeout = close_ready_execution_tasks(root)
+            if closeout["blocked"]:
+                blocked = [
+                    {
+                        "candidate_id": "execution-closeout",
+                        "blockers": list(closeout["blocked"]),
+                    }
+                ]
+                return None, blocked
         index = build_roadmap_candidate_index(root)
         dump_yaml(root / ROADMAP_CANDIDATES_FILE, index)
         claims = _load_claims(root)

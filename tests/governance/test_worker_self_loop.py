@@ -85,7 +85,7 @@ def test_worker_self_loop_resumes_blocked_task_without_claiming_new_one(tmp_path
     assert "manual blocker" in payload["blockers"][0]
 
 
-def test_worker_self_loop_closes_review_task_and_claims_next(tmp_path: Path) -> None:
+def test_worker_self_loop_hands_review_task_back_to_coordinator_closeout(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
     clone_path = tmp_path / "clone-worker-01"
@@ -114,8 +114,8 @@ def test_worker_self_loop_closes_review_task_and_claims_next(tmp_path: Path) -> 
     code, payload = _run_loop(clone_path, "once")
 
     assert code == 0
-    assert payload["task"]["task_id"] == "TASK-RM-STAGE2-CORE-CONTRACT"
-    assert subprocess.run(["git", "branch", "--show-current"], cwd=clone_path, check=True, capture_output=True, text=True).stdout.strip() == "codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract"
+    assert payload["mode"] == "await-coordinator-closeout"
+    assert payload["task"]["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"
 
 
 def test_worker_self_loop_supports_explicit_task_id_fallback(tmp_path: Path) -> None:

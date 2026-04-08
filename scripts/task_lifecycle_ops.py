@@ -20,6 +20,7 @@ from governance_lib import (
     is_idle_current_payload,
     iso_now,
     load_current_task,
+    load_yaml,
     load_task_policy,
     load_task_registry,
     load_worktree_registry,
@@ -37,6 +38,7 @@ from governance_lib import (
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
 from control_plane_root import default_full_clone_idle_branch, load_full_clone_pool, slot_by_id
+from roadmap_claim_next import CLAIMS_FILE
 from task_closeout import assess_live_closeout
 from task_coordination_lease import (
     claim_coordination_lease,
@@ -58,6 +60,26 @@ from task_rendering import (
     update_task_file,
     upsert_coordination_entry,
 )
+
+
+def _close_roadmap_claim_if_present(root, task: dict[str, Any]) -> None:
+    candidate_id = task.get("roadmap_candidate_id")
+    if not candidate_id:
+        return
+    claims_path = root / CLAIMS_FILE
+    if not claims_path.exists():
+        return
+    claims = load_yaml(claims_path) or {}
+    changed = False
+    for claim in claims.get("claims", []):
+        if claim.get("candidate_id") != candidate_id:
+            continue
+        claim["status"] = "closed"
+        claim["closed_at"] = iso_now()
+        claim["expires_at"] = iso_now()
+        changed = True
+    if changed:
+        dump_yaml(claims_path, claims)
 
 
 def cmd_new(args: argparse.Namespace) -> int:
@@ -366,6 +388,7 @@ def cmd_close(args: argparse.Namespace) -> int:
         resume_notes=["Task closed."],
         append_resume_notes=True,
     )
+    _close_roadmap_claim_if_present(root, task)
     release_coordination_lease(root, task, reason="close")
     sync_task_artifacts(root, registry, touched_task_ids)
     record_session_event(
