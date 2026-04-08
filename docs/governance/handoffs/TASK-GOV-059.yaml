@@ -1,0 +1,27 @@
+task_id: TASK-GOV-059
+summary_status: doing
+last_handoff_at: '2026-04-08T16:25:54+08:00'
+completed_items:
+- Recorded explain-candidate, explain-candidate-pool, explain-claim-decision, and
+  explain-release-chain as delivered commands
+- Confirmed explain commands consume evaluator truth rather than re-deriving scheduler
+  logic
+remaining_items:
+- Complete the remaining scoped implementation for this task.
+next_step: Close the explain-command record task.
+next_tests:
+- pytest tests/governance/test_roadmap_explain.py -q
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-059.md
+- docs/governance/runlogs/TASK-GOV-059-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-059.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/CURRENT_TASK.yaml
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=current.
+- Handoff recorded by session `019d6b2c-8952-7a63-a3bc-0c8506875a95`.
+- ai_guarded closeout candidate

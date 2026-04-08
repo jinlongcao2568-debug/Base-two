@@ -5,19 +5,18 @@
 - `task_id`: `TASK-GOV-059`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `planned`
+- `status`: `done`
 - `stage`: `governance-roadmap-explain-commands-v1`
 - `branch`: `codex/TASK-GOV-059-roadmap-explain-commands`
-- `size_class`: `standard`
+- `size_class`: `micro`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-
 ## Primary Goals
 
 - Add explain commands for candidate, candidate pool, claim decision, and release chain.
@@ -73,29 +72,29 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `planned`
-- `closeout_state`: `not_started`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `full_task_remaining`
-- `next_gate`: `explain_command_implementation`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `planned`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `size_class`: `standard`
+- `size_class`: `micro`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
+- `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/`
 - `branch`: `codex/TASK-GOV-059-roadmap-explain-commands`
-- `updated_at`: `2026-04-08T16:20:00+08:00`
+- `updated_at`: `2026-04-08T16:26:29+08:00`
 <!-- generated:task-meta:end -->
 
