@@ -294,6 +294,25 @@ def test_claim_next_from_clone_side_task_ops_resolves_control_plane_truth(tmp_pa
     assert "candidate_id=stage1-core-contract" in result.stdout
 
 
+def test_claim_next_blocks_when_governance_runtime_is_dirty(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+    runtime_file = repo / "scripts/review_candidate_pool.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# dirty runtime change for claim-next test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "claim-next")
+
+    assert result.returncode == 1
+    assert "governance runtime unpublished" in result.stdout
+    assert "scripts/review_candidate_pool.py" in result.stdout
+
+
 def test_claim_next_fails_fast_when_mvp_scope_mismatches_business_automation_scope(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)

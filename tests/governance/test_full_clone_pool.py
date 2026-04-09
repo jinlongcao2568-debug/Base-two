@@ -2,8 +2,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 
 from .helpers import TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+from control_plane_root import build_governance_runtime_stamp, published_governance_runtime_dirty_paths  # noqa: E402
 
 
 def _pool(repo: Path) -> dict:
@@ -163,3 +170,22 @@ def test_rebuild_full_clone_pool_restores_runtime_stamp_parity_for_idle_slot(tmp
     assert audit.returncode == 0, audit.stdout + audit.stderr
     assert slot["runtime_drift"] is False
     assert slot["divergent"] is False
+
+
+def test_governance_runtime_stamp_uses_published_head_not_dirty_worktree(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    baseline = build_governance_runtime_stamp(repo)
+    runtime_file = repo / "scripts/review_candidate_pool.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# dirty runtime change for published stamp test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    updated = build_governance_runtime_stamp(repo)
+    dirty_paths = published_governance_runtime_dirty_paths(repo)
+
+    assert "scripts/review_candidate_pool.py" in dirty_paths
+    assert updated["governance_scripts_hash"] == baseline["governance_scripts_hash"]
+    assert updated["control_plane_head"] == baseline["control_plane_head"]

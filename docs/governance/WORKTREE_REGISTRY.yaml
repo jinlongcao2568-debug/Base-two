@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T19:09:59+08:00'
+updated_at: '2026-04-09T19:20:46+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1081,6 +1081,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-OPS-004-worker-01-salvage-continuation
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-073
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-073-published-runtime-stamp
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

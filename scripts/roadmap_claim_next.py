@@ -29,6 +29,7 @@ from control_plane_root import (
     default_full_clone_idle_branch,
     detect_ledger_divergences,
     load_full_clone_pool,
+    published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
     slot_by_id,
 )
@@ -786,6 +787,14 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
         raise GovernanceError("claim-next must run from the main control plane; clone-side claim-next is frozen")
     if args.promote_task:
         args.write_claim = True
+    dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
+    if dirty_runtime_paths:
+        sample = ", ".join(dirty_runtime_paths[:4])
+        suffix = "" if len(dirty_runtime_paths) <= 4 else f" (+{len(dirty_runtime_paths) - 4} more)"
+        raise GovernanceError(
+            "governance runtime unpublished; publish or revert runtime files before claim-next "
+            f"({sample}{suffix})"
+        )
     divergences = detect_ledger_divergences(root)
     if divergences:
         summary = "; ".join(

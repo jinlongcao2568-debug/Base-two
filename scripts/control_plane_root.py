@@ -101,6 +101,33 @@ def _hash_runtime_files(root: Path) -> str:
     return digest.hexdigest()
 
 
+def _published_runtime_file_bytes(root: Path, relative: Path) -> bytes | None:
+    result = subprocess.run(
+        ["git", "show", f"HEAD:{relative.as_posix()}"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.replace(b"\r\n", b"\n")
+
+
+def _hash_published_runtime_files(root: Path) -> str:
+    if _git_head(root) is None:
+        return _hash_runtime_files(root)
+    digest = hashlib.sha256()
+    for relative in GOVERNANCE_RUNTIME_FILES:
+        payload = _published_runtime_file_bytes(root, relative)
+        if payload is None:
+            continue
+        digest.update(relative.as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(payload)
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _git_head(root: Path) -> str | None:
     result = git(root, "rev-parse", "HEAD", check=False)
     head = (result.stdout or "").strip()
@@ -109,11 +136,16 @@ def _git_head(root: Path) -> str | None:
     return head
 
 
+def published_governance_runtime_dirty_paths(root: Path) -> list[str]:
+    runtime_paths = {actual_path(str(relative)) for relative in GOVERNANCE_RUNTIME_FILES}
+    return [path for path in git_status_paths(root) if actual_path(path) in runtime_paths]
+
+
 def build_governance_runtime_stamp(root: Path) -> dict[str, Any]:
     return {
         "governance_runtime_version": GOVERNANCE_RUNTIME_VERSION,
         "candidate_index_format_version": CANDIDATE_INDEX_FORMAT_VERSION,
-        "governance_scripts_hash": _hash_runtime_files(root),
+        "governance_scripts_hash": _hash_published_runtime_files(root),
         "control_plane_head": _git_head(root),
     }
 
@@ -391,6 +423,7 @@ def audit_full_clone_pool(root: Path) -> dict[str, Any]:
     tasks_by_id = _tasks_by_id(registry)
     claims_by_candidate = _claims_by_candidate(claims)
     control_stamp = write_governance_runtime_stamp(root)
+    dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
     control_candidate_ids = _control_candidate_ids(root)
     slots = [
         assess_full_clone_slot_runtime(
@@ -413,6 +446,8 @@ def audit_full_clone_pool(root: Path) -> dict[str, Any]:
         "control_plane_root": str(root).replace("\\", "/"),
         "governance_runtime_stamp_file": str(GOVERNANCE_RUNTIME_STAMP_FILE).replace("\\", "/"),
         "governance_runtime_stamp": control_stamp,
+        "governance_runtime_published": not bool(dirty_runtime_paths),
+        "dirty_governance_runtime_paths": dirty_runtime_paths,
         "ledger_divergence_count": divergence_count,
         "stale_runtime_count": stale_runtime_count,
         "slots": slots,

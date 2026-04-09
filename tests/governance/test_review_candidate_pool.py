@@ -129,6 +129,27 @@ def test_review_candidate_pool_is_ready_when_parallel_supply_is_sufficient(tmp_p
     assert payload["candidate_summary"]["parallelism_deficit"] == 0
 
 
+def test_review_candidate_pool_blocks_when_governance_runtime_is_dirty(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate("stage1-core-contract", status="planned", priority=100)])
+    runtime_file = repo / "scripts/review_candidate_pool.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# dirty runtime change for review-pool test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    result = run_python(SCRIPT, repo)
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 1
+    assert payload["status"] == "blocked"
+    assert "governance runtime unpublished" in payload["issues"]
+    assert "scripts/review_candidate_pool.py" in payload["dirty_governance_runtime_paths"]
+
+
 def test_review_candidate_pool_reports_root_and_closeout_radar_fields(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
