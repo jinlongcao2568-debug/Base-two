@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-08T10:01:01+08:00'
+updated_at: '2026-04-09T21:20:32+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 slot_status_values:
@@ -19,10 +19,10 @@ slots:
 - slot_id: worker-02
   worker_owner: worker-02
   path: D:/Base One/Base-two/AX9.worktrees/worker-02
-  status: idle
-  current_task_id: null
-  branch: codex/worker-02-idle
-  last_claimed_at: null
+  status: active
+  current_task_id: TASK-RM-STAGE2-SOURCE-FAMILY-LANES
+  branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
+  last_claimed_at: '2026-04-09T21:20:21+08:00'
   last_released_at: null
   idle_branch: codex/worker-02-idle
 - slot_id: worker-03

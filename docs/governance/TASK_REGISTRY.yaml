@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T21:19:18+08:00'
+updated_at: '2026-04-09T21:20:32+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4711,3 +4711,44 @@ tasks:
   created_at: '2026-04-09T20:39:59+08:00'
   activated_at: '2026-04-09T21:13:36+08:00'
   closed_at: '2026-04-09T21:19:18+08:00'
+- task_id: TASK-RM-STAGE2-SOURCE-FAMILY-LANES
+  title: Stage2 source-family ingestion lanes
+  status: doing
+  task_kind: execution
+  execution_mode: isolated_worktree
+  parent_task_id: null
+  stage: stage2
+  branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
+  size_class: standard
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-09T21:20:21+08:00'
+  topology: single_task
+  allowed_dirs:
+  - src/stage2_ingestion/
+  - tests/stage2/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  protected_paths: []
+  planned_write_paths:
+  - src/stage2_ingestion/
+  - tests/stage2/
+  planned_test_paths:
+  - tests/stage2/
+  required_tests:
+  - pytest tests/stage2 -q
+  task_file: docs/governance/tasks/TASK-RM-STAGE2-SOURCE-FAMILY-LANES.md
+  runlog_file: docs/governance/runlogs/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: null
+  created_at: '2026-04-09T21:20:21+08:00'
+  activated_at: '2026-04-09T21:20:21+08:00'
+  closed_at: null
+  roadmap_candidate_id: stage2-source-family-lanes
+  integration_gate: stage2-integration-gate
