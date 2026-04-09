@@ -86,5 +86,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-005-automation-intent-hardening`
-- `updated_at`: `2026-04-06T14:12:09+08:00`
+- `updated_at`: `2026-04-09T12:08:35+08:00`
 <!-- generated:task-meta:end -->

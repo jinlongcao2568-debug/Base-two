@@ -16,7 +16,6 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
-
 ## Primary Goals
 
 - Enforce a single candidate source of truth when `compiled_mode=module_graph_compiler` by blocking inline candidates in `ROADMAP_BACKLOG.yaml`.
@@ -123,6 +122,16 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
+- `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
 - `branch`: `codex/TASK-GOV-066-candidate-source-gate`
-- `updated_at`: `2026-04-09T11:20:00+08:00`
+- `updated_at`: `2026-04-09T12:08:35+08:00`
 <!-- generated:task-meta:end -->
+
+## Narrative Assertions
+
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
+- `blocking_state`: `clear`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`

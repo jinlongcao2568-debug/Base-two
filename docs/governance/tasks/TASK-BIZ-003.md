@@ -81,5 +81,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/stage6_facts/, db/migrations/`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
-- `updated_at`: `2026-04-07T19:32:31+08:00`
+- `updated_at`: `2026-04-09T12:08:35+08:00`
 <!-- generated:task-meta:end -->

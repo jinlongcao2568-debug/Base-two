@@ -5,12 +5,12 @@
 - `task_id`: `TASK-BIZ-001`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `business-stage7-9-contracts-v1`
 - `branch`: `feat/TASK-BIZ-001-stage7-9-contracts`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -58,21 +58,21 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `heavy`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -81,5 +81,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, db/migrations/`
 - `branch`: `feat/TASK-BIZ-001-stage7-9-contracts`
-- `updated_at`: `2026-04-06T14:12:09+08:00`
+- `updated_at`: `2026-04-09T12:08:35+08:00`
 <!-- generated:task-meta:end -->

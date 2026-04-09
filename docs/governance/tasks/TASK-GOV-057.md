@@ -8,7 +8,7 @@
 - `status`: `done`
 - `stage`: `governance-roadmap-scheduler-transition-record-v1`
 - `branch`: `codex/TASK-GOV-057-roadmap-governance-transition`
-- `size_class`: `micro`
+- `size_class`: `standard`
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
@@ -83,7 +83,7 @@
 - `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `size_class`: `micro`
+- `size_class`: `standard`
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
 - `topology`: `single_worker`
@@ -94,5 +94,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/`
 - `branch`: `codex/TASK-GOV-057-roadmap-governance-transition`
-- `updated_at`: `2026-04-08T16:02:12+08:00`
+- `updated_at`: `2026-04-09T12:08:35+08:00`
 <!-- generated:task-meta:end -->

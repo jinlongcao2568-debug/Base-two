@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GRAD-001`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-heavy-autonomy-graduation-v1`
 - `branch`: `feat/TASK-GRAD-001-autonomy-graduation`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -29,20 +29,20 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GRAD-001`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-heavy-autonomy-graduation-v1`
 - `branch`: `feat/TASK-GRAD-001-autonomy-graduation`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

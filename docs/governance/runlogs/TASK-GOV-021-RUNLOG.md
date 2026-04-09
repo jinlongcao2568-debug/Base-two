@@ -42,9 +42,9 @@
 - `narrative_status`: `done`
 - `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `complete`
+- `completed_scope`: `closed`
 - `remaining_scope`: `none`
-- `next_gate`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 

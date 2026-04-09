@@ -11,7 +11,6 @@
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
-
 ## Execution Log
 
 - `2026-04-09T10:17:28+08:00`: task package created
@@ -26,6 +25,8 @@
 - `pytest tests/governance/test_governance_console.py -q`
 - `pytest tests/governance/test_control_plane_single_ledger.py -q`
 - `python scripts/check_repo.py` (failed: idle control plane has dirty paths but no recoverable predecessor task)
+- `pytest tests/governance/test_control_plane_single_ledger.py -q`
+- `python scripts/check_repo.py`
 
 ## Narrative Assertions
 
@@ -35,7 +36,6 @@
 - `completed_scope`: `closed`
 - `remaining_scope`: `none`
 - `next_gate`: `closed`
-
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 

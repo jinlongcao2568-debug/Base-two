@@ -1,0 +1,27 @@
+task_id: TASK-GOV-067
+summary_status: doing
+last_handoff_at: '2026-04-09T11:54:34+08:00'
+completed_items: []
+remaining_items:
+- Complete the remaining scoped implementation for this task.
+next_step: Continue the scoped implementation and keep the control plane aligned.
+next_tests:
+- python scripts/check_repo.py
+- pytest tests/governance -q
+- python scripts/task_ops.py review-candidate-pool
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-067.md
+- docs/governance/runlogs/TASK-GOV-067-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-067.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
+- .codex/local/roadmap_candidates/index.yaml
+- .codex/local/roadmap_candidates/summary.yaml
+- docs/governance/handoffs/ledger_divergence/
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
