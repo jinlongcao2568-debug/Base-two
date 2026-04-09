@@ -13,7 +13,13 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 import governance_console as console  # noqa: E402
-from control_plane_root import audit_full_clone_pool, detect_ledger_divergences  # noqa: E402
+from control_plane_root import (  # noqa: E402
+    CONTROL_PLANE_EXECUTOR_ID,
+    audit_full_clone_pool,
+    detect_ledger_divergences,
+    load_execution_leases,
+    sync_execution_lease,
+)
 
 
 def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
@@ -313,4 +319,71 @@ def test_blocked_slot_runtime_drift_is_quarantined_not_dispatch_blocking(tmp_pat
     assert audit["stale_runtime_count"] == 0
     assert audit["quarantined_runtime_count"] == 1
     assert audit["quarantined_slot_count"] == 1
+    assert detect_ledger_divergences(repo) == []
+
+
+def test_current_task_is_focus_projection_while_execution_leases_track_multiple_executors(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE3-CORE-CONTRACT",
+            "title": "stage3 contract",
+            "status": "doing",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage3",
+            "branch": "codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "running",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-09T21:00:00+08:00",
+            "topology": "single_task",
+            "allowed_dirs": ["src/stage3_parsing/"],
+            "reserved_paths": [],
+            "planned_write_paths": ["src/stage3_parsing/"],
+            "planned_test_paths": ["tests/stage3/"],
+            "required_tests": ["pytest tests/stage3 -q"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE3-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE3-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "roadmap_candidate_id": "stage3-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+    current_payload = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    focus_task = registry["tasks"][0]
+    execution_task = next(task for task in registry["tasks"] if task["task_id"] == "TASK-RM-STAGE3-CORE-CONTRACT")
+
+    sync_execution_lease(
+        repo,
+        task=focus_task,
+        executor_id=CONTROL_PLANE_EXECUTOR_ID,
+        executor_type="control_plane",
+        status="running",
+        owner_session_id="session-control-plane",
+        heartbeat_at="2026-04-09T21:00:00+08:00",
+    )
+    sync_execution_lease(
+        repo,
+        task=execution_task,
+        executor_id="worker-02",
+        executor_type="full_clone",
+        status="running",
+        owner_session_id="session-worker-02",
+        heartbeat_at="2026-04-09T21:01:00+08:00",
+    )
+
+    leases = load_execution_leases(repo)
+
+    assert current_payload["current_task_id"] == "TASK-BASE-001"
+    assert current_payload["status"] == "doing"
+    assert {lease["executor_id"] for lease in leases["leases"]} == {CONTROL_PLANE_EXECUTOR_ID, "worker-02"}
+    assert {lease["task_id"] for lease in leases["leases"]} == {"TASK-BASE-001", "TASK-RM-STAGE3-CORE-CONTRACT"}
     assert detect_ledger_divergences(repo) == []

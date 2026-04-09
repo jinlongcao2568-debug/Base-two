@@ -19,11 +19,13 @@ from governance_lib import (
     find_repo_root,
     git,
     git_status_paths,
+    iso_now,
     load_yaml,
 )
 
 
 FULL_CLONE_POOL_FILE = Path("docs/governance/FULL_CLONE_POOL.yaml")
+EXECUTION_LEASES_FILE = Path("docs/governance/EXECUTION_LEASES.yaml")
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
 ROADMAP_CANDIDATES_FILE = Path(".codex/local/roadmap_candidates/index.yaml")
 GOVERNANCE_RUNTIME_STAMP_FILE = Path(".codex/local/governance_runtime/stamp.yaml")
@@ -32,6 +34,8 @@ GOVERNANCE_RUNTIME_VERSION = "control_plane_runtime_v1"
 CANDIDATE_INDEX_FORMAT_VERSION = "roadmap_candidate_index_v2"
 TERMINAL_TASK_STATUSES = {"done", "closed"}
 NON_TERMINAL_EXECUTION_STATUSES = {"doing", "paused", "blocked", "review"}
+CONTROL_PLANE_EXECUTOR_ID = "control-plane-main"
+EXECUTION_LEASE_TERMINAL_STATUSES = {"closed"}
 GOVERNANCE_RUNTIME_FILES = (
     Path("scripts/control_plane_root.py"),
     Path("scripts/full_clone_pool.py"),
@@ -57,6 +61,159 @@ def load_full_clone_pool(root: Path) -> dict[str, Any]:
         raise GovernanceError(f"full clone pool must be a mapping: {FULL_CLONE_POOL_FILE}")
     payload.setdefault("slots", [])
     return payload
+
+
+def execution_leases_defaults() -> dict[str, Any]:
+    return {
+        "version": "1.0",
+        "updated_at": None,
+        "revision": 0,
+        "leases": [],
+    }
+
+
+def load_execution_leases(root: Path) -> dict[str, Any]:
+    path = root / EXECUTION_LEASES_FILE
+    if not path.exists():
+        return execution_leases_defaults()
+    payload = load_yaml(path) or {}
+    if not isinstance(payload, dict):
+        raise GovernanceError(f"execution leases must be a mapping: {EXECUTION_LEASES_FILE}")
+    merged = execution_leases_defaults()
+    merged.update(payload)
+    merged["revision"] = int(merged.get("revision") or 0)
+    merged["leases"] = [dict(lease or {}) for lease in (merged.get("leases") or [])]
+    return merged
+
+
+def _lease_slug(value: str) -> str:
+    slug = "".join(char.lower() if char.isalnum() else "-" for char in value)
+    slug = slug.strip("-")
+    return slug or "unknown"
+
+
+def _execution_lease_matches(
+    lease: dict[str, Any],
+    *,
+    task_id: str | None = None,
+    executor_id: str | None = None,
+    include_closed: bool = True,
+) -> bool:
+    if task_id is not None and str(lease.get("task_id") or "") != task_id:
+        return False
+    if executor_id is not None and str(lease.get("executor_id") or "") != executor_id:
+        return False
+    if not include_closed and str(lease.get("status") or "") in EXECUTION_LEASE_TERMINAL_STATUSES:
+        return False
+    return True
+
+
+def find_execution_leases(
+    payload: dict[str, Any],
+    *,
+    task_id: str | None = None,
+    executor_id: str | None = None,
+    include_closed: bool = True,
+) -> list[dict[str, Any]]:
+    return [
+        lease
+        for lease in (payload.get("leases") or [])
+        if _execution_lease_matches(
+            lease,
+            task_id=task_id,
+            executor_id=executor_id,
+            include_closed=include_closed,
+        )
+    ]
+
+
+def _write_execution_leases(root: Path, payload: dict[str, Any]) -> None:
+    payload["revision"] = int(payload.get("revision") or 0) + 1
+    payload["updated_at"] = iso_now()
+    dump_yaml(root / EXECUTION_LEASES_FILE, payload)
+
+
+def sync_execution_lease(
+    root: Path,
+    *,
+    task: dict[str, Any],
+    executor_id: str,
+    executor_type: str,
+    status: str,
+    owner_session_id: str | None = None,
+    heartbeat_at: str | None = None,
+) -> dict[str, Any]:
+    payload = load_execution_leases(root)
+    existing = find_execution_leases(
+        payload,
+        task_id=str(task.get("task_id") or ""),
+        executor_id=executor_id,
+    )
+    lease = existing[0] if existing else None
+    now = heartbeat_at or iso_now()
+    if lease is None:
+        lease = {
+            "lease_id": f"lease-{_lease_slug(str(task.get('task_id') or 'task'))}-{_lease_slug(executor_id)}",
+            "task_id": task.get("task_id"),
+            "task_kind": task.get("task_kind"),
+            "stage": task.get("stage"),
+            "branch": task.get("branch"),
+            "candidate_id": task.get("roadmap_candidate_id"),
+            "executor_id": executor_id,
+            "executor_type": executor_type,
+            "status": status,
+            "owner_session_id": owner_session_id,
+            "started_at": now,
+            "heartbeat_at": now,
+            "closed_at": None,
+        }
+        payload.setdefault("leases", []).append(lease)
+    else:
+        lease["task_kind"] = task.get("task_kind")
+        lease["stage"] = task.get("stage")
+        lease["branch"] = task.get("branch")
+        lease["candidate_id"] = task.get("roadmap_candidate_id")
+        lease["executor_type"] = executor_type
+        lease["status"] = status
+        if owner_session_id is not None:
+            lease["owner_session_id"] = owner_session_id
+        lease["started_at"] = lease.get("started_at") or now
+        lease["heartbeat_at"] = now
+    if status in EXECUTION_LEASE_TERMINAL_STATUSES:
+        lease["closed_at"] = lease.get("closed_at") or now
+    else:
+        lease["closed_at"] = None
+    _write_execution_leases(root, payload)
+    return dict(lease)
+
+
+def close_execution_leases(
+    root: Path,
+    *,
+    task_id: str,
+    executor_id: str | None = None,
+    owner_session_id: str | None = None,
+) -> list[dict[str, Any]]:
+    payload = load_execution_leases(root)
+    now = iso_now()
+    changed: list[dict[str, Any]] = []
+    for lease in payload.get("leases", []):
+        if not _execution_lease_matches(
+            lease,
+            task_id=task_id,
+            executor_id=executor_id,
+            include_closed=False,
+        ):
+            continue
+        lease["status"] = "closed"
+        lease["closed_at"] = now
+        lease["heartbeat_at"] = now
+        if owner_session_id is not None:
+            lease["owner_session_id"] = owner_session_id
+        changed.append(dict(lease))
+    if changed:
+        _write_execution_leases(root, payload)
+    return changed
 
 
 def _load_registry(path: Path) -> dict[str, Any]:

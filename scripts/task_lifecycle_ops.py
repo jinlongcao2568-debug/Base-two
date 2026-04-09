@@ -38,7 +38,15 @@ from governance_lib import (
 )
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
-from control_plane_root import default_full_clone_idle_branch, load_full_clone_pool, resolve_control_plane_root, slot_by_id
+from control_plane_root import (
+    CONTROL_PLANE_EXECUTOR_ID,
+    close_execution_leases,
+    default_full_clone_idle_branch,
+    load_full_clone_pool,
+    resolve_control_plane_root,
+    slot_by_id,
+    sync_execution_lease,
+)
 from child_execution_flow import mirror_governance_ledgers_to_worktree
 from roadmap_claim_next import CLAIMS_FILE
 from task_closeout import assess_live_closeout
@@ -186,12 +194,24 @@ def _mark_active(task: dict[str, Any]) -> None:
         task["activated_at"] = iso_now()
 
 
+def _sync_control_plane_focus_lease(root: Path, task: dict[str, Any], *, status: str) -> None:
+    sync_execution_lease(
+        root,
+        task=task,
+        executor_id=CONTROL_PLANE_EXECUTOR_ID,
+        executor_type="control_plane",
+        status=status,
+        owner_session_id=current_session_id(root),
+    )
+
+
 def _activate_coordination_task(root, registry: dict, worktrees: dict, task: dict, *, reason: str) -> list[str]:
     if task["task_kind"] != "coordination":
         raise GovernanceError("only coordination tasks can be activated in the main worktree")
     claim_coordination_lease(root, task, reason=reason)
     touched_tasks = pause_other_doing_tasks(registry["tasks"], task["task_id"])
     _mark_active(task)
+    _sync_control_plane_focus_lease(root, task, status="running")
     registry["updated_at"] = iso_now()
     upsert_coordination_entry(worktrees, task, root)
     worktrees["updated_at"] = iso_now()
@@ -304,6 +324,7 @@ def cmd_pause(args: argparse.Namespace) -> int:
     task["worker_state"] = "idle"
     task["blocked_reason"] = None
     task["last_reported_at"] = iso_now()
+    _sync_control_plane_focus_lease(root, task, status="paused")
     registry["updated_at"] = iso_now()
     entry = worktree_map(worktrees).get(task["task_id"])
     if entry is not None:
@@ -367,6 +388,11 @@ def cmd_close(args: argparse.Namespace) -> int:
     task["blocked_reason"] = None
     task["last_reported_at"] = iso_now()
     task["closed_at"] = iso_now()
+    close_execution_leases(
+        root,
+        task_id=task["task_id"],
+        owner_session_id=current_session_id(root),
+    )
     registry["updated_at"] = iso_now()
     entry = worktree_map(worktrees).get(task["task_id"])
     if entry is not None:

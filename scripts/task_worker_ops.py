@@ -43,7 +43,7 @@ from orchestration_runtime import (
     update_execution_runtime_entry,
 )
 from task_coordination_lease import claim_coordination_lease, coordination_thread_id, current_session_id
-from control_plane_root import resolve_control_plane_root
+from control_plane_root import CONTROL_PLANE_EXECUTOR_ID, resolve_control_plane_root, sync_execution_lease
 from task_handoff import write_handoff
 from task_rendering import (
     enforce_execution_split_guards,
@@ -60,6 +60,20 @@ def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
     if entry is None or entry.get("work_mode") != "execution":
         return None
     return entry
+
+
+def _task_executor_identity(
+    task: dict,
+    entry: dict | None,
+    *,
+    explicit_owner: str | None = None,
+) -> tuple[str, str]:
+    if task.get("task_kind") == "coordination":
+        return CONTROL_PLANE_EXECUTOR_ID, "control_plane"
+    owner = str(explicit_owner or (entry or {}).get("worker_owner") or "").strip() or LOCAL_WORKER_ID
+    if entry is not None and entry.get("pool_kind") == "full_clone":
+        return owner, "full_clone"
+    return owner, "execution_worker"
 
 
 def _sync_full_clone_mirror(root: Path, registry: dict, worktrees: dict, task: dict) -> None:
@@ -269,6 +283,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     if task["activated_at"] is None:
         task["activated_at"] = now
     entry = _execution_entry(worktrees, task["task_id"])
+    executor_id, executor_type = _task_executor_identity(task, entry, explicit_owner=args.worker_owner)
     if entry is not None:
         entry["status"] = "active"
         if args.worker_owner:
@@ -284,6 +299,15 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
             executor_status="running",
             last_result="worker-start",
         )
+    sync_execution_lease(
+        root,
+        task=task,
+        executor_id=executor_id,
+        executor_type=executor_type,
+        status="running",
+        owner_session_id=current_session_id(root),
+        heartbeat_at=now,
+    )
     record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
     worktrees["updated_at"] = now
@@ -322,6 +346,7 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     task["blocked_reason"] = None
     task["last_reported_at"] = now
     entry = _execution_entry(worktrees, task["task_id"])
+    executor_id, executor_type = _task_executor_identity(task, entry)
     _mark_execution_runtime(
         root,
         task["task_id"],
@@ -330,6 +355,15 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
         lane_session_id=entry.get("lane_session_id") if entry is not None else None,
         executor_status="running" if entry is not None else None,
         last_result="worker-report",
+    )
+    sync_execution_lease(
+        root,
+        task=task,
+        executor_id=executor_id,
+        executor_type=executor_type,
+        status="running",
+        owner_session_id=current_session_id(root),
+        heartbeat_at=now,
     )
     record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
@@ -387,6 +421,7 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
     task["blocked_reason"] = args.reason
     task["last_reported_at"] = now
     entry = _execution_entry(worktrees, task["task_id"])
+    executor_id, executor_type = _task_executor_identity(task, entry)
     _mark_execution_runtime(
         root,
         task["task_id"],
@@ -395,6 +430,15 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
         lane_session_id=entry.get("lane_session_id") if entry is not None else None,
         executor_status="blocked" if entry is not None else None,
         last_result=args.reason,
+    )
+    sync_execution_lease(
+        root,
+        task=task,
+        executor_id=executor_id,
+        executor_type=executor_type,
+        status="blocked",
+        owner_session_id=current_session_id(root),
+        heartbeat_at=now,
     )
     record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now
@@ -466,6 +510,7 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         context["workflow_state"]["finish"]["status"] = "ready"
         context["workflow_state"]["finish"]["recorded_at"] = now
         context["workflow_state"]["phase"] = "finish_ready"
+    executor_id, executor_type = _task_executor_identity(task, entry)
     _mark_execution_runtime(
         root,
         task["task_id"],
@@ -474,6 +519,15 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         lane_session_id=entry.get("lane_session_id") if entry is not None else None,
         executor_status="completed" if entry is not None else None,
         last_result=args.summary,
+    )
+    sync_execution_lease(
+        root,
+        task=task,
+        executor_id=executor_id,
+        executor_type=executor_type,
+        status="review_pending",
+        owner_session_id=current_session_id(root),
+        heartbeat_at=now,
     )
     record_worker_heartbeat(root, LOCAL_WORKER_ID, timestamp=now, observed_status="active")
     registry["updated_at"] = now

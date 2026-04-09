@@ -23,9 +23,12 @@ def test_pause_moves_active_task_to_paused(tmp_path: Path) -> None:
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    leases = read_yaml(repo / "docs/governance/EXECUTION_LEASES.yaml")
     assert current_task["status"] == "paused"
     assert registry["tasks"][0]["status"] == "paused"
     assert worktrees["entries"][0]["status"] == "paused"
+    assert leases["leases"][0]["executor_id"] == "control-plane-main"
+    assert leases["leases"][0]["status"] == "paused"
 
 
 def test_can_start_succeeds_for_live_current_task(tmp_path: Path) -> None:
@@ -53,6 +56,7 @@ def test_close_moves_live_coordination_task_to_idle(tmp_path: Path) -> None:
     current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     worktrees = read_yaml(repo / "docs/governance/WORKTREE_REGISTRY.yaml")
+    leases = read_yaml(repo / "docs/governance/EXECUTION_LEASES.yaml")
     roadmap_frontmatter, roadmap_body = read_roadmap(repo / "docs/governance/DEVELOPMENT_ROADMAP.md")
 
     assert current_task["status"] == "idle"
@@ -71,6 +75,29 @@ def test_close_moves_live_coordination_task_to_idle(tmp_path: Path) -> None:
     assert registry["tasks"][0]["status"] == "done"
     assert registry["tasks"][0]["worker_state"] == "completed"
     assert worktrees["entries"][0]["status"] == "closed"
+    assert leases["leases"][0]["executor_id"] == "control-plane-main"
+    assert leases["leases"][0]["status"] == "closed"
+    assert leases["leases"][0]["closed_at"] is not None
+
+
+def test_activate_from_paused_refreshes_control_plane_execution_lease(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    paused = run_python(TASK_OPS_SCRIPT, repo, "pause")
+    assert paused.returncode == 0, paused.stdout + paused.stderr
+    git_commit_all(repo, "pause base task before reactivation")
+
+    activated = run_python(TASK_OPS_SCRIPT, repo, "activate", "TASK-BASE-001")
+    assert activated.returncode == 0, activated.stdout + activated.stderr
+
+    current_task = read_yaml(repo / "docs/governance/CURRENT_TASK.yaml")
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    leases = read_yaml(repo / "docs/governance/EXECUTION_LEASES.yaml")
+
+    assert current_task["current_task_id"] == "TASK-BASE-001"
+    assert current_task["status"] == "doing"
+    assert registry["tasks"][0]["status"] == "doing"
+    assert leases["leases"][0]["executor_id"] == "control-plane-main"
+    assert leases["leases"][0]["status"] == "running"
 
 
 def test_new_task_templates_include_narrative_assertions(tmp_path: Path) -> None:
@@ -342,8 +369,9 @@ def test_decide_topology_scales_to_three_lanes(tmp_path: Path) -> None:
     assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-003-3"
 
 
-def test_decide_topology_caps_at_four_lanes(tmp_path: Path) -> None:
+def test_decide_topology_respects_current_lane_ceiling(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
+    lane_ceiling = int(read_yaml(repo / "docs/governance/TASK_POLICY.yaml")["size_classes"]["heavy"]["dynamic_lane_ceiling_v1"])
     created = run_python(
         TASK_OPS_SCRIPT,
         repo,
@@ -370,8 +398,9 @@ def test_decide_topology_caps_at_four_lanes(tmp_path: Path) -> None:
     task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-HEAVY-004")
     assert result.returncode == 0, result.stdout + result.stderr
     assert task["topology"] == "parallel_parent"
-    assert task["lane_count"] == 4
-    assert task["parallelism_plan_id"] == "plan-TASK-HEAVY-004-4"
+    expected_lanes = min(5, lane_ceiling)
+    assert task["lane_count"] == expected_lanes
+    assert task["parallelism_plan_id"] == f"plan-TASK-HEAVY-004-{expected_lanes}"
 
 
 def test_decide_topology_downgrades_when_required_tests_missing(tmp_path: Path) -> None:
@@ -518,9 +547,10 @@ def test_split_check_detects_task_reserved_path_conflict(tmp_path: Path) -> None
     assert "reserved path" in result.stdout
 
 
-def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -> None:
+def test_worktree_create_caps_active_execution_entries_at_policy_ceiling(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
-    task_ids = [f"TASK-EXEC-00{index}" for index in range(1, 6)]
+    lane_ceiling = int(read_yaml(repo / "docs/governance/TASK_POLICY.yaml")["size_classes"]["heavy"]["dynamic_lane_ceiling_v1"])
+    task_ids = [f"TASK-EXEC-{index:03d}" for index in range(1, lane_ceiling + 2)]
     for index, task_id in enumerate(task_ids, start=1):
         create_task = run_python(
             TASK_OPS_SCRIPT,
@@ -543,7 +573,7 @@ def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -
             f"tests/execution{index}/",
         )
         assert create_task.returncode == 0, create_task.stdout + create_task.stderr
-    for task_id in task_ids[:4]:
+    for task_id in task_ids[:lane_ceiling]:
         destination = tmp_path / "repo.worktrees" / task_id
         created = run_python(
             TASK_OPS_SCRIPT,
@@ -563,4 +593,4 @@ def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -
         str(tmp_path / "repo.worktrees" / task_ids[4]),
     )
     assert rejected.returncode == 1
-    assert "already at hard limit 4" in rejected.stdout
+    assert f"already at hard limit {lane_ceiling}" in rejected.stdout
