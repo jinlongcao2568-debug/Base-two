@@ -1,0 +1,41 @@
+task_id: TASK-GOV-068
+summary_status: done
+last_handoff_at: '2026-04-09T16:05:25+08:00'
+completed_items:
+- Updated governance_console.start_console() so only a newly created server may open
+  the browser, with already-running and bind-race paths returning without fronting
+  the page.
+- Reworked governance_console_launcher.vbs into the operator entrypoint that probes
+  127.0.0.1:8765, starts pythonw with --no-browser only when needed, waits for readiness,
+  and then opens the console URL.
+- Added regression tests for new-server browser open, already-running no-open behavior,
+  --no-browser handling, and launcher script content.
+- Validated TASK-GOV-068 with pytest tests/governance/test_governance_console.py -q
+  and python scripts/check_repo.py.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_governance_console.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-068.md
+- docs/governance/runlogs/TASK-GOV-068-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-068.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
+- docs/governance/WORKTREE_REGISTRY.yaml
+- scripts/governance_console.py
+- scripts/governance_console_launcher.vbs
+- tests/governance/test_governance_console.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
+- Implementation complete; awaiting can-close/close from the control plane.
+- 'Worker finish summary: Implemented console background launch split so existing
+  listeners no longer reopen the browser, and moved browser-opening responsibility
+  into the VBS launcher using --no-browser startup plus reachability polling.'
+- Task closed.

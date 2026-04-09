@@ -149,6 +149,13 @@ def _console_url(host: str, port: int) -> str:
     return f"http://{host}:{port}/"
 
 
+def _open_console_url(url: str) -> None:
+    if os.name == "nt":
+        os.startfile(url)
+    else:
+        webbrowser.open(url)
+
+
 def _run_task_ops(*args: str) -> dict[str, Any]:
     root = _repo_root()
     creationflags = 0
@@ -1705,20 +1712,19 @@ def _port_in_use(host: str, port: int) -> bool:
 def start_console(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT, *, open_browser: bool = True) -> int:
     url = _console_url(host, port)
     if _port_in_use(host, port):
-        if open_browser:
-            if os.name == "nt":
-                os.startfile(url)
-            else:
-                webbrowser.open(url)
         print(f"[OK] governance console already running at {url}")
         return 0
 
-    server = ThreadingHTTPServer((host, port), GovernanceConsoleHandler)
+    try:
+        server = ThreadingHTTPServer((host, port), GovernanceConsoleHandler)
+    except OSError:
+        if _port_in_use(host, port):
+            print(f"[OK] governance console already running at {url}")
+            return 0
+        raise
+
     if open_browser:
-        if os.name == "nt":
-            os.startfile(url)
-        else:
-            webbrowser.open(url)
+        _open_console_url(url)
     print(f"[OK] governance console serving at {url}")
     try:
         server.serve_forever()

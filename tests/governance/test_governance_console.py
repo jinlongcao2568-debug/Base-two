@@ -40,6 +40,74 @@ def test_console_url_is_localhost() -> None:
     assert console._console_url("127.0.0.1", 8765) == "http://127.0.0.1:8765/"
 
 
+def test_start_console_opens_browser_only_for_new_server(monkeypatch) -> None:
+    opened = []
+    created = []
+
+    class DummyServer:
+        def __init__(self, address, handler):
+            created.append((address, handler))
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+        def server_close(self):
+            return None
+
+    monkeypatch.setattr(console, "_port_in_use", lambda host, port: False)
+    monkeypatch.setattr(console, "ThreadingHTTPServer", DummyServer)
+    monkeypatch.setattr(console, "_open_console_url", lambda url: opened.append(url))
+
+    result = console.start_console(open_browser=True)
+
+    assert result == 0
+    assert created == [(("127.0.0.1", 8765), console.GovernanceConsoleHandler)]
+    assert opened == ["http://127.0.0.1:8765/"]
+
+
+def test_start_console_does_not_open_browser_when_console_already_running(monkeypatch) -> None:
+    opened = []
+    monkeypatch.setattr(console, "_port_in_use", lambda host, port: True)
+    monkeypatch.setattr(console, "_open_console_url", lambda url: opened.append(url))
+
+    result = console.start_console(open_browser=True)
+
+    assert result == 0
+    assert opened == []
+
+
+def test_start_console_respects_no_browser_on_new_server(monkeypatch) -> None:
+    opened = []
+
+    class DummyServer:
+        def __init__(self, address, handler):
+            self.address = address
+            self.handler = handler
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+        def server_close(self):
+            return None
+
+    monkeypatch.setattr(console, "_port_in_use", lambda host, port: False)
+    monkeypatch.setattr(console, "ThreadingHTTPServer", DummyServer)
+    monkeypatch.setattr(console, "_open_console_url", lambda url: opened.append(url))
+
+    result = console.start_console(open_browser=False)
+
+    assert result == 0
+    assert opened == []
+
+
+def test_launcher_script_starts_background_service_before_opening_page() -> None:
+    launcher = (ROOT / "scripts" / "governance_console_launcher.vbs").read_text(encoding="utf-8")
+    assert "--no-browser" in launcher
+    assert "http://127.0.0.1:8765/" in launcher
+    assert "WinHttp.WinHttpRequest.5.1" in launcher
+    assert "If Not IsConsoleReachable(ConsoleUrl) Then" in launcher
+
+
 def test_translate_candidate_title_to_chinese() -> None:
     assert (
         console._translate_candidate_title("Stage8 contact-context parallel lanes")
