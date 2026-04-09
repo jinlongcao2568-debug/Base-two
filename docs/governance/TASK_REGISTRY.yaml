@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T21:20:32+08:00'
+updated_at: '2026-04-09T21:34:06+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4752,3 +4752,51 @@ tasks:
   closed_at: null
   roadmap_candidate_id: stage2-source-family-lanes
   integration_gate: stage2-integration-gate
+- task_id: TASK-OPS-007
+  title: full-clone runtime parity and stale claim recovery
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-runtime-parity-recovery-v1
+  branch: codex/TASK-OPS-007-runtime-parity-and-stale-claim-recovery
+  size_class: standard
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-09T21:34:06+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - .codex/local/roadmap_candidates/
+  - .codex/local/governance_runtime/
+  reserved_paths: []
+  planned_write_paths:
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/FULL_CLONE_POOL.yaml
+  - docs/governance/tasks/TASK-OPS-007.md
+  - docs/governance/runlogs/TASK-OPS-007-RUNLOG.md
+  - docs/governance/handoffs/TASK-OPS-007.yaml
+  - .codex/local/roadmap_candidates/claims.yaml
+  - .codex/local/roadmap_candidates/index.yaml
+  - .codex/local/roadmap_candidates/summary.yaml
+  - .codex/local/governance_runtime/stamp.yaml
+  planned_test_paths:
+  - docs/governance/
+  - .codex/local/roadmap_candidates/
+  required_tests:
+  - python scripts/task_ops.py audit-full-clone-pool
+  - python scripts/review_candidate_pool.py
+  - python scripts/task_ops.py claim-next --now 2026-04-09T21:40:00+08:00
+  task_file: docs/governance/tasks/TASK-OPS-007.md
+  runlog_file: docs/governance/runlogs/TASK-OPS-007-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T21:34:06+08:00'
+  activated_at: null
+  closed_at: null
