@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T19:01:40+08:00'
+updated_at: '2026-04-09T19:09:59+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4211,7 +4211,7 @@ tasks:
   integration_gate: stage2-integration-gate
 - task_id: TASK-OPS-004
   title: worker-01 Stage2 salvage continuation and preserve-slot preconditions
-  status: doing
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -4219,9 +4219,9 @@ tasks:
   branch: codex/TASK-OPS-004-worker-01-salvage-continuation
   size_class: standard
   automation_mode: manual
-  worker_state: running
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-09T19:01:40+08:00'
+  last_reported_at: '2026-04-09T19:09:59+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -4254,4 +4254,4 @@ tasks:
   successor_state: backlog
   created_at: '2026-04-09T19:00:47+08:00'
   activated_at: '2026-04-09T19:01:40+08:00'
-  closed_at: null
+  closed_at: '2026-04-09T19:09:59+08:00'

@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T19:01:40+08:00'
+updated_at: '2026-04-09T19:09:59+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1077,3 +1077,13 @@ entries:
   last_heartbeat_at: '2026-04-09T18:15:14+08:00'
   last_result: frozen Stage2 raw payload boundary with fixture-root validation and
     source metadata fallback
+- task_id: TASK-OPS-004
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-OPS-004-worker-01-salvage-continuation
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator

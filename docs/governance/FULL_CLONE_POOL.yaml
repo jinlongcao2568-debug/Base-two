@@ -15,8 +15,9 @@ slots:
   status: blocked
   current_task_id: null
   idle_branch: codex/worker-01-idle
-  blocked_reason: 'preserve-before-rebuild: worker-01 retains unmerged stage2 local
-    state'
+  blocked_reason: 'preserve-before-rebuild: Stage2 branch codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract
+    salvaged to main control plane at 688753cad8875add7bb4bdb82b4d926042746631;
+    slot remains blocked pending governed continuation or rebuild'
   stale_runtime: true
   preserve_before_rebuild: true
   last_provisioned_at: '2026-04-09T16:28:32+08:00'
