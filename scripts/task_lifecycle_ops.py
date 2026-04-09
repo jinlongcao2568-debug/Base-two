@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 from typing import Any
 
 from governance_lib import (
@@ -38,6 +39,7 @@ from governance_lib import (
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
 from control_plane_root import default_full_clone_idle_branch, load_full_clone_pool, resolve_control_plane_root, slot_by_id
+from child_execution_flow import mirror_governance_ledgers_to_worktree
 from roadmap_claim_next import CLAIMS_FILE
 from task_closeout import assess_live_closeout
 from task_coordination_lease import (
@@ -80,6 +82,16 @@ def _close_roadmap_claim_if_present(root, task: dict[str, Any]) -> None:
         changed = True
     if changed:
         dump_yaml(claims_path, claims)
+
+
+def _sync_full_clone_mirror(root, registry: dict, worktrees: dict, task: dict[str, Any]) -> None:
+    entry = worktree_map(worktrees).get(task["task_id"])
+    if entry is None or entry.get("pool_kind") != "full_clone":
+        return
+    worktree_path = Path(str(entry.get("path") or "")).resolve()
+    if not worktree_path.exists():
+        return
+    mirror_governance_ledgers_to_worktree(root, worktree_path, registry, worktrees, task)
 
 
 def _refresh_candidate_cache_if_needed(root, task: dict[str, Any]) -> None:
@@ -299,6 +311,7 @@ def cmd_pause(args: argparse.Namespace) -> int:
         worktrees["updated_at"] = iso_now()
         dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    _sync_full_clone_mirror(root, registry, worktrees, task)
     if current_task["current_task_id"] == task["task_id"]:
         dump_yaml(root / CURRENT_TASK_FILE, build_current_task_payload(task, "Task paused; waiting for explicit reactivation."))
     write_handoff(
@@ -386,6 +399,7 @@ def cmd_close(args: argparse.Namespace) -> int:
                 root / CURRENT_TASK_FILE,
                 build_current_task_payload(task, "Waiting for explicit successor activation."),
             )
+    _sync_full_clone_mirror(root, registry, worktrees, task)
     write_handoff(
         root,
         task,

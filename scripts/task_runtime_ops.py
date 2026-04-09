@@ -44,7 +44,12 @@ from roadmap_explain import (
 )
 from roadmap_claim_next import cmd_claim_next
 from roadmap_execution_closeout import main as roadmap_closeout_main, close_ready_execution_tasks
-from full_clone_pool import cmd_provision_full_clone_pool
+from full_clone_pool import (
+    cmd_audit_full_clone_pool,
+    cmd_provision_full_clone_pool,
+    cmd_rebuild_full_clone_pool,
+    cmd_refresh_full_clone_pool,
+)
 from roadmap_candidate_maintainer import cmd_refresh
 from worker_self_loop import cmd_once as cmd_worker_self_loop_once, cmd_loop as cmd_worker_self_loop_loop
 from review_candidate_pool import cmd_review
@@ -70,6 +75,8 @@ from task_worktree_ops import (
 )
 
 LOCAL_EXECUTION_COMMANDS = {
+    "claim-next",
+    "close-ready-execution-tasks",
     "checkpoint-task-results",
     "commit-task-results",
     "push-task-branch",
@@ -79,6 +86,18 @@ LOCAL_EXECUTION_COMMANDS = {
     "worker-self-loop-once",
     "worker-self-loop-loop",
 }
+
+
+def _ensure_control_plane_only(command_name: str) -> None:
+    current = Path.cwd().resolve()
+    control_root = resolve_control_plane_root(current)
+    if current != control_root:
+        raise GovernanceError(f"{command_name} must run from the main control plane; clone-side {command_name} is frozen")
+
+
+def _cmd_close_ready_execution_tasks(args: argparse.Namespace) -> int:
+    _ensure_control_plane_only("close-ready-execution-tasks")
+    return roadmap_closeout_main()
 
 
 def _command_cwd(args: argparse.Namespace) -> Path:
@@ -139,7 +158,7 @@ def add_coordination_commands(subparsers) -> None:
     explain_release_parser.set_defaults(func=cmd_explain_release_chain)
 
     close_ready_execution_parser = subparsers.add_parser("close-ready-execution-tasks")
-    close_ready_execution_parser.set_defaults(func=lambda args: roadmap_closeout_main())
+    close_ready_execution_parser.set_defaults(func=_cmd_close_ready_execution_tasks)
 
     claim_next_parser = subparsers.add_parser("claim-next")
     claim_next_parser.add_argument("--write-claim", action="store_true")
@@ -328,6 +347,18 @@ def add_worktree_commands(subparsers) -> None:
     clone_pool_parser.add_argument("--slot-id")
     clone_pool_parser.add_argument("--refresh", action="store_true")
     clone_pool_parser.set_defaults(func=cmd_provision_full_clone_pool)
+
+    audit_clone_pool_parser = subparsers.add_parser("audit-full-clone-pool")
+    audit_clone_pool_parser.add_argument("--slot-id")
+    audit_clone_pool_parser.set_defaults(func=cmd_audit_full_clone_pool)
+
+    refresh_clone_pool_parser = subparsers.add_parser("refresh-full-clone-pool")
+    refresh_clone_pool_parser.add_argument("--slot-id")
+    refresh_clone_pool_parser.set_defaults(func=cmd_refresh_full_clone_pool)
+
+    rebuild_clone_pool_parser = subparsers.add_parser("rebuild-full-clone-pool")
+    rebuild_clone_pool_parser.add_argument("--slot-id")
+    rebuild_clone_pool_parser.set_defaults(func=cmd_rebuild_full_clone_pool)
 
     prewarm_parser = subparsers.add_parser("prewarm-worktree-pool")
     prewarm_parser.add_argument("--slot-id")

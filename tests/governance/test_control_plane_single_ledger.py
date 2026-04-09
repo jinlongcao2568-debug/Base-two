@@ -13,6 +13,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 import governance_console as console  # noqa: E402
+from control_plane_root import detect_ledger_divergences  # noqa: E402
 
 
 def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
@@ -42,6 +43,13 @@ def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
 def _clone_repo(repo: Path, clone_path: Path) -> None:
     git_commit_all(repo, "prepare full clone worker slot")
     subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "switch", "-c", "codex/worker-01-idle"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _dependent_stage1_candidate(candidate_id: str, *, priority: int) -> dict:
@@ -59,9 +67,6 @@ def test_clone_governance_writes_redirect_to_main_control_plane(tmp_path: Path) 
     clone_path = tmp_path / "clone-worker-01"
     _write_full_clone_pool(repo, clone_path)
     _clone_repo(repo, clone_path)
-    clone_pool = clone_path / "docs/governance/FULL_CLONE_POOL.yaml"
-    if clone_pool.exists():
-        clone_pool.unlink()
     _write_backlog(
         repo,
         [
@@ -92,7 +97,8 @@ def test_clone_governance_writes_redirect_to_main_control_plane(tmp_path: Path) 
         "--tests",
         "pytest tests/stage1 -q",
     )
-    closed = run_python(TASK_OPS_SCRIPT, clone_path, "close-ready-execution-tasks")
+    closed_from_clone = run_python(TASK_OPS_SCRIPT, clone_path, "close-ready-execution-tasks")
+    closed = run_python(TASK_OPS_SCRIPT, repo, "close-ready-execution-tasks")
 
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
@@ -105,13 +111,100 @@ def test_clone_governance_writes_redirect_to_main_control_plane(tmp_path: Path) 
 
     assert promoted.returncode == 0, promoted.stdout + promoted.stderr
     assert finished.returncode == 0, finished.stdout + finished.stderr
+    assert closed_from_clone.returncode == 1
+    assert "clone-side close-ready-execution-tasks is frozen" in closed_from_clone.stdout
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert stage1_task["status"] == "done"
     assert slot["status"] == "ready"
     assert slot["current_task_id"] is None
     assert claims["claims"][0]["status"] == "closed"
     assert by_id["stage1-source-family-cn"]["status"] == "ready"
-    assert all(task["task_id"] != "TASK-RM-STAGE1-CORE-CONTRACT" for task in clone_registry["tasks"])
+    mirrored_task = next(task for task in clone_registry["tasks"] if task["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT")
+    assert mirrored_task["status"] == "done"
+
+
+def test_detect_ledger_divergence_for_ready_slot_stale_mirror(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+            "title": "Stage1 orchestration contract and fixture boundary",
+            "status": "done",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage1",
+            "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "completed",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-08T00:00:00+08:00",
+            "topology": "single_task",
+            "allowed_dirs": ["src/stage1_orchestration/"],
+            "reserved_paths": [],
+            "planned_write_paths": ["src/stage1_orchestration/"],
+            "planned_test_paths": ["tests/stage1/"],
+            "required_tests": ["pytest tests/stage1 -q"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "roadmap_candidate_id": "stage1-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    subprocess.run(
+        ["git", "switch", "-c", "codex/TASK-RM-STAGE1-SOURCE-FAMILY-CN-stage1-source-family-cn"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [
+                {
+                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "status": "doing",
+                    "task_kind": "execution",
+                    "worker_state": "running",
+                    "roadmap_candidate_id": "stage1-core-contract",
+                }
+            ],
+        },
+    )
+    write_yaml(
+        clone_path / ".codex/local/roadmap_candidates/index.yaml",
+        {
+            "version": "0.1",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "candidates": [
+                {"candidate_id": "stage1-source-family-lanes"},
+                {"candidate_id": "stage2-core-contract"},
+            ],
+        },
+    )
+
+    divergences = detect_ledger_divergences(repo)
+
+    assert len(divergences) == 1
+    assert divergences[0]["slot_id"] == "worker-01"
+    assert divergences[0]["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"
+    assert any("ready slot 当前分支不是 idle_branch" in reason for reason in divergences[0]["reasons"])
+    assert any("clone 本地账本残留非终态执行任务" in reason for reason in divergences[0]["reasons"])
+    assert any("clone 候选池格式过期" in reason for reason in divergences[0]["reasons"])
 
 
 def test_console_detects_ledger_divergence_and_marks_candidate(monkeypatch, tmp_path: Path) -> None:

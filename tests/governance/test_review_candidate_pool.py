@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 
 from .helpers import init_governance_repo, read_yaml, run_python, set_idle_control_plane, write_yaml
 from .test_roadmap_candidate_index import _candidate, _write_backlog
@@ -120,3 +121,61 @@ def test_review_candidate_pool_reports_root_and_closeout_radar_fields(tmp_path: 
     assert "closeout_ready_execution_count" in payload
     assert "top_unlock_value_candidates" in payload
     assert "hard_gate_backlog" in payload
+
+
+def test_review_candidate_pool_blocks_ready_slot_stale_mirror(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "status": "active",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/worker-01-idle",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                }
+            ],
+        },
+    )
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    _write_backlog(repo, [_candidate("stage1-core-contract", status="planned", priority=100)])
+    subprocess.run(
+        ["git", "switch", "-c", "codex/TASK-RM-STAGE1-SOURCE-FAMILY-CN-stage1-source-family-cn"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [
+                {
+                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "status": "doing",
+                    "task_kind": "execution",
+                    "worker_state": "running",
+                    "roadmap_candidate_id": "stage1-core-contract",
+                }
+            ],
+        },
+    )
+
+    result = run_python(SCRIPT, repo)
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 1
+    assert payload["status"] == "blocked"
+    assert payload["ledger_divergence_count"] >= 1
+    assert payload["issues"]

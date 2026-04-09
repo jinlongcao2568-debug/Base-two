@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from control_plane_root import detect_ledger_divergences, load_full_clone_pool, resolve_control_plane_root
+from control_plane_root import audit_full_clone_pool, detect_ledger_divergences, load_full_clone_pool, resolve_control_plane_root
 from governance_lib import configure_utf8_stdio, find_repo_root, load_task_registry, load_yaml
 from roadmap_candidate_maintainer import SUMMARY_FILE, refresh_once
 from roadmap_execution_closeout import list_closeout_ready_execution_tasks
@@ -24,6 +24,7 @@ def _parse_iso(value: str | None) -> datetime | None:
 
 def review_pool(control_root: Path) -> dict[str, Any]:
     summary = refresh_once(control_root)
+    pool_audit = audit_full_clone_pool(control_root)
     registry = load_task_registry(control_root)
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
     full_clone_pool = load_full_clone_pool(control_root)
@@ -95,9 +96,15 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     issues = [*slot_issues]
     if ledger_divergences:
         issues.append("ledger divergence detected")
+    if str(pool_audit.get("pool_status") or "active") != "active":
+        issues.append("full clone pool is frozen")
+    if int(pool_audit.get("stale_runtime_count") or 0) > 0:
+        issues.append("stale runtime detected")
     if legacy_candidates:
         issues.append(f"legacy candidate compatibility still present: {len(legacy_candidates)}")
     if ledger_divergences:
+        status = "blocked"
+    elif str(pool_audit.get("pool_status") or "active") != "active":
         status = "blocked"
     elif slot_issues:
         status = "blocked"
@@ -126,6 +133,8 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "closeout_blocked_execution_tasks": closeout_blocked,
         "ledger_divergences": ledger_divergences,
         "ledger_divergence_count": len(ledger_divergences),
+        "stale_runtime_count": int(pool_audit.get("stale_runtime_count") or 0),
+        "full_clone_pool_audit": pool_audit,
         "issues": issues,
     }
 

@@ -11,6 +11,7 @@ from business_autopilot import (
     capability_is_open,
     load_business_policy,
 )
+from control_plane_root import resolve_control_plane_root
 from governance_lib import (
     GovernanceError,
     append_runlog_bullets,
@@ -19,7 +20,6 @@ from governance_lib import (
     current_branch,
     dump_yaml,
     ensure_clean_worktree,
-    find_repo_root,
     git,
     is_idle_current_payload,
     iso_now,
@@ -313,7 +313,7 @@ def _mark_capability_in_progress(capability_map: dict[str, Any]) -> None:
 def _build_generated_task(
     registry: dict[str, Any], blueprint: dict[str, Any], current_task_id: str | None
 ) -> dict[str, Any]:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     task_id = _next_auto_task_id(registry.get("tasks", []))
     task = {
         "task_id": task_id,
@@ -1231,7 +1231,7 @@ def assess_continuation_readiness(
 
 
 def cmd_continue_current(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_payload = load_current_task(root)
@@ -1293,7 +1293,7 @@ def cmd_continue_current(args: argparse.Namespace) -> int:
 
 
 def cmd_continue_roadmap(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry, worktrees, capability_map, task_policy, current_task_payload, current_task = _load_continue_roadmap_state(root)
 
     readiness = assess_continuation_readiness(

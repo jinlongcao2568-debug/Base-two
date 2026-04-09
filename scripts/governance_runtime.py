@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import os
 from pathlib import Path
 import re
+import stat
 import shutil
 import subprocess
 import sys
@@ -239,4 +241,12 @@ def safe_rmtree(path: Path) -> None:
     if path.is_file():
         path.unlink()
         return
-    shutil.rmtree(path)
+
+    def _onerror(func, target, exc_info):
+        try:
+            os.chmod(target, stat.S_IWRITE)
+        except OSError:
+            raise exc_info[1]
+        func(target)
+
+    shutil.rmtree(path, onerror=_onerror)

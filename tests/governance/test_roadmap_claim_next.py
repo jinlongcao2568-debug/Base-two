@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 
 from .helpers import TASK_OPS_SCRIPT, read_yaml, run_python, set_idle_control_plane, write_yaml, init_governance_repo
 from .test_roadmap_candidate_index import _candidate, _write_backlog
@@ -59,6 +60,44 @@ def _append_active_task(
         }
     )
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+
+def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "status": "active",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/worker-01-idle",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                    "last_provisioned_at": None,
+                    "last_claimed_at": None,
+                    "last_released_at": None,
+                }
+            ],
+        },
+    )
+
+
+def _clone_repo(repo: Path, clone_path: Path) -> None:
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "prepare full clone slot"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "switch", "-c", "codex/worker-01-idle"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def test_claim_next_dry_run_selects_top_ready_candidate_without_claim_file(tmp_path: Path) -> None:
@@ -239,3 +278,65 @@ def test_claim_next_obeys_roadmap_claim_capacity_not_runner_lane_ceiling(tmp_pat
     assert first.returncode == 0, first.stdout + first.stderr
     assert second.returncode == 1
     assert "roadmap claim capacity reached (1/1)" in second.stdout
+
+
+def test_claim_next_rejects_clone_side_invocation(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+
+    result = run_python(TASK_OPS_SCRIPT, clone_path, "claim-next")
+
+    assert result.returncode == 1
+    assert "clone-side claim-next is frozen" in result.stdout
+
+
+def test_claim_next_blocks_ready_full_clone_slot_with_live_runtime_drift(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+    subprocess.run(
+        ["git", "switch", "-c", "codex/TASK-RM-STAGE1-SOURCE-FAMILY-CN-stage1-source-family-cn"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [
+                {
+                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "status": "doing",
+                    "task_kind": "execution",
+                    "worker_state": "running",
+                    "roadmap_candidate_id": "stage1-core-contract",
+                }
+            ],
+        },
+    )
+
+    result = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "claim-next",
+        "--promote-task",
+        "--dispatch-target",
+        "full_clone",
+        "--full-clone-slot-id",
+        "worker-01",
+    )
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+
+    assert result.returncode == 1
+    assert "ledger divergence detected" in result.stdout
+    assert pool["slots"][0]["status"] == "ready"

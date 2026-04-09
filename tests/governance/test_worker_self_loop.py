@@ -40,6 +40,13 @@ def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
 def _clone_repo(repo: Path, clone_path: Path) -> None:
     git_commit_all(repo, "prepare full clone worker slot")
     subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "switch", "-c", "codex/worker-01-idle"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def _run_loop(clone_path: Path, *args: str):
@@ -71,11 +78,15 @@ def test_worker_self_loop_resumes_blocked_task_without_claiming_new_one(tmp_path
     _clone_repo(repo, clone_path)
     _write_backlog(repo, [_stage_candidate("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
     run_python(TASK_OPS_SCRIPT, repo, "claim-next", "--promote-task", "--dispatch-target", "full_clone", "--full-clone-slot-id", "worker-01")
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT")
-    task["status"] = "blocked"
-    task["blocked_reason"] = "manual blocker"
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    blocked = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "worker-blocked",
+        "TASK-RM-STAGE1-CORE-CONTRACT",
+        "--reason",
+        "manual blocker",
+    )
+    assert blocked.returncode == 0, blocked.stdout + blocked.stderr
 
     code, payload = _run_loop(clone_path, "once")
 
@@ -128,7 +139,7 @@ def test_worker_self_loop_supports_explicit_task_id_fallback(tmp_path: Path) -> 
     run_python(TASK_OPS_SCRIPT, repo, "claim-next", "--promote-task", "--dispatch-target", "full_clone", "--full-clone-slot-id", "worker-01")
     pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
     pool["slots"][0]["current_task_id"] = None
-    pool["slots"][0]["status"] = "ready"
+    pool["slots"][0]["status"] = "active"
     write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
     subprocess.run(["git", "switch", "codex/worker-01-idle"], cwd=clone_path, check=False, capture_output=True, text=True)
 
@@ -146,14 +157,28 @@ def test_worker_self_loop_resumes_paused_task(tmp_path: Path) -> None:
     _clone_repo(repo, clone_path)
     _write_backlog(repo, [_stage_candidate("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
     run_python(TASK_OPS_SCRIPT, repo, "claim-next", "--promote-task", "--dispatch-target", "full_clone", "--full-clone-slot-id", "worker-01")
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT")
-    task["status"] = "paused"
-    task["worker_state"] = "idle"
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    paused = run_python(TASK_OPS_SCRIPT, repo, "pause", "TASK-RM-STAGE1-CORE-CONTRACT")
+    assert paused.returncode == 0, paused.stdout + paused.stderr
 
     code, payload = _run_loop(clone_path, "once")
 
     assert code == 0
     assert payload["mode"] == "resume-current"
     assert payload["task"]["status"] == "paused"
+
+
+def test_worker_self_loop_blocks_when_full_clone_pool_is_frozen(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+    pool["status"] = "blocked"
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+
+    code, payload = _run_loop(clone_path, "once")
+
+    assert code == 1
+    assert payload["status"] == "blocked"
+    assert payload["mode"] == "pool-frozen"

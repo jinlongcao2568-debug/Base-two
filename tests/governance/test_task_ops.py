@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import subprocess
 
 from .helpers import (
     CHECK_REPO_SCRIPT,
@@ -11,9 +13,11 @@ from .helpers import (
     read_roadmap,
     read_yaml,
     run_python_inline as run_python,
+    set_idle_control_plane,
     write_yaml,
 )
 from .scenario_builders import create_cleanup_orphan, create_review_ready_child
+from .test_roadmap_candidate_index import _candidate, _write_backlog
 
 
 def test_pause_moves_active_task_to_paused(tmp_path: Path) -> None:
@@ -695,3 +699,46 @@ def test_worktree_create_caps_active_execution_entries_at_four(tmp_path: Path) -
     )
     assert rejected.returncode == 1
     assert "already at hard limit 4" in rejected.stdout
+
+
+def test_review_candidate_pool_from_clone_cwd_reads_control_plane_truth(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "status": "active",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/worker-01-idle",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                }
+            ],
+        },
+    )
+    _write_backlog(repo, [_candidate("stage1-core-contract", status="planned", priority=100)])
+    git_commit_all(repo, "prepare full clone slot")
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "switch", "-c", "codex/worker-01-idle"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, clone_path, "review-candidate-pool")
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 0
+    assert payload["control_plane_root"] == str(repo).replace("\\", "/")
+    assert (repo / ".codex/local/roadmap_candidates/index.yaml").exists()
+    assert not (clone_path / ".codex/local/roadmap_candidates/index.yaml").exists()

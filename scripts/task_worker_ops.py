@@ -24,6 +24,7 @@ from child_execution_flow import (
     cleanup_transient_child_artifacts,
     load_execution_context,
     merge_child_into_parent,
+    mirror_governance_ledgers_to_worktree,
     persist_child_workflow,
     run_shell_command,
     set_design_confirmation,
@@ -59,6 +60,16 @@ def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
     if entry is None or entry.get("work_mode") != "execution":
         return None
     return entry
+
+
+def _sync_full_clone_mirror(root: Path, registry: dict, worktrees: dict, task: dict) -> None:
+    entry = _execution_entry(worktrees, task["task_id"])
+    if entry is None or entry.get("pool_kind") != "full_clone":
+        return
+    worktree_path = Path(str(entry.get("path") or "")).resolve()
+    if not worktree_path.exists():
+        return
+    mirror_governance_ledgers_to_worktree(root, worktree_path, registry, worktrees, task)
 
 
 def _requires_governed_child_workflow(root: Path, task: dict) -> bool:
@@ -278,6 +289,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _sync_full_clone_mirror(root, registry, worktrees, task)
     update_current_task_if_active(root, task, "Worker started and the task is actively running.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-start owner=`{args.worker_owner or 'unknown'}`"])
     sync_task_artifacts(root, registry, [task["task_id"]])
@@ -324,6 +336,7 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _sync_full_clone_mirror(root, registry, worktrees, task)
     update_current_task_if_active(root, task, "Worker progress was recorded for the live task.")
     bullets = [f"`{now}`: {note}" for note in args.note]
     if bullets:
@@ -388,6 +401,7 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _sync_full_clone_mirror(root, registry, worktrees, task)
     update_current_task_if_active(root, task, "Task blocked; waiting for blocker resolution before more changes.")
     append_runlog_bullets(root, task, "Risk and Blockers", [f"`{now}`: {args.reason}"])
     write_handoff(
@@ -466,6 +480,7 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
     worktrees["updated_at"] = now
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    _sync_full_clone_mirror(root, registry, worktrees, task)
     _record_finish_artifacts(root, task, args, now)
     if context is not None and entry is not None:
         persist_child_workflow(root, registry, worktrees, task, entry, context)

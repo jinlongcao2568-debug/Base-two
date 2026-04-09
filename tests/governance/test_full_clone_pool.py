@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python, write_yaml
@@ -101,3 +102,48 @@ def test_provision_full_clone_pool_preserves_active_slot_metadata(tmp_path: Path
     assert repaired_pool["slots"][0]["status"] == "active"
     assert repaired_pool["slots"][0]["current_task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"
     assert claims["claims"][0]["dispatch_target"] == "full_clone"
+
+
+def test_audit_full_clone_pool_reports_ready_slot_runtime_drift(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    pool = _pool(repo)
+    pool["slots"][0]["status"] = "ready"
+    pool["slots"][0]["branch"] = "codex/worker-01-idle"
+    pool["slots"][0]["idle_branch"] = "codex/worker-01-idle"
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+    clone_path = Path(pool["slots"][0]["path"])
+    clone_path.mkdir(parents=True, exist_ok=True)
+    (clone_path / ".git").mkdir()
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [
+                {
+                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "status": "doing",
+                    "task_kind": "execution",
+                    "roadmap_candidate_id": "stage1-core-contract",
+                }
+            ],
+        },
+    )
+    write_yaml(
+        clone_path / ".codex/local/roadmap_candidates/index.yaml",
+        {
+            "version": "0.1",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "candidates": [{"candidate_id": "stage1-source-family-lanes"}],
+        },
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "audit-full-clone-pool")
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 1
+    assert payload["ledger_divergence_count"] >= 1
+    slot = next(item for item in payload["slots"] if item["slot_id"] == "worker-01")
+    assert slot["divergent"] is True
+    assert any("clone 本地账本残留非终态执行任务" in reason for reason in slot["reasons"])
+    assert any("clone 候选池格式过期" in reason for reason in slot["reasons"])

@@ -1,0 +1,57 @@
+task_id: TASK-GOV-067
+summary_status: implementing
+last_handoff_at: '2026-04-09T14:35:00+08:00'
+completed_items:
+- Created the formal governance task package in the main control plane.
+- Confirmed authority-doc, execution-handbook, and execution-plan boundaries before implementation.
+- Applied P0 control-plane containment by freezing full-clone dispatch and isolating worker-01.
+- Implemented governance runtime stamp, stale-mirror detection, direct-writer sealing, and full-clone live runtime validation.
+- Added audit/refresh/rebuild full-clone commands and synchronized full-clone governance mirrors during promote, worker state changes, and closeout.
+- Passed the scoped governance regression tests for this hardening task.
+remaining_items:
+- Commit or otherwise publish the control-plane working tree changes before expecting rebuilt clones to achieve runtime hash parity.
+- Decide whether to broaden the fix to the unrelated `test_task_ops.py` topology/worktree-cap failures or leave them to a separate task.
+next_step: Review the remaining rollout gap for full-clone runtime parity against the uncommitted control-plane working tree, then decide whether to stage/commit this task or hand it off.
+next_tests:
+- pytest tests/governance/test_control_plane_single_ledger.py -q
+- pytest tests/governance/test_full_clone_pool.py -q
+- pytest tests/governance/test_roadmap_claim_next.py -q
+- pytest tests/governance/test_roadmap_candidate_index.py -q
+- pytest tests/governance/test_roadmap_candidate_compiler.py -q
+- pytest tests/governance/test_review_candidate_pool.py -q
+- pytest tests/governance/test_worker_self_loop.py -q
+- pytest tests/governance/test_task_ops.py -q
+current_risks:
+- worker-01 carries unmerged local changes and must remain preserve-first until runtime hardening is complete.
+- existing control-plane slot, claim, and worktree metadata for worker-01 are already divergent and must not be silently rewritten as a business-state repair.
+- rebuilt clones still reflect committed control-plane git state, not the uncommitted governance-script working tree, so runtime hash parity remains intentionally blocked until publish.
+candidate_write_paths:
+- docs/governance/CONTROL_PLANE_FULL_CLONE_RUNTIME_HARDENING_EXECUTION_PLAN_V2.md
+- docs/governance/FULL_CLONE_POOL.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/tasks/TASK-GOV-067.md
+- docs/governance/runlogs/TASK-GOV-067-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-067.yaml
+- scripts/control_plane_root.py
+- scripts/full_clone_pool.py
+- scripts/roadmap_candidate_index.py
+- scripts/roadmap_candidate_compiler.py
+- scripts/roadmap_claim_next.py
+- scripts/review_candidate_pool.py
+- scripts/task_runtime_ops.py
+- scripts/task_continuation_ops.py
+- scripts/worker_self_loop.py
+- tests/governance/test_control_plane_single_ledger.py
+- tests/governance/test_full_clone_pool.py
+- tests/governance/test_roadmap_claim_next.py
+- tests/governance/test_roadmap_candidate_index.py
+- tests/governance/test_roadmap_candidate_compiler.py
+- tests/governance/test_review_candidate_pool.py
+- tests/governance/test_worker_self_loop.py
+- tests/governance/test_task_ops.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.

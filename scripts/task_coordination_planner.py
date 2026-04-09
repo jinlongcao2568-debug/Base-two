@@ -5,13 +5,13 @@ import re
 from pathlib import Path
 from typing import Any
 
+from control_plane_root import resolve_control_plane_root
 from governance_lib import (
     GovernanceError,
     build_current_task_payload,
     current_branch,
     dump_yaml,
     effective_successor_state,
-    find_repo_root,
     iso_now,
     load_capability_map,
     load_current_task,
@@ -176,7 +176,7 @@ def _build_blueprint_candidate(
     task_policy: dict[str, Any],
     capability_map: dict[str, Any],
 ) -> dict[str, Any] | None:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     if _compiled_roadmap_dispatch_enabled(root):
         return None
     if not _autopilot_capability_open(capability_map):
@@ -287,7 +287,7 @@ def build_coordination_candidates(root: Path) -> list[dict[str, Any]]:
 
 
 def cmd_plan_coordination(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     candidates = build_coordination_candidates(root)
     _write_candidates(root, candidates)
     record_session_event(
@@ -381,7 +381,7 @@ def _activate_promoted_task(root: Path, registry: dict[str, Any], task: dict[str
 
 
 def cmd_promote_candidate(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     candidate = _load_candidate(root, args.candidate_id)
     registry = load_task_registry(root)
     tasks = registry.setdefault("tasks", [])

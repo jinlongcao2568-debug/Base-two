@@ -5,6 +5,7 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
+from control_plane_root import resolve_control_plane_root
 from governance_lib import GovernanceError, configure_utf8_stdio, dump_yaml, find_repo_root, iso_now, load_task_policy, load_yaml
 
 
@@ -763,7 +764,12 @@ def write_compiled_roadmap_candidates(root: Path) -> dict[str, Any]:
 
 
 def cmd_compile(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    local_root = find_repo_root()
+    root = resolve_control_plane_root(local_root)
+    if local_root != root:
+        local_output = (local_root / COMPILED_GRAPH_FILE).resolve()
+        if local_output.exists():
+            raise GovernanceError("clone 内禁止复用本地 compiled candidate graph；请改在主控制面编译")
     payload = write_compiled_roadmap_candidates(root)
     print(
         f"[OK] compiled roadmap candidate graph count={len(payload['candidates'])} "

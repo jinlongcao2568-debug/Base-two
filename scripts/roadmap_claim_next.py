@@ -15,6 +15,7 @@ from governance_lib import (
     configure_utf8_stdio,
     dump_yaml,
     # find_repo_root removed; control-plane writes must resolve the main root.
+    find_repo_root,
     git,
     iso_now,
     load_task_registry,
@@ -24,6 +25,7 @@ from governance_lib import (
 )
 from control_plane_root import (
     FULL_CLONE_POOL_FILE,
+    assess_full_clone_slot_runtime,
     default_full_clone_idle_branch,
     detect_ledger_divergences,
     load_full_clone_pool,
@@ -31,7 +33,7 @@ from control_plane_root import (
     slot_by_id,
 )
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
-from child_execution_flow import transient_child_paths
+from child_execution_flow import mirror_governance_ledgers_to_worktree, transient_child_paths
 from roadmap_execution_closeout import close_ready_execution_tasks
 from task_handoff import ensure_handoff_file
 from task_rendering import update_runlog_file, update_task_file
@@ -492,6 +494,8 @@ def _assign_full_clone_slot(root: Path, candidate: dict[str, Any], args: argpars
     pool = load_full_clone_pool(root)
     if not pool.get("slots"):
         raise GovernanceError(f"full clone pool is missing or empty: {FULL_CLONE_POOL_FILE}")
+    if str(pool.get("status") or "active") != "active":
+        raise GovernanceError("full clone dispatch is frozen in the control plane pool")
     slot_id = getattr(args, "full_clone_slot_id", None)
     if not slot_id:
         raise GovernanceError("full clone dispatch requires --full-clone-slot-id")
@@ -500,9 +504,20 @@ def _assign_full_clone_slot(root: Path, candidate: dict[str, Any], args: argpars
         raise GovernanceError(f"unknown full clone slot: {slot_id}")
     if slot.get("status") != "ready":
         raise GovernanceError(f"full clone slot is not ready: {slot_id}")
+    assessment = assess_full_clone_slot_runtime(root, slot)
+    if assessment["divergent"]:
+        slot["status"] = "blocked"
+        slot["blocked_reason"] = assessment["summary_zh"]
+        slot["stale_runtime"] = assessment["runtime_drift"]
+        _write_full_clone_pool(root, pool)
+        raise GovernanceError(
+            f"ledger divergence detected for full clone slot {slot_id}: {'; '.join(assessment['reasons'])}"
+        )
     slot["status"] = "active"
     slot["current_task_id"] = candidate["task_id_hint"]
     slot["branch"] = candidate["candidate_branch"]
+    slot["blocked_reason"] = None
+    slot["stale_runtime"] = False
     slot["last_claimed_at"] = _iso(now)
     _write_full_clone_pool(root, pool)
     candidate["pool_slot_id"] = slot_id
@@ -564,6 +579,7 @@ def _upsert_full_clone_execution_entry(root: Path, task: dict[str, Any], slot_id
     registry["updated_at"] = iso_now()
     dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
     dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    mirror_governance_ledgers_to_worktree(root, Path(clone_path), registry, worktrees, task)
 
 
 def _assign_pool_slot(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> dict[str, Any] | None:
@@ -645,6 +661,10 @@ def _takeover_stale_claim(root: Path, candidate: dict[str, Any], claim: dict[str
             branch=claim.get("candidate_branch") or candidate["candidate_branch"],
             now=now,
         )
+        registry = load_task_registry(root)
+        worktrees = load_worktree_registry(root)
+        task = next(task for task in registry.get("tasks", []) if task.get("task_id") == formal_task_id)
+        mirror_governance_ledgers_to_worktree(root, destination, registry, worktrees, task)
         return destination
     if not destination.exists():
         cmd_worktree_create(argparse.Namespace(task_id=formal_task_id, path=str(destination), worker_owner=args.worker_owner))
@@ -760,7 +780,10 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
 
 
 def cmd_claim_next(args: argparse.Namespace) -> int:
-    root = resolve_control_plane_root()
+    local_root = find_repo_root()
+    root = resolve_control_plane_root(local_root)
+    if local_root != root:
+        raise GovernanceError("claim-next must run from the main control plane; clone-side claim-next is frozen")
     if args.promote_task:
         args.write_claim = True
     divergences = detect_ledger_divergences(root)

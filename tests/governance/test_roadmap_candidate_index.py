@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 
-from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python, set_idle_control_plane, write_yaml
+from .helpers import TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, set_idle_control_plane, write_yaml
+
+
+SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "roadmap_candidate_index.py"
 
 
 LANE_TYPES = {
@@ -148,6 +152,28 @@ def _candidate_by_id(index: dict, candidate_id: str) -> dict:
     return next(candidate for candidate in index["candidates"] if candidate["candidate_id"] == candidate_id)
 
 
+def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "status": "active",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/worker-01-idle",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                }
+            ],
+        },
+    )
+
+
 def test_plan_roadmap_candidates_derives_ready_waiting_and_controlled_statuses(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
@@ -261,6 +287,22 @@ def test_plan_roadmap_candidates_marks_expired_promoted_claim_as_takeover_not_re
     assert index["takeover_candidate_ids"] == ["stage1-core-contract"]
     assert candidate["status"] == "stale"
     assert candidate["takeover_mode"] == "expired_promoted_takeover"
+
+
+def test_direct_candidate_index_script_from_clone_writes_only_to_control_plane(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    git_commit_all(repo, "prepare full clone slot")
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    _write_backlog(repo, [_candidate("stage1-core-contract", status="planned", priority=100)])
+
+    result = run_python(SCRIPT, clone_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (repo / ".codex/local/roadmap_candidates/index.yaml").exists()
+    assert not (clone_path / ".codex/local/roadmap_candidates/index.yaml").exists()
 
 
 def test_plan_roadmap_candidates_rejects_unknown_stage_candidate_reference(tmp_path: Path) -> None:

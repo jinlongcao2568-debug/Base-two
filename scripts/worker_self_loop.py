@@ -7,7 +7,14 @@ import subprocess
 import time
 from typing import Any
 
-from control_plane_root import default_full_clone_idle_branch, find_full_clone_slot, load_full_clone_pool, resolve_control_plane_root
+from control_plane_root import (
+    assess_full_clone_slot_runtime,
+    default_full_clone_idle_branch,
+    detect_ledger_divergences,
+    find_full_clone_slot,
+    load_full_clone_pool,
+    resolve_control_plane_root,
+)
 from governance_lib import GovernanceError, configure_utf8_stdio, find_repo_root, git, load_task_registry
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -75,6 +82,39 @@ def preview_worker_action(local_root: Path, *, explicit_task_id: str | None = No
     slot = find_full_clone_slot(pool, local_root)
     if slot is None:
         raise GovernanceError("current directory is not a configured full clone worker slot")
+    if str(pool.get("status") or "active") != "active":
+        return {
+            "status": "blocked",
+            "mode": "pool-frozen",
+            "slot_id": slot["slot_id"],
+            "control_root": str(control_root).replace("\\", "/"),
+            "explanation": "full-clone dispatch is frozen in the control plane pool",
+            "blockers": [str(pool.get("status") or "blocked")],
+        }
+
+    divergences = detect_ledger_divergences(control_root)
+    if divergences:
+        slot_divergences = [item for item in divergences if item.get("slot_id") == slot["slot_id"]]
+        active_divergences = slot_divergences or divergences
+        return {
+            "status": "blocked",
+            "mode": "ledger-divergence",
+            "slot_id": slot["slot_id"],
+            "control_root": str(control_root).replace("\\", "/"),
+            "explanation": "worker self-loop is blocked until control-plane divergence is repaired",
+            "blockers": [item.get("summary_zh") or "ledger divergence detected" for item in active_divergences],
+        }
+
+    assessment = assess_full_clone_slot_runtime(control_root, slot)
+    if assessment["divergent"]:
+        return {
+            "status": "blocked",
+            "mode": "stale-runtime",
+            "slot_id": slot["slot_id"],
+            "control_root": str(control_root).replace("\\", "/"),
+            "explanation": "worker self-loop detected stale runtime for this full-clone slot",
+            "blockers": list(assessment["reasons"]),
+        }
 
     registry = load_task_registry(control_root)
     current_branch = _current_branch(local_root)

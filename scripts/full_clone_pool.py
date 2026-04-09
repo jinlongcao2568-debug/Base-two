@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -15,8 +16,14 @@ from governance_lib import (
     load_task_registry,
     load_worktree_registry,
     load_yaml,
+    safe_rmtree,
 )
-from control_plane_root import resolve_control_plane_root
+from control_plane_root import (
+    assess_full_clone_slot_runtime,
+    audit_full_clone_pool,
+    resolve_control_plane_root,
+    write_governance_runtime_stamp,
+)
 
 
 FULL_CLONE_POOL_FILE = Path("docs/governance/FULL_CLONE_POOL.yaml")
@@ -31,6 +38,11 @@ def _load_pool(root: Path) -> dict[str, Any]:
     payload.setdefault("slots", [])
     payload.setdefault("control_plane_root", str(root).replace("\\", "/"))
     return payload
+
+
+def _is_git_repo(path: Path) -> bool:
+    result = git(path, "rev-parse", "--is-inside-work-tree", check=False)
+    return result.returncode == 0 and (result.stdout or "").strip() == "true"
 
 
 def _write_pool(root: Path, pool: dict[str, Any]) -> None:
@@ -153,26 +165,51 @@ def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
     slot["idle_branch"] = idle_branch
     _reconcile_slot(root, slot)
     branch = str(slot["branch"])
+    current_task_id = str(slot.get("current_task_id") or "").strip()
     destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists() and not _is_git_repo(destination):
+        safe_rmtree(destination)
     if not destination.exists():
         git(root, "clone", "--local", str(root), str(destination))
     if refresh:
         git(destination, "fetch", "--all", check=False)
-    checkout = git(destination, "switch", branch, check=False)
-    if checkout.returncode != 0:
-        create = git(destination, "switch", "-c", branch, f"origin/{branch}", check=False)
-        if create.returncode != 0:
-            local_create = git(destination, "switch", "-c", branch, check=False)
-            if local_create.returncode != 0:
-                raise GovernanceError(
-                    local_create.stderr.strip()
-                    or local_create.stdout.strip()
-                    or create.stderr.strip()
-                    or create.stdout.strip()
-                    or f"unable to switch clone slot to {branch}"
-                )
+    if not current_task_id and branch == idle_branch:
+        control_head = (git(root, "rev-parse", "HEAD").stdout or "").strip()
+        if not control_head:
+            raise GovernanceError("unable to resolve control-plane HEAD for idle full-clone provisioning")
+        reset_branch = git(destination, "checkout", "-B", idle_branch, control_head, check=False)
+        if reset_branch.returncode != 0:
+            raise GovernanceError(
+                reset_branch.stderr.strip()
+                or reset_branch.stdout.strip()
+                or f"unable to reset idle branch {idle_branch} to control-plane HEAD"
+            )
+        branch = idle_branch
+    else:
+        checkout = git(destination, "switch", branch, check=False)
+        if checkout.returncode != 0:
+            create = git(destination, "switch", "-c", branch, f"origin/{branch}", check=False)
+            if create.returncode != 0:
+                local_create = git(destination, "switch", "-c", branch, check=False)
+                if local_create.returncode != 0:
+                    raise GovernanceError(
+                        local_create.stderr.strip()
+                        or local_create.stdout.strip()
+                        or create.stderr.strip()
+                        or create.stdout.strip()
+                        or f"unable to switch clone slot to {branch}"
+                    )
+    if refresh and not (not current_task_id and branch == idle_branch):
+        reset = git(destination, "reset", "--hard", f"origin/{branch}", check=False)
+        if reset.returncode != 0:
+            git(destination, "reset", "--hard", branch, check=False)
+        git(destination, "clean", "-fd", check=False)
+    elif refresh:
+        git(destination, "clean", "-fd", check=False)
     slot["status"] = "ready"
     slot["idle_branch"] = idle_branch
+    slot["blocked_reason"] = None
+    slot["stale_runtime"] = False
     slot.setdefault("current_task_id", None)
     slot.setdefault("last_claimed_at", None)
     slot.setdefault("last_released_at", None)
@@ -180,8 +217,24 @@ def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
     _reconcile_slot(root, slot)
 
 
+def _rebuild_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
+    assessment = assess_full_clone_slot_runtime(root, slot)
+    if slot.get("preserve_before_rebuild"):
+        raise GovernanceError(f"{slot['slot_id']} is preserve-before-rebuild and requires manual handling")
+    if assessment["effective_dirty_paths"]:
+        sample = ", ".join(assessment["effective_dirty_paths"][:4])
+        raise GovernanceError(f"{slot['slot_id']} has dirty runtime state and cannot be rebuilt automatically: {sample}")
+    destination = Path(str(slot["path"])).resolve()
+    if destination.exists():
+        safe_rmtree(destination)
+    _provision_slot(root, slot, refresh=refresh)
+    slot["blocked_reason"] = None
+    slot["stale_runtime"] = False
+
+
 def cmd_provision_full_clone_pool(args: argparse.Namespace) -> int:
     root = resolve_control_plane_root()
+    write_governance_runtime_stamp(root)
     pool = _load_pool(root)
     provisioned: list[str] = []
     for slot in pool.get("slots", []):
@@ -194,6 +247,43 @@ def cmd_provision_full_clone_pool(args: argparse.Namespace) -> int:
         print("[OK] no full clone slot matched the request")
         return 0
     print(f"[OK] provisioned full clone slots: {', '.join(provisioned)}")
+    return 0
+
+
+def cmd_audit_full_clone_pool(args: argparse.Namespace) -> int:
+    root = resolve_control_plane_root()
+    payload = audit_full_clone_pool(root)
+    if args.slot_id:
+        payload = {
+            **payload,
+            "slots": [slot for slot in payload["slots"] if slot.get("slot_id") == args.slot_id],
+        }
+        payload["ledger_divergence_count"] = sum(1 for slot in payload["slots"] if slot["divergent"])
+        payload["stale_runtime_count"] = sum(1 for slot in payload["slots"] if slot["runtime_drift"])
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload["status"] == "ready" else 1
+
+
+def cmd_refresh_full_clone_pool(args: argparse.Namespace) -> int:
+    refresh_args = argparse.Namespace(slot_id=args.slot_id, refresh=True)
+    return cmd_provision_full_clone_pool(refresh_args)
+
+
+def cmd_rebuild_full_clone_pool(args: argparse.Namespace) -> int:
+    root = resolve_control_plane_root()
+    write_governance_runtime_stamp(root)
+    pool = _load_pool(root)
+    rebuilt: list[str] = []
+    for slot in pool.get("slots", []):
+        if args.slot_id and slot.get("slot_id") != args.slot_id:
+            continue
+        _rebuild_slot(root, slot, refresh=True)
+        rebuilt.append(slot["slot_id"])
+    _write_pool(root, pool)
+    if not rebuilt:
+        print("[OK] no full clone slot matched the request")
+        return 0
+    print(f"[OK] rebuilt full clone slots: {', '.join(rebuilt)}")
     return 0
 
 
