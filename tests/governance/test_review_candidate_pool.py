@@ -173,6 +173,82 @@ def test_review_candidate_pool_reports_root_and_closeout_radar_fields(tmp_path: 
     assert "hard_gate_backlog" in payload
 
 
+def test_review_candidate_pool_reports_live_execution_leases_without_false_divergence(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate("stage3-core-contract", status="planned", priority=100)])
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE3-CORE-CONTRACT",
+            "title": "stage3 contract",
+            "status": "doing",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage3",
+            "branch": "codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "running",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-08T00:00:00+08:00",
+            "topology": "single_task",
+            "allowed_dirs": ["src/stage3_parsing/"],
+            "reserved_paths": [],
+            "planned_write_paths": ["src/stage3_parsing/"],
+            "planned_test_paths": ["tests/stage3/"],
+            "required_tests": ["pytest tests/stage3 -q"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE3-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE3-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "created_at": "2026-04-08T00:00:00+08:00",
+            "activated_at": "2026-04-08T00:00:00+08:00",
+            "closed_at": None,
+            "roadmap_candidate_id": "stage3-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    write_yaml(
+        repo / "docs/governance/EXECUTION_LEASES.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "revision": 1,
+            "leases": [
+                {
+                    "lease_id": "lease-task-rm-stage3-core-contract-worker-02",
+                    "task_id": "TASK-RM-STAGE3-CORE-CONTRACT",
+                    "task_kind": "execution",
+                    "stage": "stage3",
+                    "branch": "codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract",
+                    "candidate_id": "stage3-core-contract",
+                    "executor_id": "worker-02",
+                    "executor_type": "full_clone",
+                    "status": "running",
+                    "owner_session_id": "session-worker-02",
+                    "started_at": "2026-04-08T00:00:00+08:00",
+                    "heartbeat_at": "2026-04-08T00:00:00+08:00",
+                    "closed_at": None,
+                }
+            ],
+        },
+    )
+
+    result = run_python(SCRIPT, repo)
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 0
+    assert payload["status"] == "ready"
+    assert payload["ledger_divergence_count"] == 0
+    assert payload["live_execution_lease_count"] == 1
+    assert payload["incomplete_tasks"][0]["executor_id"] == "worker-02"
+    assert payload["incomplete_tasks"][0]["lease_status"] == "running"
+
+
 def test_review_candidate_pool_blocks_ready_slot_stale_mirror(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)

@@ -28,6 +28,7 @@ from control_plane_root import (
     assess_full_clone_slot_runtime,
     default_full_clone_idle_branch,
     detect_ledger_divergences,
+    load_execution_leases,
     load_full_clone_pool,
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
@@ -148,7 +149,31 @@ def _pool_slot_by_id(pool: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 def _active_registry_tasks(root: Path) -> list[dict[str, Any]]:
     registry = load_task_registry(root)
-    return [task for task in registry.get("tasks", []) if task.get("status") in ACTIVE_TASK_STATUSES]
+    return [
+        task
+        for task in registry.get("tasks", [])
+        if task.get("task_kind") == "execution" and task.get("status") in ACTIVE_TASK_STATUSES
+    ]
+
+
+def _live_execution_leases(root: Path) -> list[dict[str, Any]]:
+    payload = load_execution_leases(root)
+    return [dict(lease) for lease in payload.get("leases", []) if str(lease.get("status") or "") != "closed"]
+
+
+def _active_execution_tasks(root: Path) -> list[dict[str, Any]]:
+    registry = load_task_registry(root)
+    tasks_by_id = {str(task.get("task_id") or ""): task for task in registry.get("tasks", [])}
+    active: dict[str, dict[str, Any]] = {}
+    for task in _active_registry_tasks(root):
+        active[str(task["task_id"])] = task
+    for lease in _live_execution_leases(root):
+        task_id = str(lease.get("task_id") or "")
+        task = tasks_by_id.get(task_id)
+        if task is None or task.get("task_kind") != "execution":
+            continue
+        active[task_id] = task
+    return list(active.values())
 
 
 def _active_worktrees(root: Path) -> list[dict[str, Any]]:
@@ -288,6 +313,11 @@ def _candidate_blockers(
 
     claim = claims_by_candidate.get(candidate["candidate_id"])
     worktree_entry = _worktree_entry_for_claim(active_worktrees, claim) if claim else None
+    live_candidate_leases = [
+        lease
+        for lease in _live_execution_leases(root)
+        if lease.get("candidate_id") == candidate["candidate_id"]
+    ]
     stale_takeover_task_id = None
     if claim:
         if _claim_is_stale(root, claim, worktree_entry, now):
@@ -295,6 +325,9 @@ def _candidate_blockers(
             blockers.extend(_takeover_blockers(root, candidate, claim, now))
         elif _claim_is_fresh(claim, now):
             blockers.append(f"active claim by {claim.get('window_id')}")
+    if live_candidate_leases and not stale_takeover_task_id:
+        executor_id = live_candidate_leases[0].get("executor_id") or "unknown"
+        blockers.append(f"active execution lease by {executor_id}")
 
     candidate_paths = list(candidate.get("planned_write_paths") or [])
     for task in active_tasks:
@@ -346,7 +379,7 @@ def _ranked_safe_candidates(
     now: datetime,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     claims_by_candidate = _claim_by_candidate(claims)
-    active_tasks = _active_registry_tasks(root)
+    active_tasks = _active_execution_tasks(root)
     active_worktrees = _active_worktrees(root)
     safe: list[dict[str, Any]] = []
     blocked: list[dict[str, Any]] = []

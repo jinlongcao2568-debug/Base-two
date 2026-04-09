@@ -23,21 +23,25 @@ def _append_active_task(
     branch: str,
     paths: list[str],
     protected_paths: list[str] | None = None,
+    candidate_id: str | None = None,
+    executor_id: str = "worker-02",
+    status: str = "doing",
+    worker_state: str = "running",
 ) -> None:
     registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
     registry["tasks"].append(
         {
             "task_id": task_id,
             "title": "active task",
-            "status": "doing",
-            "task_kind": "coordination",
-            "execution_mode": "shared_coordination",
+            "status": status,
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
             "parent_task_id": None,
             "stage": "governance-test",
             "branch": branch,
             "size_class": "standard",
             "automation_mode": "manual",
-            "worker_state": "running",
+            "worker_state": worker_state,
             "blocked_reason": None,
             "last_reported_at": "2026-04-07T00:00:00+08:00",
             "topology": "single_worker",
@@ -54,12 +58,38 @@ def _append_active_task(
             "parallelism_plan_id": None,
             "review_bundle_status": "not_applicable",
             "successor_state": "backlog",
+            "roadmap_candidate_id": candidate_id,
             "created_at": "2026-04-07T00:00:00+08:00",
             "activated_at": "2026-04-07T00:00:00+08:00",
             "closed_at": None,
         }
     )
     write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    write_yaml(
+        repo / "docs/governance/EXECUTION_LEASES.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-07T00:00:00+08:00",
+            "revision": 1,
+            "leases": [
+                {
+                    "lease_id": f"lease-{task_id.lower()}-{executor_id}",
+                    "task_id": task_id,
+                    "task_kind": "execution",
+                    "stage": "governance-test",
+                    "branch": branch,
+                    "candidate_id": candidate_id,
+                    "executor_id": executor_id,
+                    "executor_type": "full_clone",
+                    "status": "running",
+                    "owner_session_id": "test-session",
+                    "started_at": "2026-04-07T00:00:00+08:00",
+                    "heartbeat_at": "2026-04-07T00:00:00+08:00",
+                    "closed_at": None,
+                }
+            ],
+        },
+    )
 
 
 def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
@@ -326,6 +356,28 @@ def test_claim_next_obeys_roadmap_claim_capacity_not_runner_lane_ceiling(tmp_pat
     assert first.returncode == 0, first.stdout + first.stderr
     assert second.returncode == 1
     assert "roadmap claim capacity reached (1/1)" in second.stdout
+
+
+def test_claim_next_blocks_candidate_with_live_execution_lease_even_without_fresh_claim(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate_with_paths("stage3-core-contract", priority=100, paths=["src/stage3_parsing/"])])
+    _append_active_task(
+        repo,
+        task_id="TASK-RM-STAGE3-CORE-CONTRACT",
+        branch="codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract",
+        paths=["src/stage3_parsing/"],
+        candidate_id="stage3-core-contract",
+        executor_id="worker-02",
+        status="done",
+        worker_state="completed",
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "claim-next")
+
+    assert result.returncode == 1
+    assert "no safe roadmap candidate" in result.stdout
+    assert "top_candidate=stage3-core-contract" in result.stdout
 
 
 def test_claim_next_from_clone_side_task_ops_resolves_control_plane_truth(tmp_path: Path) -> None:

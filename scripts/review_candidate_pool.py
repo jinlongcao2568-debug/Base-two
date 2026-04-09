@@ -9,6 +9,7 @@ from typing import Any
 from control_plane_root import (
     audit_full_clone_pool,
     detect_ledger_divergences,
+    load_execution_leases,
     load_full_clone_pool,
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
@@ -51,21 +52,53 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     dirty_runtime_paths = published_governance_runtime_dirty_paths(control_root)
     registry = load_task_registry(control_root)
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
+    execution_leases = load_execution_leases(control_root)
     full_clone_pool = load_full_clone_pool(control_root)
     tasks = registry.get("tasks", [])
     candidates = (
         load_yaml(control_root / ".codex/local/roadmap_candidates/index.yaml") or {}
     ).get("candidates", [])
-    incomplete_tasks = [
-        {
-            "task_id": task["task_id"],
-            "status": task["status"],
-            "branch": task["branch"],
-            "stage": task["stage"],
-        }
-        for task in tasks
-        if task.get("task_kind") == "execution" and task.get("status") in {"doing", "paused", "review", "blocked"}
+    live_execution_leases = [
+        dict(lease)
+        for lease in execution_leases.get("leases", [])
+        if str(lease.get("status") or "") != "closed"
     ]
+    live_leases_by_task_id = {
+        str(lease.get("task_id")): lease for lease in live_execution_leases if lease.get("task_id")
+    }
+    incomplete_task_rows: list[dict[str, Any]] = []
+    seen_task_ids: set[str] = set()
+    for task in tasks:
+        if task.get("task_kind") != "execution":
+            continue
+        lease = live_leases_by_task_id.get(str(task.get("task_id") or ""))
+        if task.get("status") not in {"doing", "paused", "review", "blocked"} and lease is None:
+            continue
+        seen_task_ids.add(str(task["task_id"]))
+        incomplete_task_rows.append(
+            {
+                "task_id": task["task_id"],
+                "status": task["status"],
+                "branch": task["branch"],
+                "stage": task["stage"],
+                "executor_id": None if lease is None else lease.get("executor_id"),
+                "lease_status": None if lease is None else lease.get("status"),
+            }
+        )
+    for lease in live_execution_leases:
+        task_id = str(lease.get("task_id") or "")
+        if not task_id or task_id in seen_task_ids:
+            continue
+        incomplete_task_rows.append(
+            {
+                "task_id": task_id,
+                "status": "lease_only",
+                "branch": lease.get("branch"),
+                "stage": lease.get("stage"),
+                "executor_id": lease.get("executor_id"),
+                "lease_status": lease.get("status"),
+            }
+        )
     now = datetime.now().astimezone()
     stale_claims = _stale_claims(list(claims.get("claims", [])), now)
     slot_issues = []
@@ -154,7 +187,9 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "top_unlock_value_candidates": top_unlock,
         "top_blocker_codes": blocker_counts,
         "hard_gate_backlog": hard_gate_backlog,
-        "incomplete_tasks": incomplete_tasks,
+        "incomplete_tasks": incomplete_task_rows,
+        "live_execution_lease_count": len(live_execution_leases),
+        "live_execution_leases": live_execution_leases,
         "stale_claims": stale_claims,
         "slot_issues": slot_issues,
         "closeout_ready_execution_tasks": closeout_ready,
