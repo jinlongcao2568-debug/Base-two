@@ -1,0 +1,186 @@
+diff --git a/src/stage3_parsing/runtime.py b/src/stage3_parsing/runtime.py
+index c9f30a4..f08691d 100644
+--- a/src/stage3_parsing/runtime.py
++++ b/src/stage3_parsing/runtime.py
+@@ -3,15 +3,89 @@ from __future__ import annotations
+ from typing import Any
+ 
+ from src.shared.contracts.minimal_chain_profiles import get_scenario_id, get_scenario_profile
++from src.shared.contracts.runtime_support import validate_schema
++
++
++STAGE3_PROJECT_BASE_SCHEMA = "docs/contracts/schemas/stage3_project_base.schema.json"
++FORMAL_PROJECT_BASE_FIELDS = (
++    "project_name",
++    "project_type_raw",
++    "engineering_domain",
++    "bid_control_price",
++    "bid_eval_method",
++    "public_chain_status",
++    "opening_record_count",
++    "invalid_bid_count",
++)
++
++
++def _require_mapping(value: Any, field_name: str) -> dict[str, Any]:
++    if not isinstance(value, dict):
++        raise ValueError(f"{field_name} must be an object")
++    return value
++
++
++def _require_non_empty_string(value: Any, field_name: str) -> str:
++    if not isinstance(value, str) or not value.strip():
++        raise ValueError(f"{field_name} must be a non-empty string")
++    return value
++
++
++def _require_non_negative_integer(value: Any, field_name: str) -> int:
++    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
++        raise ValueError(f"{field_name} must be a non-negative integer")
++    return value
++
++
++def _require_non_negative_number(value: Any, field_name: str) -> int | float:
++    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
++        raise ValueError(f"{field_name} must be a non-negative number")
++    return value
++
++
++def _resolve_identity_field(
++    artifact: dict[str, Any],
++    raw_payload: dict[str, Any],
++    field_name: str,
++) -> str:
++    artifact_value = artifact.get(field_name)
++    raw_value = raw_payload.get(field_name)
++    if artifact_value is None:
++        return _require_non_empty_string(raw_value, field_name)
++    resolved = _require_non_empty_string(artifact_value, field_name)
++    if raw_value is not None and resolved != _require_non_empty_string(raw_value, field_name):
++        raise ValueError(f"{field_name} mismatch between artifact and raw_payload")
++    return resolved
++
++
++def _normalize_formal_project_base(profile: dict[str, Any]) -> dict[str, Any]:
++    return {
++        "project_name": _require_non_empty_string(profile.get("project_name"), "project_name"),
++        "project_type_raw": _require_non_empty_string(profile.get("project_type_raw"), "project_type_raw"),
++        "engineering_domain": _require_non_empty_string(profile.get("engineering_domain"), "engineering_domain"),
++        "bid_control_price": _require_non_negative_number(profile.get("bid_control_price"), "bid_control_price"),
++        "bid_eval_method": _require_non_empty_string(profile.get("bid_eval_method"), "bid_eval_method"),
++        "public_chain_status": _require_non_empty_string(profile.get("public_chain_status"), "public_chain_status"),
++        "opening_record_count": _require_non_negative_integer(
++            profile.get("opening_record_count"),
++            "opening_record_count",
++        ),
++        "invalid_bid_count": _require_non_negative_integer(profile.get("invalid_bid_count"), "invalid_bid_count"),
++    }
+ 
+ 
+ def build_project_base(raw_ingestion_artifact: dict[str, Any]) -> dict[str, Any]:
+-    raw_payload = raw_ingestion_artifact["raw_payload"]
++    artifact = _require_mapping(raw_ingestion_artifact, "raw_ingestion_artifact")
++    raw_payload = _require_mapping(artifact.get("raw_payload"), "raw_payload")
+     scenario_id = get_scenario_id(raw_payload)
+-    profile = get_scenario_profile(scenario_id)["project_base"]
+-    return {
+-        "project_id": raw_payload["project_id"],
+-        "source_family": raw_payload["source_family"],
+-        "region_code": raw_payload["region_code"],
+-        **profile,
++    profile = _require_mapping(get_scenario_profile(scenario_id)["project_base"], "project_base profile")
++    project_base = {
++        "project_id": _resolve_identity_field(artifact, raw_payload, "project_id"),
++        "source_family": _resolve_identity_field(artifact, raw_payload, "source_family"),
++        "region_code": _resolve_identity_field(artifact, raw_payload, "region_code"),
++        **_normalize_formal_project_base(profile),
+     }
++    errors = validate_schema(STAGE3_PROJECT_BASE_SCHEMA, project_base)
++    if errors:
++        raise ValueError(f"stage3 project_base failed schema validation: {'; '.join(errors)}")
++    return {field: project_base[field] for field in ("project_id", "source_family", "region_code", *FORMAL_PROJECT_BASE_FIELDS)}
+diff --git a/tests/stage3/test_stage3_project_base_contract.py b/tests/stage3/test_stage3_project_base_contract.py
+index d125c94..9c33ddb 100644
+--- a/tests/stage3/test_stage3_project_base_contract.py
++++ b/tests/stage3/test_stage3_project_base_contract.py
+@@ -12,6 +12,8 @@ import pytest
+ from jsonschema import Draft202012Validator
+ 
+ from src.shared.contracts.minimal_chain_pipeline import run_minimal_runtime_chain
++from src.stage3_parsing.runtime import build_project_base
++
+ CASES = (
+     "case_review_ready",
+     "case_open_issued",
+@@ -39,3 +41,71 @@ def test_stage3_project_base_runtime_matches_case_fixture(case_id: str) -> None:
+     assert project_base["source_family"] == raw_notice["source_family"]
+     assert project_base["region_code"] == raw_notice["region_code"]
+     assert project_base == expected
++
++
++def test_stage3_project_base_keeps_stage2_identity_boundary_and_contract_only() -> None:
++    artifact = {
++        "project_id": "project-cn-review-001",
++        "source_family": "ggzy_national",
++        "region_code": "CN-320100",
++        "ingestion_job_id": "job-ignored",
++        "captured_at": "2026-04-05T10:00:00+08:00",
++        "raw_payload": {
++            "scenario_id": "case_review_ready",
++            "project_id": "project-cn-review-001",
++            "source_family": "ggzy_national",
++            "region_code": "CN-320100",
++            "project_name": "raw-name-should-not-leak",
++        },
++    }
++
++    project_base = build_project_base(artifact)
++
++    assert project_base["project_id"] == "project-cn-review-001"
++    assert project_base["source_family"] == "ggzy_national"
++    assert project_base["region_code"] == "CN-320100"
++    assert "raw_payload" not in project_base
++    assert "ingestion_job_id" not in project_base
++    assert set(project_base) == {
++        "project_id",
++        "source_family",
++        "region_code",
++        "project_name",
++        "project_type_raw",
++        "engineering_domain",
++        "bid_control_price",
++        "bid_eval_method",
++        "public_chain_status",
++        "opening_record_count",
++        "invalid_bid_count",
++    }
++
++
++def test_stage3_project_base_rejects_invalid_stage2_identity_values() -> None:
++    artifact = {
++        "project_id": "",
++        "source_family": "ggzy_national",
++        "region_code": "CN-320100",
++        "raw_payload": {
++            "scenario_id": "case_review_ready",
++        },
++    }
++
++    with pytest.raises(ValueError, match="project_id must be a non-empty string"):
++        build_project_base(artifact)
++
++
++def test_stage3_project_base_rejects_identity_mismatch_between_artifact_and_raw_payload() -> None:
++    artifact = {
++        "project_id": "project-cn-review-001",
++        "source_family": "ggzy_national",
++        "raw_payload": {
++            "scenario_id": "case_review_ready",
++            "project_id": "project-cn-review-001",
++            "source_family": "other-source-family",
++            "region_code": "CN-320100",
++        },
++    }
++
++    with pytest.raises(ValueError, match="source_family mismatch between artifact and raw_payload"):
++        build_project_base(artifact)
