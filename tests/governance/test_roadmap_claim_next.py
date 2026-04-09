@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+pytestmark = pytest.mark.slow
+
 from pathlib import Path
 
 from .helpers import TASK_OPS_SCRIPT, read_yaml, run_python, set_idle_control_plane, write_yaml, init_governance_repo

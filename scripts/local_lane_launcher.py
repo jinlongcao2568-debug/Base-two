@@ -18,6 +18,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 LAUNCH_BUNDLE_FILE = Path(".codex/local/EXECUTION_LAUNCHER_BUNDLE.md")
 
 
+def _creationflags() -> int:
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return subprocess.CREATE_NO_WINDOW
+    return 0
+
+
 def _env_int(name: str, default: int) -> int:
     value = os.environ.get(name)
     if value is None:
@@ -74,6 +80,7 @@ def _task_ops(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        creationflags=_creationflags(),
     )
 
 
@@ -142,6 +149,7 @@ def _load_context(repo_root: Path, worktree_path: Path, task_id: str) -> tuple[d
                 capture_output=True,
                 encoding="utf-8",
                 errors="replace",
+                creationflags=_creationflags(),
             )
         if rendered.returncode != 0 or not prompt_path.exists():
             detail = rendered.stdout.strip() or rendered.stderr.strip()

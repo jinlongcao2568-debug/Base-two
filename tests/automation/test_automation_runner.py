@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+pytestmark = pytest.mark.slow
 
 
 HELPERS_PATH = Path(__file__).resolve().parents[1] / "governance" / "helpers.py"

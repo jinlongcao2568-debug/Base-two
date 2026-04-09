@@ -1,11 +1,13 @@
 task_id: TASK-GOV-067
 summary_status: doing
-last_handoff_at: '2026-04-09T11:54:34+08:00'
+last_handoff_at: '2026-04-09T12:30:50+08:00'
 completed_items: []
 remaining_items:
 - Complete the remaining scoped implementation for this task.
-next_step: Continue the scoped implementation and keep the control plane aligned.
+next_step: Continue the console flicker fix and slow-test fastlane changes, then run the fast test entrypoint.
 next_tests:
+- python scripts/run_tests_fast.py
+- pytest tests/governance/test_governance_console.py -q
 - python scripts/check_repo.py
 - pytest tests/governance -q
 - python scripts/task_ops.py review-candidate-pool
@@ -17,11 +19,40 @@ candidate_write_paths:
 - docs/governance/TASK_REGISTRY.yaml
 - docs/governance/CURRENT_TASK.yaml
 - docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
 - .codex/local/roadmap_candidates/index.yaml
 - .codex/local/roadmap_candidates/summary.yaml
 - docs/governance/handoffs/ledger_divergence/
+- scripts/automation_runner.py
+- scripts/local_lane_launcher.py
+- scripts/run_tests_fast.py
+- pyproject.toml
+- tests/automation/
+- tests/integration/
+- tests/governance/test_candidate_refresh_loop.py
+- tests/governance/test_parallel_closeout_pipeline.py
+- tests/governance/test_worktree_pool_dispatch.py
+- tests/governance/test_worktree_pool_prewarm.py
+- tests/governance/test_worker_self_loop.py
+- tests/governance/test_task_ops.py
+- tests/governance/test_task_publish_ops.py
+- tests/governance/test_roadmap_claim_next.py
+- tests/governance/test_roadmap_execution_closeout.py
+- tests/governance/test_roadmap_takeover.py
+- tests/governance/test_roadmap_claim_promotion.py
+- tests/governance/test_orchestration_runtime.py
+- tests/governance/test_coordination_planner.py
+- tests/governance/test_full_clone_pool.py
+- tests/governance/test_handoff_recovery.py
+- tests/governance/test_task_continuation.py
+- tests/governance/test_task_continuation_idle_successor.py
+- tests/governance/test_control_plane_single_ledger.py
 candidate_test_paths:
-- tests/governance/
+- tests/
 resume_notes:
 - Formal handoff has not been recorded yet.
 - Task activated through queue-and-activate branch_action=created.
+- Takeover completed by session `019d6fbb-0c2e-7033-b603-2ca0dba1cf90` from `019d6fc2-aafb-7aa0-9b23-f2b7167d2498`.
+- Temporarily pausing to execute operator console flicker fix + slow tests split.
+- Task paused; resume requires explicit reactivation.
+- Task resumed for console flicker fix and slow-test fastlane.

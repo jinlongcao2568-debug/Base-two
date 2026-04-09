@@ -9,6 +9,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import pytest
+pytestmark = pytest.mark.slow
+
 from jsonschema import Draft202012Validator
 
 from src.shared.contracts.minimal_chain_pipeline import run_minimal_runtime_chain

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import pytest
+pytestmark = pytest.mark.slow
+
 from pathlib import Path
 import subprocess
 import sys

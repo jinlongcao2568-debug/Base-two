@@ -12,3 +12,8 @@ dependencies = [
 dev = [
   "pytest>=8.0,<9",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+  "slow: slow tests (automation, integration, worktree-heavy governance)",
+]

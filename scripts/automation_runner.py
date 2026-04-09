@@ -50,6 +50,12 @@ METRIC_KEYS = (
 )
 
 
+def _creationflags() -> int:
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return subprocess.CREATE_NO_WINDOW
+    return 0
+
+
 def run_step(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     if os.environ.get("AX9_INLINE_GOVERNANCE_SCRIPTS") == "1" and args:
         return _run_step_inline(root, Path(args[0]), *args[1:])
@@ -60,6 +66,7 @@ def run_step(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        creationflags=_creationflags(),
     )
 
 
@@ -503,6 +510,7 @@ def _run_lane_launcher(
                 capture_output=True,
                 encoding="utf-8",
                 errors="replace",
+                creationflags=_creationflags(),
             )
     except OSError as error:
         _update_execution_runtime(

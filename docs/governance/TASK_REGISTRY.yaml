@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T11:54:33+08:00'
+updated_at: '2026-04-09T12:39:17+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -3683,7 +3683,7 @@ tasks:
   activated_at: '2026-04-09T10:58:00+08:00'
   closed_at: '2026-04-09T11:07:00+08:00'
 - task_id: TASK-GOV-067
-  title: Ledger divergence cleanup and governance regression
+  title: Ledger divergence cleanup + console flicker fix + slow-test fastlane
   status: doing
   task_kind: coordination
   execution_mode: shared_coordination
@@ -3694,11 +3694,14 @@ tasks:
   automation_mode: manual
   worker_state: running
   blocked_reason: null
-  last_reported_at: '2026-04-09T11:54:33+08:00'
+  last_reported_at: '2026-04-09T12:39:17+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
   - .codex/local/roadmap_candidates/
+  - scripts/
+  - tests/
+  - pyproject.toml
   reserved_paths:
   - src/
   - docs/contracts/
@@ -3722,13 +3725,39 @@ tasks:
   - docs/governance/TASK_REGISTRY.yaml
   - docs/governance/CURRENT_TASK.yaml
   - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/DEVELOPMENT_ROADMAP.md
   - .codex/local/roadmap_candidates/index.yaml
   - .codex/local/roadmap_candidates/summary.yaml
   - docs/governance/handoffs/ledger_divergence/
-  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - scripts/automation_runner.py
+  - scripts/local_lane_launcher.py
+  - scripts/run_tests_fast.py
+  - pyproject.toml
+  - tests/automation/
+  - tests/integration/
+  - tests/governance/test_candidate_refresh_loop.py
+  - tests/governance/test_parallel_closeout_pipeline.py
+  - tests/governance/test_worktree_pool_dispatch.py
+  - tests/governance/test_worktree_pool_prewarm.py
+  - tests/governance/test_worker_self_loop.py
+  - tests/governance/test_task_ops.py
+  - tests/governance/test_task_publish_ops.py
+  - tests/governance/test_roadmap_claim_next.py
+  - tests/governance/test_roadmap_execution_closeout.py
+  - tests/governance/test_roadmap_takeover.py
+  - tests/governance/test_roadmap_claim_promotion.py
+  - tests/governance/test_orchestration_runtime.py
+  - tests/governance/test_coordination_planner.py
+  - tests/governance/test_full_clone_pool.py
+  - tests/governance/test_handoff_recovery.py
+  - tests/governance/test_task_continuation.py
+  - tests/governance/test_task_continuation_idle_successor.py
+  - tests/governance/test_control_plane_single_ledger.py
   planned_test_paths:
-  - tests/governance/
+  - tests/
   required_tests:
+  - python scripts/run_tests_fast.py
+  - pytest tests/governance/test_governance_console.py -q
   - python scripts/check_repo.py
   - pytest tests/governance -q
   - python scripts/task_ops.py review-candidate-pool
