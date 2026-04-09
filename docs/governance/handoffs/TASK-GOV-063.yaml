@@ -1,6 +1,6 @@
 task_id: TASK-GOV-063
 summary_status: paused
-last_handoff_at: '2026-04-09T11:20:00+08:00'
+last_handoff_at: '2026-04-09T11:53:14+08:00'
 completed_items:
 - Recorded control-plane decision to discard clone-only TASK-RM-STAGE1-SOURCE-FAMILY-CN.
 - Drafted TASK-GOV-065 (MVP/coverage hard gate + stage2_to_stage6 scope).
@@ -8,7 +8,7 @@ completed_items:
 remaining_items:
 - Review whether TASK-GOV-063 still needs reactivation now that TASK-GOV-064/065/066
   have closed.
-next_step: Reactivate TASK-GOV-063 only if console-refresh fixes are still required.
+next_step: Reactivate the task before making further changes.
 next_tests:
 - pytest tests/governance/test_governance_console.py -q
 - pytest tests/governance/test_control_plane_single_ledger.py -q
