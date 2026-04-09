@@ -100,6 +100,54 @@ def _clone_repo(repo: Path, clone_path: Path) -> None:
     )
 
 
+def _clone_repo_on_idle_branch(repo: Path, clone_path: Path, idle_branch: str) -> None:
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "switch", "-c", idle_branch],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _write_two_slot_full_clone_pool(repo: Path, blocked_clone: Path, ready_clone: Path) -> None:
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "status": "active",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(blocked_clone).replace("\\", "/"),
+                    "branch": "codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "blocked",
+                    "current_task_id": None,
+                    "blocked_reason": "preserve-before-rebuild",
+                    "last_provisioned_at": None,
+                    "last_claimed_at": None,
+                    "last_released_at": None,
+                },
+                {
+                    "slot_id": "worker-02",
+                    "path": str(ready_clone).replace("\\", "/"),
+                    "branch": "codex/worker-02-idle",
+                    "idle_branch": "codex/worker-02-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                    "last_provisioned_at": None,
+                    "last_claimed_at": None,
+                    "last_released_at": None,
+                },
+            ],
+        },
+    )
+
+
 def test_claim_next_dry_run_selects_top_ready_candidate_without_claim_file(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
@@ -376,3 +424,56 @@ def test_claim_next_blocks_ready_full_clone_slot_with_live_runtime_drift(tmp_pat
     assert result.returncode == 1
     assert "ledger divergence detected" in result.stdout
     assert pool["slots"][0]["status"] == "ready"
+
+
+def test_claim_next_allows_healthy_ready_slot_when_another_slot_is_quarantined(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    blocked_clone = tmp_path / "clone-worker-01"
+    _clone_repo(repo, blocked_clone)
+    runtime_file = repo / "scripts/control_plane_root.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# advance control runtime for quarantined claim-next test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "commit", "-m", "advance control runtime for quarantined claim-next test"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    ready_clone = tmp_path / "clone-worker-02"
+    _clone_repo_on_idle_branch(repo, ready_clone, "codex/worker-02-idle")
+    subprocess.run(
+        ["git", "switch", "-c", "codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract"],
+        cwd=blocked_clone,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    _write_two_slot_full_clone_pool(repo, blocked_clone, ready_clone)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+
+    result = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "claim-next",
+        "--promote-task",
+        "--dispatch-target",
+        "full_clone",
+        "--full-clone-slot-id",
+        "worker-02",
+        "--window-id",
+        "worker-02",
+    )
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "candidate_id=stage1-core-contract" in result.stdout
+    assert pool["slots"][0]["status"] == "blocked"
+    assert pool["slots"][1]["status"] == "active"
+    assert pool["slots"][1]["current_task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"

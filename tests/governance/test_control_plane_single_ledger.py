@@ -13,7 +13,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 import governance_console as console  # noqa: E402
-from control_plane_root import detect_ledger_divergences  # noqa: E402
+from control_plane_root import audit_full_clone_pool, detect_ledger_divergences  # noqa: E402
 
 
 def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
@@ -278,3 +278,39 @@ def test_console_detects_ledger_divergence_and_marks_candidate(monkeypatch, tmp_
     assert row["ledger_divergence"]["slot_id"] == "worker-01"
     assert row["copy_instruction"] == "先修复主控制面与工作树台账分叉，再继续判断、续接或接单。"
     assert "主控制面" in row["operator_reason"]
+
+
+def test_blocked_slot_runtime_drift_is_quarantined_not_dispatch_blocking(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+    pool["slots"][0]["status"] = "blocked"
+    pool["slots"][0]["blocked_reason"] = "preserve-before-rebuild"
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+
+    runtime_file = repo / "scripts/control_plane_root.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# advance control runtime for quarantined slot test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    git_commit_all(repo, "advance control runtime for quarantined slot test")
+
+    audit = audit_full_clone_pool(repo)
+    slot = audit["slots"][0]
+
+    assert slot["runtime_drift"] is True
+    assert slot["quarantined"] is True
+    assert slot["dispatch_eligible"] is False
+    assert slot["dispatch_blocking_runtime_drift"] is False
+    assert slot["divergent"] is False
+    assert audit["ledger_divergence_count"] == 0
+    assert audit["stale_runtime_count"] == 0
+    assert audit["quarantined_runtime_count"] == 1
+    assert audit["quarantined_slot_count"] == 1
+    assert detect_ledger_divergences(repo) == []

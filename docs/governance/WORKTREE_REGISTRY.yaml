@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T19:25:47+08:00'
+updated_at: '2026-04-09T19:27:38+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1103,6 +1103,16 @@ entries:
   branch: codex/TASK-GOV-074-preserve-guard-hardening
   path: D:/Base One/Base-two/AX9
   status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-075
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-075-quarantined-slot-compatibility
+  path: D:/Base One/Base-two/AX9
+  status: active
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null

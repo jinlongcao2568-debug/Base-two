@@ -107,6 +107,16 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         if candidate.get("root_kind") == "hard_gate" and candidate.get("status") in {"waiting", "blocked", "stale"}
     ]
     ledger_divergences = detect_ledger_divergences(control_root)
+    quarantined_slots = [
+        {
+            "slot_id": slot["slot_id"],
+            "slot_status": slot["slot_status"],
+            "runtime_drift": slot["runtime_drift"],
+            "summary_zh": slot["summary_zh"],
+        }
+        for slot in pool_audit.get("slots", [])
+        if slot.get("quarantined")
+    ]
     issues = [*slot_issues]
     if ledger_divergences:
         issues.append("ledger divergence detected")
@@ -153,6 +163,9 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "ledger_divergence_count": len(ledger_divergences),
         "dirty_governance_runtime_paths": dirty_runtime_paths,
         "stale_runtime_count": int(pool_audit.get("stale_runtime_count") or 0),
+        "quarantined_runtime_count": int(pool_audit.get("quarantined_runtime_count") or 0),
+        "quarantined_slot_count": int(pool_audit.get("quarantined_slot_count") or 0),
+        "quarantined_slots": quarantined_slots,
         "full_clone_pool_audit": pool_audit,
         "issues": issues,
     }

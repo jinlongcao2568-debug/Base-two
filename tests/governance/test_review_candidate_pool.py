@@ -229,3 +229,74 @@ def test_review_candidate_pool_blocks_ready_slot_stale_mirror(tmp_path: Path) ->
     assert payload["status"] == "blocked"
     assert payload["ledger_divergence_count"] >= 1
     assert payload["issues"]
+
+
+def test_review_candidate_pool_reports_quarantined_runtime_without_global_stale_runtime_issue(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "status": "active",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "blocked",
+                    "current_task_id": None,
+                    "blocked_reason": "preserve-before-rebuild",
+                }
+            ],
+        },
+    )
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "switch", "-c", "codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    _write_backlog(
+        repo,
+        [
+            _candidate("stage1-core-contract", status="planned", priority=100),
+            _candidate("stage1-source-family-cn", status="planned", priority=110),
+            _candidate("stage1-source-family-global", status="planned", priority=120),
+            _candidate("stage1-extra-ready-1", status="planned", priority=130),
+        ],
+    )
+    runtime_file = repo / "scripts/control_plane_root.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# advance control runtime for quarantined review test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "commit", "-m", "advance control runtime for quarantined review test"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = run_python(SCRIPT, repo)
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 0
+    assert payload["status"] == "ready"
+    assert payload["ledger_divergence_count"] == 0
+    assert payload["stale_runtime_count"] == 0
+    assert payload["quarantined_runtime_count"] == 1
+    assert payload["quarantined_slot_count"] == 1
+    assert payload["quarantined_slots"][0]["slot_id"] == "worker-01"
+    assert payload["quarantined_slots"][0]["runtime_drift"] is True
+    assert "stale runtime detected" not in payload["issues"]

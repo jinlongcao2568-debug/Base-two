@@ -384,9 +384,14 @@ def assess_full_clone_slot_runtime(
 
     claim = claims_by_candidate.get(str(candidate_id)) if candidate_id else None
     summary = divergence_reasons[0] if divergence_reasons else (reasons[0] if reasons else "状态一致")
+    dispatch_eligible = slot_status == "ready"
+    quarantined = slot_status == "blocked"
+    dispatch_blocking_runtime_drift = bool(runtime_stamp_reasons) and dispatch_eligible
     return {
         "slot_id": slot_id,
         "slot_status": slot_status,
+        "dispatch_eligible": dispatch_eligible,
+        "quarantined": quarantined,
         "slot_path": None if slot_path is None else str(slot_path).replace("\\", "/"),
         "idle_branch": idle_branch,
         "observed_branch": observed_branch,
@@ -409,6 +414,7 @@ def assess_full_clone_slot_runtime(
             for task in non_terminal_tasks
         ],
         "runtime_drift": bool(runtime_stamp_reasons),
+        "dispatch_blocking_runtime_drift": dispatch_blocking_runtime_drift,
         "divergent": bool(divergence_reasons),
         "reasons": reasons,
         "divergence_reasons": divergence_reasons,
@@ -437,7 +443,9 @@ def audit_full_clone_pool(root: Path) -> dict[str, Any]:
         for slot in (pool.get("slots", []) or [])
     ]
     divergence_count = sum(1 for slot in slots if slot["divergent"])
-    stale_runtime_count = sum(1 for slot in slots if slot["runtime_drift"])
+    stale_runtime_count = sum(1 for slot in slots if slot["dispatch_blocking_runtime_drift"])
+    quarantined_runtime_count = sum(1 for slot in slots if slot["quarantined"] and slot["runtime_drift"])
+    quarantined_slot_count = sum(1 for slot in slots if slot["quarantined"])
     pool_status = str(pool.get("status") or "active")
     status = "blocked" if pool_status != "active" or divergence_count else "ready"
     return {
@@ -450,6 +458,8 @@ def audit_full_clone_pool(root: Path) -> dict[str, Any]:
         "dirty_governance_runtime_paths": dirty_runtime_paths,
         "ledger_divergence_count": divergence_count,
         "stale_runtime_count": stale_runtime_count,
+        "quarantined_runtime_count": quarantined_runtime_count,
+        "quarantined_slot_count": quarantined_slot_count,
         "slots": slots,
     }
 

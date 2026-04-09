@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-075`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-quarantined-slot-compatibility-v1`
 - `branch`: `codex/TASK-GOV-075-quarantined-slot-compatibility`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -14,28 +14,27 @@
 ## Execution Log
 
 - `2026-04-09T19:26:56+08:00`: task package created
-
+- `2026-04-09T19:27:38+08:00`: worker-start owner=`coordinator`
 ## Test Log
 
 - to-be-filled
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-075`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-quarantined-slot-compatibility-v1`
 - `branch`: `codex/TASK-GOV-075-quarantined-slot-compatibility`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
