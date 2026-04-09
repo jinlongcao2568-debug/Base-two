@@ -12,13 +12,13 @@ generic_continue_signals:
 supported_intents:
   - intent_id: coordinator-refresh-loop
     canonical_phrase: 协调窗口：定时更新候选池
-    mapped_command: python scripts/roadmap_candidate_maintainer.py --loop --interval-seconds 60
+    mapped_command: python scripts/roadmap_candidate_maintainer.py --loop --interval-seconds 540
     command_argv:
       - python
       - scripts/roadmap_candidate_maintainer.py
       - --loop
       - --interval-seconds
-      - "60"
+      - "540"
     description: Coordination window loop for periodic candidate pool refresh.
     examples:
       - 协调窗口：定时更新候选池

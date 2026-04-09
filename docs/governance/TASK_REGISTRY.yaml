@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T11:53:14+08:00'
+updated_at: '2026-04-09T13:10:29+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -3419,7 +3419,7 @@ tasks:
   closed_at: '2026-04-08T17:29:55+08:00'
 - task_id: TASK-GOV-063
   title: Governance console refresh, localization, and action verification
-  status: paused
+  status: doing
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -3427,9 +3427,9 @@ tasks:
   branch: codex/TASK-GOV-063-console-refresh-no-window-fix
   size_class: standard
   automation_mode: manual
-  worker_state: idle
+  worker_state: running
   blocked_reason: null
-  last_reported_at: '2026-04-09T11:53:14+08:00'
+  last_reported_at: '2026-04-09T13:10:29+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/

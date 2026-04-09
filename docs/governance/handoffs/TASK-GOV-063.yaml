@@ -1,6 +1,6 @@
 task_id: TASK-GOV-063
-summary_status: paused
-last_handoff_at: '2026-04-09T11:53:14+08:00'
+summary_status: doing
+last_handoff_at: '2026-04-09T13:10:30+08:00'
 completed_items:
 - Recorded control-plane decision to discard clone-only TASK-RM-STAGE1-SOURCE-FAMILY-CN.
 - Drafted TASK-GOV-065 (MVP/coverage hard gate + stage2_to_stage6 scope).
@@ -8,7 +8,7 @@ completed_items:
 remaining_items:
 - Review whether TASK-GOV-063 still needs reactivation now that TASK-GOV-064/065/066
   have closed.
-next_step: Reactivate the task before making further changes.
+next_step: Continue the scoped implementation and keep the control plane aligned.
 next_tests:
 - pytest tests/governance/test_governance_console.py -q
 - pytest tests/governance/test_control_plane_single_ledger.py -q
@@ -20,12 +20,28 @@ candidate_write_paths:
 - docs/governance/handoffs/TASK-GOV-063.yaml
 - docs/governance/TASK_REGISTRY.yaml
 - docs/governance/CURRENT_TASK.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
+- docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/FULL_CLONE_POOL.yaml
+- docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md
+- docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md
+- docs/governance/AUTOMATION_INTENTS.yaml
+- docs/governance/CONTROL_PLANE_SINGLE_LEDGER_PRINCIPLES.md
+- docs/governance/tasks/TASK-GOV-064.md
+- .codex/local/roadmap_candidates/claims.yaml
 - scripts/governance_console.py
+- scripts/control_plane_root.py
+- scripts/roadmap_candidate_maintainer.py
+- scripts/task_lifecycle_ops.py
+- scripts/task_runtime_ops.py
+- scripts/task_worker_ops.py
 - scripts/governance_runtime.py
 - tests/governance/test_governance_console.py
+- tests/governance/test_control_plane_single_ledger.py
 candidate_test_paths:
 - tests/governance/
 resume_notes:
 - Formal handoff has not been recorded yet.
 - Task activated through queue-and-activate branch_action=current.
 - Task paused; resume requires explicit reactivation.
+- Task activated in the main coordination worktree.

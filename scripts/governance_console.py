@@ -33,8 +33,8 @@ SUMMARY_FILE = Path(".codex/local/roadmap_candidates/summary.yaml")
 TASK_REGISTRY_FILE = Path("docs/governance/TASK_REGISTRY.yaml")
 FULL_CLONE_POOL_FILE = Path("docs/governance/FULL_CLONE_POOL.yaml")
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
-AUTO_REFRESH_FOREGROUND_SECONDS = 20
-AUTO_REFRESH_BACKGROUND_SECONDS = 60
+AUTO_REFRESH_FOREGROUND_SECONDS = 180
+AUTO_REFRESH_BACKGROUND_SECONDS = 180
 
 ACTION_COMMANDS: dict[str, tuple[str, ...]] = {
     "compile-roadmap-candidates": ("compile-roadmap-candidates",),
