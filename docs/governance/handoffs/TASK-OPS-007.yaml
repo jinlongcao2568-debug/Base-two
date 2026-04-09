@@ -1,10 +1,10 @@
 task_id: TASK-OPS-007
-summary_status: queued
-last_handoff_at: null
+summary_status: doing
+last_handoff_at: '2026-04-09T21:35:25+08:00'
 completed_items: []
 remaining_items:
 - Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+next_step: Continue the scoped implementation and keep the control plane aligned.
 next_tests:
 - python scripts/task_ops.py audit-full-clone-pool
 - python scripts/review_candidate_pool.py
@@ -27,3 +27,4 @@ candidate_test_paths:
 - .codex/local/roadmap_candidates/
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.

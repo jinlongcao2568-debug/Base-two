@@ -1,27 +1,46 @@
-current_task_id: null
-title: null
-status: idle
-task_kind: null
-execution_mode: null
+current_task_id: TASK-OPS-007
+title: full-clone runtime parity and stale claim recovery
+status: doing
+task_kind: coordination
+execution_mode: shared_coordination
 parent_task_id: null
-stage: null
-branch: null
-size_class: null
-automation_mode: null
-worker_state: idle
+stage: governance-runtime-parity-recovery-v1
+branch: codex/TASK-OPS-007-runtime-parity-and-stale-claim-recovery
+size_class: standard
+automation_mode: manual
+worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-09T21:19:18+08:00'
-topology: null
-allowed_dirs: []
+last_reported_at: '2026-04-09T21:35:24+08:00'
+topology: single_worker
+allowed_dirs:
+- docs/governance/
+- .codex/local/roadmap_candidates/
+- .codex/local/governance_runtime/
 reserved_paths: []
-planned_write_paths: []
-planned_test_paths: []
-required_tests: []
-task_file: null
-runlog_file: null
-lane_count: null
+planned_write_paths:
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/FULL_CLONE_POOL.yaml
+- docs/governance/tasks/TASK-OPS-007.md
+- docs/governance/runlogs/TASK-OPS-007-RUNLOG.md
+- docs/governance/handoffs/TASK-OPS-007.yaml
+- .codex/local/roadmap_candidates/claims.yaml
+- .codex/local/roadmap_candidates/index.yaml
+- .codex/local/roadmap_candidates/summary.yaml
+- .codex/local/governance_runtime/stamp.yaml
+planned_test_paths:
+- docs/governance/
+- .codex/local/roadmap_candidates/
+required_tests:
+- python scripts/task_ops.py audit-full-clone-pool
+- python scripts/review_candidate_pool.py
+- python scripts/task_ops.py claim-next --now 2026-04-09T21:40:00+08:00
+task_file: docs/governance/tasks/TASK-OPS-007.md
+runlog_file: docs/governance/runlogs/TASK-OPS-007-RUNLOG.md
+lane_count: 1
 lane_index: null
 parallelism_plan_id: null
-review_bundle_status: null
-next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-09T21:19:18+08:00'
+review_bundle_status: not_applicable
+next_action: Implement the live task package and keep branch/control-plane state aligned.
+updated_at: '2026-04-09T21:35:25+08:00'

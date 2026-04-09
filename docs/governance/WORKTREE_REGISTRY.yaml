@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T21:20:32+08:00'
+updated_at: '2026-04-09T21:39:35+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1182,16 +1182,17 @@ entries:
   parent_task_id: null
   branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
   path: D:/Base One/Base-two/AX9.worktrees/worker-02
-  status: active
-  cleanup_state: pending
-  cleanup_attempts: 0
+  status: closed
+  cleanup_state: done
+  cleanup_attempts: 1
   last_cleanup_error: null
   worker_owner: worker-02
   lane_session_id: null
-  executor_status: prepared
-  started_at: null
-  last_heartbeat_at: null
-  last_result: null
+  executor_status: completed
+  started_at: '2026-04-09T21:39:04+08:00'
+  last_heartbeat_at: '2026-04-09T21:39:04+08:00'
+  last_result: Recovered stale promoted Stage2 source-family lanes task without implementation
+    changes; recorded Stage2 regression evidence and prepared formal closeout.
   workflow_state:
     phase: preparing
     prepared_at: null
@@ -1233,3 +1234,13 @@ entries:
       status: pending
       recorded_at: null
       merged_into_parent_at: null
+- task_id: TASK-OPS-007
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-OPS-007-runtime-parity-and-stale-claim-recovery
+  path: D:/Base One/Base-two/AX9
+  status: active
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator

@@ -1,6 +1,6 @@
 ---
-current_phase: idle
-current_task_id: null
+current_phase: governance-runtime-parity-recovery-v1
+current_task_id: TASK-OPS-007
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -36,7 +36,7 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Task
 
-- no live current task; waiting for explicit activation or roadmap continuation.
+- `TASK-OPS-007`: `full-clone runtime parity and stale claim recovery` is the live coordination task for `governance-runtime-parity-recovery-v1`.
 ## Recently Closed
 
 - `TASK-GOV-066`: enforced compiled-only candidate source and added path/pilot gates for roadmap evaluation.

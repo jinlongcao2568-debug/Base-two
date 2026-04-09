@@ -5,12 +5,12 @@
 - `task_id`: `TASK-OPS-007`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-runtime-parity-recovery-v1`
 - `branch`: `codex/TASK-OPS-007-runtime-parity-and-stale-claim-recovery`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -96,22 +96,21 @@
 - Candidate-pool status can remain degraded until both runtime parity and the stale Stage2 claim chain are cleared.
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -120,5 +119,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `[]`
 - `branch`: `codex/TASK-OPS-007-runtime-parity-and-stale-claim-recovery`
-- `updated_at`: `2026-04-09T21:34:07+08:00`
+- `updated_at`: `2026-04-09T21:35:25+08:00`
 <!-- generated:task-meta:end -->

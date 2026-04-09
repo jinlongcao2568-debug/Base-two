@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-09T21:19:18+08:00'
-revision: 13
+updated_at: '2026-04-09T21:39:14+08:00'
+revision: 16
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -54,3 +54,29 @@ leases:
   started_at: '2026-04-09T21:13:36+08:00'
   heartbeat_at: '2026-04-09T21:19:18+08:00'
   closed_at: '2026-04-09T21:19:18+08:00'
+- lease_id: lease-task-ops-007-control-plane-main
+  task_id: TASK-OPS-007
+  task_kind: coordination
+  stage: governance-runtime-parity-recovery-v1
+  branch: codex/TASK-OPS-007-runtime-parity-and-stale-claim-recovery
+  candidate_id: null
+  executor_id: control-plane-main
+  executor_type: control_plane
+  status: running
+  owner_session_id: 019d71c6-a58a-7af1-9126-49880b901b46
+  started_at: '2026-04-09T21:35:24+08:00'
+  heartbeat_at: '2026-04-09T21:35:24+08:00'
+  closed_at: null
+- lease_id: lease-task-rm-stage2-source-family-lanes-worker-02
+  task_id: TASK-RM-STAGE2-SOURCE-FAMILY-LANES
+  task_kind: execution
+  stage: stage2
+  branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
+  candidate_id: stage2-source-family-lanes
+  executor_id: worker-02
+  executor_type: execution_worker
+  status: closed
+  owner_session_id: 019d71c6-a58a-7af1-9126-49880b901b46
+  started_at: '2026-04-09T21:39:04+08:00'
+  heartbeat_at: '2026-04-09T21:39:14+08:00'
+  closed_at: '2026-04-09T21:39:14+08:00'
