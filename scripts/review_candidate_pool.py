@@ -22,6 +22,23 @@ def _parse_iso(value: str | None) -> datetime | None:
         return None
 
 
+def _stale_claims(claim_rows: list[dict[str, Any]], now: datetime) -> list[dict[str, Any]]:
+    stale_claims: list[dict[str, Any]] = []
+    for claim in claim_rows:
+        if claim.get("status") == "closed":
+            continue
+        expires_at = _parse_iso(claim.get("expires_at"))
+        if expires_at and expires_at <= now:
+            stale_claims.append(
+                {
+                    "candidate_id": claim.get("candidate_id"),
+                    "status": claim.get("status"),
+                    "formal_task_id": claim.get("formal_task_id"),
+                }
+            )
+    return stale_claims
+
+
 def review_pool(control_root: Path) -> dict[str, Any]:
     summary = refresh_once(control_root)
     pool_audit = audit_full_clone_pool(control_root)
@@ -43,17 +60,7 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         if task.get("task_kind") == "execution" and task.get("status") in {"doing", "paused", "review", "blocked"}
     ]
     now = datetime.now().astimezone()
-    stale_claims = []
-    for claim in claims.get("claims", []):
-        expires_at = _parse_iso(claim.get("expires_at"))
-        if expires_at and expires_at <= now:
-            stale_claims.append(
-                {
-                    "candidate_id": claim.get("candidate_id"),
-                    "status": claim.get("status"),
-                    "formal_task_id": claim.get("formal_task_id"),
-                }
-            )
+    stale_claims = _stale_claims(list(claims.get("claims", [])), now)
     slot_issues = []
     for slot in full_clone_pool.get("slots", []):
         if slot.get("status") == "active" and not slot.get("current_task_id"):
