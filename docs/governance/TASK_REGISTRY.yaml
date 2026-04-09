@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T20:27:50+08:00'
+updated_at: '2026-04-09T20:39:59+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4504,3 +4504,210 @@ tasks:
   created_at: '2026-04-09T20:18:15+08:00'
   activated_at: '2026-04-09T20:18:16+08:00'
   closed_at: '2026-04-09T20:27:50+08:00'
+- task_id: TASK-GOV-076
+  title: concurrent execution lease ledger
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-concurrent-execution-ledger-v1
+  branch: codex/TASK-GOV-076-concurrent-execution-lease-ledger
+  size_class: heavy
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-09T20:39:31+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - tests/stage2/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-076.md
+  - docs/governance/runlogs/TASK-GOV-076-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-076.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/EXECUTION_LEASES.yaml
+  - docs/governance/CONCURRENT_EXECUTION_SINGLE_LEDGER_MODEL.md
+  - scripts/control_plane_root.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_worker_ops.py
+  - tests/governance/test_control_plane_single_ledger.py
+  - tests/governance/test_task_ops.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_control_plane_single_ledger.py -q
+  - pytest tests/governance/test_task_ops.py -q
+  task_file: docs/governance/tasks/TASK-GOV-076.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-076-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T20:39:31+08:00'
+  activated_at: null
+  closed_at: null
+- task_id: TASK-GOV-077
+  title: control-plane transactional write lock and revision guard
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-transactional-write-lock-v1
+  branch: codex/TASK-GOV-077-write-lock-and-revision-guard
+  size_class: heavy
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-09T20:39:40+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - tests/stage2/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-077.md
+  - docs/governance/runlogs/TASK-GOV-077-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-077.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/EXECUTION_LEASES.yaml
+  - scripts/control_plane_root.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_worker_ops.py
+  - scripts/task_runtime_ops.py
+  - tests/governance/test_control_plane_single_ledger.py
+  - tests/governance/test_task_ops.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_control_plane_single_ledger.py -q
+  - pytest tests/governance/test_task_ops.py -q
+  task_file: docs/governance/tasks/TASK-GOV-077.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-077-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T20:39:40+08:00'
+  activated_at: null
+  closed_at: null
+- task_id: TASK-GOV-078
+  title: candidate pool and claim-next concurrency refactor
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-candidate-pool-concurrency-refactor-v1
+  branch: codex/TASK-GOV-078-candidate-pool-concurrency-refactor
+  size_class: heavy
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-09T20:39:50+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - tests/stage2/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-078.md
+  - docs/governance/runlogs/TASK-GOV-078-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-078.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/EXECUTION_LEASES.yaml
+  - scripts/control_plane_root.py
+  - scripts/review_candidate_pool.py
+  - scripts/roadmap_claim_next.py
+  - tests/governance/test_review_candidate_pool.py
+  - tests/governance/test_roadmap_claim_next.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_review_candidate_pool.py -q
+  - pytest tests/governance/test_roadmap_claim_next.py -q
+  task_file: docs/governance/tasks/TASK-GOV-078.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-078-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T20:39:50+08:00'
+  activated_at: null
+  closed_at: null
+- task_id: TASK-GOV-079
+  title: console and registry projection update for concurrent executors
+  status: queued
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-concurrent-executor-projection-v1
+  branch: codex/TASK-GOV-079-concurrent-executor-projection
+  size_class: standard
+  automation_mode: manual
+  worker_state: idle
+  blocked_reason: null
+  last_reported_at: '2026-04-09T20:39:59+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - tests/stage2/
+  - docs/contracts/
+  - db/migrations/
+  - tests/integration/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-079.md
+  - docs/governance/runlogs/TASK-GOV-079-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-079.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/EXECUTION_LEASES.yaml
+  - docs/governance/CONCURRENT_EXECUTION_SINGLE_LEDGER_MODEL.md
+  - scripts/review_candidate_pool.py
+  - tests/governance/test_review_candidate_pool.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_review_candidate_pool.py -q
+  task_file: docs/governance/tasks/TASK-GOV-079.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-079-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T20:39:59+08:00'
+  activated_at: null
+  closed_at: null
