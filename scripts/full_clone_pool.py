@@ -159,7 +159,16 @@ def _reconcile_slot(root: Path, slot: dict[str, Any]) -> None:
     slot["branch"] = idle_branch
 
 
+def _ensure_slot_not_preserved(slot: dict[str, Any], *, operation: str) -> None:
+    if slot.get("preserve_before_rebuild"):
+        raise GovernanceError(
+            f"{slot['slot_id']} is preserve-before-rebuild and cannot run {operation}; manual handling required"
+        )
+
+
 def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
+    if refresh:
+        _ensure_slot_not_preserved(slot, operation="refresh-full-clone-pool")
     destination = Path(str(slot["path"])).resolve()
     idle_branch = str(slot.get("idle_branch") or slot.get("branch") or f"codex/{slot['slot_id']}-idle")
     slot["idle_branch"] = idle_branch
@@ -218,9 +227,8 @@ def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
 
 
 def _rebuild_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
+    _ensure_slot_not_preserved(slot, operation="rebuild-full-clone-pool")
     assessment = assess_full_clone_slot_runtime(root, slot)
-    if slot.get("preserve_before_rebuild"):
-        raise GovernanceError(f"{slot['slot_id']} is preserve-before-rebuild and requires manual handling")
     if assessment["effective_dirty_paths"]:
         sample = ", ".join(assessment["effective_dirty_paths"][:4])
         raise GovernanceError(f"{slot['slot_id']} has dirty runtime state and cannot be rebuilt automatically: {sample}")

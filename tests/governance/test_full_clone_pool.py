@@ -172,6 +172,42 @@ def test_rebuild_full_clone_pool_restores_runtime_stamp_parity_for_idle_slot(tmp
     assert slot["divergent"] is False
 
 
+def test_refresh_full_clone_pool_fails_fast_for_preserve_before_rebuild_slot(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    pool = _pool(repo)
+    pool["slots"][0]["status"] = "blocked"
+    pool["slots"][0]["branch"] = "codex/worker-01-idle"
+    pool["slots"][0]["idle_branch"] = "codex/worker-01-idle"
+    pool["slots"][0]["preserve_before_rebuild"] = True
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "refresh-full-clone-pool", "--slot-id", "worker-01")
+    repaired_pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+
+    assert result.returncode == 1
+    assert "preserve-before-rebuild" in result.stdout
+    assert repaired_pool["slots"][0]["preserve_before_rebuild"] is True
+    assert repaired_pool["slots"][0]["status"] == "blocked"
+
+
+def test_rebuild_full_clone_pool_fails_fast_for_preserve_before_rebuild_slot(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    pool = _pool(repo)
+    pool["slots"][0]["status"] = "blocked"
+    pool["slots"][0]["branch"] = "codex/worker-01-idle"
+    pool["slots"][0]["idle_branch"] = "codex/worker-01-idle"
+    pool["slots"][0]["preserve_before_rebuild"] = True
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "rebuild-full-clone-pool", "--slot-id", "worker-01")
+    repaired_pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+
+    assert result.returncode == 1
+    assert "preserve-before-rebuild" in result.stdout
+    assert repaired_pool["slots"][0]["preserve_before_rebuild"] is True
+    assert repaired_pool["slots"][0]["status"] == "blocked"
+
+
 def test_governance_runtime_stamp_uses_published_head_not_dirty_worktree(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     baseline = build_governance_runtime_stamp(repo)
