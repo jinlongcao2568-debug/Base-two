@@ -107,9 +107,9 @@
 - `narrative_status`: `done`
 - `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `complete`
+- `completed_scope`: `closed`
 - `remaining_scope`: `none`
-- `next_gate`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
@@ -127,5 +127,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/, scripts/, tests/governance/, tests/automation/`
 - `branch`: `feat/TASK-GOV-020-governance-repair-parent`
-- `updated_at`: `2026-04-06T17:02:23+08:00`
+- `updated_at`: `2026-04-09T16:18:58+08:00`
 <!-- generated:task-meta:end -->

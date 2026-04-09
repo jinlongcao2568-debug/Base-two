@@ -106,6 +106,12 @@ def test_launcher_script_starts_background_service_before_opening_page() -> None
     assert "http://127.0.0.1:8765/" in launcher
     assert "WinHttp.WinHttpRequest.5.1" in launcher
     assert "If Not IsConsoleReachable(ConsoleUrl) Then" in launcher
+    assert "LaunchConsoleWindow ConsoleUrl" in launcher
+    assert "--app=" in launcher
+    assert "--disable-extensions" in launcher
+    assert "--disable-component-extensions-with-background-pages" in launcher
+    assert "--user-data-dir=" in launcher
+    assert "DetectBrowserPath()" in launcher
 
 
 def test_translate_candidate_title_to_chinese() -> None:

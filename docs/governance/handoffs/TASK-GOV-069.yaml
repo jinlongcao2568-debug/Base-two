@@ -1,0 +1,41 @@
+task_id: TASK-GOV-069
+summary_status: done
+last_handoff_at: '2026-04-09T16:18:24+08:00'
+completed_items:
+- Updated governance_console_launcher.vbs to detect Chrome or Edge, create a dedicated
+  AX9 browser profile directory, and launch the console with --app, --disable-extensions,
+  and --disable-component-extensions-with-background-pages.
+- Preserved the existing pythonw --no-browser background service flow and kept the
+  desktop shortcut as the operator entrypoint.
+- Extended launcher regression coverage to assert extensionless app-mode launch flags
+  and browser path detection helpers.
+- Verified locally that the new dedicated app process starts with AX9 profile isolation
+  and does not inherit McAfee BrowserHost cmd.exe children, while legacy normal-browser
+  windows still show those children until closed.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_governance_console.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-069.md
+- docs/governance/runlogs/TASK-GOV-069-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-069.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
+- docs/governance/WORKTREE_REGISTRY.yaml
+- scripts/governance_console_launcher.vbs
+- tests/governance/test_governance_console.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
+- Implementation complete; awaiting can-close/close from the control plane.
+- 'Worker finish summary: Reworked the governance console launcher to open the local
+  console in a dedicated extensionless browser app window, keeping the background
+  service flow intact while steering AX9 launches away from McAfee extension-host
+  cmd windows.'
+- Task closed.

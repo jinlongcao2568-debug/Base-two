@@ -81,5 +81,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-BIZ-002-stage7-9-autopilot`
-- `updated_at`: `2026-04-06T14:12:09+08:00`
+- `updated_at`: `2026-04-09T16:18:58+08:00`
 <!-- generated:task-meta:end -->
