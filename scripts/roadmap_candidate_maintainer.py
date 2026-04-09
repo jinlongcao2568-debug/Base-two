@@ -7,7 +7,8 @@ import time
 from typing import Any
 
 from control_plane_root import FULL_CLONE_POOL_FILE, load_full_clone_pool, resolve_control_plane_root
-from governance_lib import configure_utf8_stdio, dump_yaml, find_repo_root, load_yaml
+from governance_lib import configure_utf8_stdio, dump_yaml, load_yaml
+from control_plane_root import resolve_control_plane_root
 from roadmap_candidate_compiler import write_compiled_roadmap_candidates
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
 from roadmap_claim_next import CLAIMS_FILE
@@ -70,7 +71,7 @@ def refresh_once(root: Path) -> dict[str, Any]:
 
 
 def cmd_refresh(args: argparse.Namespace) -> int:
-    local_root = find_repo_root()
+    local_root = resolve_control_plane_root()
     control_root = resolve_control_plane_root(local_root)
     if not args.loop:
         summary = refresh_once(control_root)

@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-08T17:37:44+08:00'
+updated_at: '2026-04-09T11:20:00+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -1114,7 +1114,7 @@ tasks:
   closed_at: '2026-04-05T19:12:35+08:00'
 - task_id: TASK-BIZ-001
   title: stage7-stage9 ?????????
-  status: queued
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -1123,7 +1123,7 @@ tasks:
   branch: feat/TASK-BIZ-001-stage7-9-contracts
   size_class: heavy
   automation_mode: manual
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
   last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
@@ -1182,7 +1182,7 @@ tasks:
   absorbed_reason: contracts/runtime hardening now runs inside TASK-GOV-018
 - task_id: TASK-SOAK-001
   title: ?? soak chaos fallback ??
-  status: queued
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -1191,7 +1191,7 @@ tasks:
   branch: feat/TASK-SOAK-001-continuous-autonomy-validation
   size_class: heavy
   automation_mode: manual
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
   last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
@@ -1235,7 +1235,7 @@ tasks:
   absorbed_reason: soak and chaos validation now runs inside TASK-GOV-018
 - task_id: TASK-GRAD-001
   title: heavy ????????????
-  status: queued
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -1244,7 +1244,7 @@ tasks:
   branch: feat/TASK-GRAD-001-autonomy-graduation
   size_class: standard
   automation_mode: manual
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
   last_reported_at: '2026-04-06T11:41:13+08:00'
   topology: single_worker
@@ -2551,7 +2551,7 @@ tasks:
   closed_at: '2026-04-07T21:16:44+08:00'
 - task_id: TASK-RM-STAGE1-CORE-CONTRACT
   title: Stage1 orchestration contract and fixture boundary
-  status: paused
+  status: done
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: null
@@ -2559,9 +2559,9 @@ tasks:
   branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
   size_class: standard
   automation_mode: manual
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-07T21:20:11+08:00'
+  last_reported_at: '2026-04-08T21:41:14+08:00'
   topology: single_task
   allowed_dirs:
   - src/stage1_orchestration/
@@ -2581,11 +2581,11 @@ tasks:
   lane_count: 1
   lane_index: null
   parallelism_plan_id: null
-  review_bundle_status: not_applicable
+  review_bundle_status: pending
   successor_state: null
   created_at: '2026-04-07T21:20:11+08:00'
   activated_at: '2026-04-07T21:20:11+08:00'
-  closed_at: null
+  closed_at: '2026-04-08T21:41:14+08:00'
   roadmap_candidate_id: stage1-core-contract
   integration_gate: stage1-integration-gate
 - task_id: TASK-GOV-045
@@ -3343,6 +3343,7 @@ tasks:
   - tests/governance/
   required_tests:
   - pytest tests/governance/test_governance_console.py -q
+  - pytest tests/governance/test_control_plane_single_ledger.py -q
   - python scripts/check_repo.py
   - python scripts/check_hygiene.py src docs tests
   task_file: docs/governance/tasks/TASK-GOV-061.md
@@ -3404,6 +3405,7 @@ tasks:
   - tests/governance/
   required_tests:
   - pytest tests/governance/test_governance_console.py -q
+  - pytest tests/governance/test_control_plane_single_ledger.py -q
   - python scripts/check_repo.py
   task_file: docs/governance/tasks/TASK-GOV-062.md
   runlog_file: docs/governance/runlogs/TASK-GOV-062-RUNLOG.md
@@ -3417,7 +3419,7 @@ tasks:
   closed_at: '2026-04-08T17:29:55+08:00'
 - task_id: TASK-GOV-063
   title: Governance console refresh, localization, and action verification
-  status: doing
+  status: paused
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -3425,9 +3427,9 @@ tasks:
   branch: codex/TASK-GOV-063-console-refresh-no-window-fix
   size_class: standard
   automation_mode: manual
-  worker_state: running
+  worker_state: idle
   blocked_reason: null
-  last_reported_at: '2026-04-08T17:37:44+08:00'
+  last_reported_at: '2026-04-09T10:16:26+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -3457,16 +3459,27 @@ tasks:
   - docs/governance/CURRENT_TASK.yaml
   - docs/governance/DEVELOPMENT_ROADMAP.md
   - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/FULL_CLONE_POOL.yaml
+  - docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md
+  - docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md
   - docs/governance/AUTOMATION_INTENTS.yaml
   - docs/governance/CONTROL_PLANE_SINGLE_LEDGER_PRINCIPLES.md
   - docs/governance/tasks/TASK-GOV-064.md
+  - .codex/local/roadmap_candidates/claims.yaml
   - scripts/governance_console.py
+  - scripts/control_plane_root.py
+  - scripts/roadmap_candidate_maintainer.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_runtime_ops.py
+  - scripts/task_worker_ops.py
   - scripts/governance_runtime.py
   - tests/governance/test_governance_console.py
+  - tests/governance/test_control_plane_single_ledger.py
   planned_test_paths:
   - tests/governance/
   required_tests:
   - pytest tests/governance/test_governance_console.py -q
+  - pytest tests/governance/test_control_plane_single_ledger.py -q
   - python scripts/check_repo.py
   task_file: docs/governance/tasks/TASK-GOV-063.md
   runlog_file: docs/governance/runlogs/TASK-GOV-063-RUNLOG.md
@@ -3478,3 +3491,194 @@ tasks:
   created_at: '2026-04-08T17:37:43+08:00'
   activated_at: '2026-04-08T17:37:44+08:00'
   closed_at: null
+- task_id: TASK-GOV-065
+  title: MVP scope and coverage hard-gate alignment
+  status: done
+  task_kind: execution
+  execution_mode: isolated_worktree
+  parent_task_id: null
+  stage: governance-mvp-scope-gate-v1
+  branch: codex/TASK-GOV-065-mvp-scope-gate
+  size_class: standard
+  automation_mode: manual
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-09T11:12:00+08:00'
+  topology: single_task
+  allowed_dirs:
+  - docs/governance/
+  - docs/product/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - README.md
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage1/
+  - tests/stage2/
+  - tests/stage3/
+  - tests/stage4/
+  - tests/stage5/
+  - tests/stage6/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-065.md
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/product/MVP_SCOPE.md
+  - scripts/roadmap_scheduler_eval.py
+  - scripts/business_autopilot.py
+  - tests/governance/test_roadmap_scheduler_eval.py
+  - tests/governance/test_review_candidate_pool.py
+  - tests/governance/helpers.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_roadmap_scheduler_eval.py -q
+  - pytest tests/governance/test_review_candidate_pool.py -q
+  - python scripts/check_repo.py
+  task_file: docs/governance/tasks/TASK-GOV-065.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-065-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: null
+  created_at: '2026-04-09T09:29:48+08:00'
+  activated_at: '2026-04-09T11:07:30+08:00'
+  closed_at: '2026-04-09T11:12:00+08:00'
+- task_id: TASK-GOV-066
+  title: Candidate source unification and path materialization gate
+  status: done
+  task_kind: execution
+  execution_mode: isolated_worktree
+  parent_task_id: null
+  stage: governance-candidate-source-gate-v1
+  branch: codex/TASK-GOV-066-candidate-source-gate
+  size_class: standard
+  automation_mode: manual
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-09T11:20:00+08:00'
+  topology: single_task
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - README.md
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage1/
+  - tests/stage2/
+  - tests/stage3/
+  - tests/stage4/
+  - tests/stage5/
+  - tests/stage6/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-066.md
+  - docs/governance/ROADMAP_BACKLOG.yaml
+  - docs/governance/ROADMAP_BACKLOG_SCHEMA.yaml
+  - scripts/roadmap_scheduler_eval.py
+  - scripts/roadmap_candidate_compiler.py
+  - tests/governance/test_roadmap_candidate_index.py
+  - tests/governance/test_roadmap_scheduler_eval.py
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance/test_roadmap_candidate_index.py -q
+  - pytest tests/governance/test_roadmap_scheduler_eval.py -q
+  - pytest tests/governance/test_review_candidate_pool.py -q
+  - python scripts/check_repo.py
+  task_file: docs/governance/tasks/TASK-GOV-066.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-066-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: null
+  created_at: '2026-04-09T09:29:48+08:00'
+  activated_at: '2026-04-09T11:12:30+08:00'
+  closed_at: '2026-04-09T11:20:00+08:00'
+- task_id: TASK-GOV-064
+  title: Single-ledger control-plane hardening for full-clone workers
+  status: done
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-control-plane-single-ledger-hardening-v1
+  branch: codex/TASK-GOV-064-single-ledger-hardening
+  size_class: standard
+  automation_mode: manual
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-09T11:07:00+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - README.md
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage1/
+  - tests/stage2/
+  - tests/stage3/
+  - tests/stage4/
+  - tests/stage5/
+  - tests/stage6/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  planned_write_paths:
+  - docs/governance/CONTROL_PLANE_SINGLE_LEDGER_PRINCIPLES.md
+  - docs/governance/tasks/TASK-GOV-064.md
+  - docs/governance/runlogs/TASK-GOV-064-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-064.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - docs/governance/FULL_CLONE_POOL.yaml
+  - .codex/local/roadmap_candidates/claims.yaml
+  - scripts/task_runtime_ops.py
+  - scripts/task_lifecycle_ops.py
+  - scripts/task_worker_ops.py
+  - scripts/task_coordination_ops.py
+  - scripts/task_worktree_ops.py
+  - scripts/roadmap_claim_next.py
+  - scripts/roadmap_execution_closeout.py
+  - scripts/full_clone_pool.py
+  - scripts/roadmap_candidate_maintainer.py
+  - scripts/review_candidate_pool.py
+  - scripts/control_plane_root.py
+  - scripts/governance_console.py
+  - tests/governance/
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - pytest tests/governance -q
+  - python scripts/check_repo.py
+  task_file: docs/governance/tasks/TASK-GOV-064.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-064-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T10:17:27+08:00'
+  activated_at: '2026-04-09T10:58:00+08:00'
+  closed_at: '2026-04-09T11:07:00+08:00'

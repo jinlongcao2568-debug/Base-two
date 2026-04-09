@@ -20,7 +20,7 @@ DOWNSTREAM_BUSINESS_AUTOPILOT_CAPABILITY_ID = "stage7_to_stage9_business_automat
 BUSINESS_PARENT_BLUEPRINT_ID = "business_parallel_parent_stage1_to_stage6"
 BUSINESS_BOOTSTRAP_BLUEPRINT_ID = "business_stage_bootstrap_execution"
 BUSINESS_IMPLEMENTATION_BLUEPRINT_ID = "business_stage_implementation_execution"
-BUSINESS_SCOPE_VALUES = {"stage1_to_stage6", "stage1_to_stage9"}
+BUSINESS_SCOPE_VALUES = {"stage1_to_stage6", "stage2_to_stage6", "stage1_to_stage9"}
 PARALLEL_STRATEGY_VALUES = {"dependency_aware_disjoint_writes"}
 SPEC_SOURCE_POLICY_VALUES = {"baseline_contracts_task_package"}
 BUSINESS_GAP_PRIORITY_VALUES = {"bootstrap_required", "implementation_ready", "integration_expansion"}
@@ -33,6 +33,7 @@ STAGE_ESTABLISHMENT_VALUES = {
     "deferred_manual",
 }
 CORE_STAGE_IDS = ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6")
+MVP_STAGE_IDS = ("stage2", "stage3", "stage4", "stage5", "stage6")
 DOWNSTREAM_STAGE_IDS = ("stage7", "stage8", "stage9")
 BUSINESS_STAGE_IDS = (*CORE_STAGE_IDS, *DOWNSTREAM_STAGE_IDS)
 AUTHORITY_INPUTS = [
@@ -124,7 +125,11 @@ def _compiled_roadmap_dispatch_enabled(root) -> bool:
 
 
 def _automatable_stage_ids(scope: str) -> tuple[str, ...]:
-    return CORE_STAGE_IDS if scope == "stage1_to_stage6" else BUSINESS_STAGE_IDS
+    if scope == "stage1_to_stage6":
+        return CORE_STAGE_IDS
+    if scope == "stage2_to_stage6":
+        return MVP_STAGE_IDS
+    return BUSINESS_STAGE_IDS
 
 
 def _downstream_capability_enabled(capability_map: dict[str, Any]) -> bool:

@@ -14,7 +14,7 @@ from governance_lib import (
     dynamic_lane_ceiling,
     display_path,
     dump_yaml,
-    find_repo_root,
+    # find_repo_root removed; control-plane writes must resolve the main root.
     git,
     iso_now,
     load_current_task,
@@ -35,6 +35,7 @@ from child_execution_flow import (
     run_baseline_checks,
     sync_entry_workflow_state,
 )
+from control_plane_root import resolve_control_plane_root
 from orchestration_runtime import update_execution_runtime_entry
 from task_rendering import find_task
 
@@ -151,7 +152,7 @@ def _release_pool_slot_for_path(root: Path, destination: Path, *, now: str) -> N
 
 
 def cmd_prewarm_worktree_pool(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     pool = _load_worktree_pool(root)
     if not pool.get("slots"):
         raise GovernanceError(f"worktree pool is missing or empty: {WORKTREE_POOL_FILE}")
@@ -254,7 +255,7 @@ def upsert_execution_entry(worktrees: dict, task: dict, destination: Path, worke
 
 
 def cmd_worktree_create(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task_policy = load_task_policy(root)
@@ -290,7 +291,7 @@ def cmd_worktree_create(args: argparse.Namespace) -> int:
 
 
 def cmd_prepare_child_execution(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task_policy = load_task_policy(root)
@@ -352,7 +353,7 @@ def cmd_prepare_child_execution(args: argparse.Namespace) -> int:
 
 
 def cmd_worktree_release(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = task_map(registry).get(args.task_id)
@@ -391,7 +392,7 @@ def cmd_worktree_release(args: argparse.Namespace) -> int:
 
 
 def cmd_cleanup_orphans(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     cleaned: list[str] = []

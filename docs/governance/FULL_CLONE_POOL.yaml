@@ -11,13 +11,13 @@ slot_status_values:
 slots:
 - slot_id: worker-01
   path: D:/Base One/Base-two/AX9.clones/worker-01
-  branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
-  status: active
-  current_task_id: TASK-RM-STAGE1-CORE-CONTRACT
+  branch: codex/worker-01-idle
+  status: ready
+  current_task_id: null
   idle_branch: codex/worker-01-idle
   last_provisioned_at: '2026-04-08T10:00:57+08:00'
   last_claimed_at: '2026-04-08T17:30:53+08:00'
-  last_released_at: null
+  last_released_at: '2026-04-08T21:41:14+08:00'
 - slot_id: worker-02
   path: D:/Base One/Base-two/AX9.clones/worker-02
   branch: codex/worker-02-idle

@@ -5,12 +5,12 @@
 - `task_id`: `TASK-GOV-063`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `doing`
+- `status`: `paused`
 - `stage`: `governance-console-refresh-fix-v1`
 - `branch`: `codex/TASK-GOV-063-console-refresh-no-window-fix`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `idle`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -106,22 +106,21 @@
 - `tests/stage9/`
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
 - `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
-
+- `next_gate`: `resume_required`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `paused`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `running`
+- `worker_state`: `idle`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -130,5 +129,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
 - `branch`: `codex/TASK-GOV-063-console-refresh-no-window-fix`
-- `updated_at`: `2026-04-08T17:37:44+08:00`
+- `updated_at`: `2026-04-09T10:16:26+08:00`
 <!-- generated:task-meta:end -->

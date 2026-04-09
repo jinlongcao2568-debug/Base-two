@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from control_plane_root import load_full_clone_pool, resolve_control_plane_root
+from control_plane_root import detect_ledger_divergences, load_full_clone_pool, resolve_control_plane_root
 from governance_lib import configure_utf8_stdio, find_repo_root, load_task_registry, load_yaml
 from roadmap_candidate_maintainer import SUMMARY_FILE, refresh_once
 from roadmap_execution_closeout import list_closeout_ready_execution_tasks
@@ -91,10 +91,15 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         for candidate in candidates
         if candidate.get("root_kind") == "hard_gate" and candidate.get("status") in {"waiting", "blocked", "stale"}
     ]
+    ledger_divergences = detect_ledger_divergences(control_root)
     issues = [*slot_issues]
+    if ledger_divergences:
+        issues.append("ledger divergence detected")
     if legacy_candidates:
         issues.append(f"legacy candidate compatibility still present: {len(legacy_candidates)}")
-    if slot_issues:
+    if ledger_divergences:
+        status = "blocked"
+    elif slot_issues:
         status = "blocked"
     elif stale_claims or int(summary.get("parallelism_deficit") or 0) > 0:
         status = "degraded"
@@ -119,6 +124,8 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "slot_issues": slot_issues,
         "closeout_ready_execution_tasks": closeout_ready,
         "closeout_blocked_execution_tasks": closeout_blocked,
+        "ledger_divergences": ledger_divergences,
+        "ledger_divergence_count": len(ledger_divergences),
         "issues": issues,
     }
 

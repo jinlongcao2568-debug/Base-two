@@ -1,3 +1,19 @@
+---
+mvp_scope: stage2_to_stage6
+included_stages:
+- stage2
+- stage3
+- stage4
+- stage5
+- stage6
+excluded_stages:
+- stage1
+- stage7
+- stage8
+- stage9
+updated_at: '2026-04-09T10:30:00+08:00'
+---
+
 # AX9S MVP Scope
 
 Derived from:

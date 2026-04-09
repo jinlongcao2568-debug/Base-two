@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-08T17:37:44+08:00'
+updated_at: '2026-04-09T11:20:00+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -748,16 +748,16 @@ entries:
   parent_task_id: null
   branch: codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract
   path: D:/Base One/Base-two/AX9.clones/worker-01
-  status: active
+  status: closed
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null
   worker_owner: worker-01
   lane_session_id: null
-  executor_status: prepared
-  started_at: null
-  last_heartbeat_at: null
-  last_result: null
+  executor_status: completed
+  started_at: '2026-04-08T21:40:13+08:00'
+  last_heartbeat_at: '2026-04-08T21:40:13+08:00'
+  last_result: reconcile main control plane closeout after historical clone-only close
   workflow_state:
     phase: preparing
     prepared_at: null
@@ -945,7 +945,37 @@ entries:
   parent_task_id: null
   branch: codex/TASK-GOV-063-console-refresh-no-window-fix
   path: D:/Base One/Base-two/AX9
-  status: active
+  status: paused
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-064
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-064-single-ledger-hardening
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-065
+  work_mode: execution
+  parent_task_id: null
+  branch: codex/TASK-GOV-065-mvp-scope-gate
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-066
+  work_mode: execution
+  parent_task_id: null
+  branch: codex/TASK-GOV-066-candidate-source-gate
+  path: D:/Base One/Base-two/AX9
+  status: closed
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null

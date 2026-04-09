@@ -4,6 +4,8 @@ import importlib.util
 from pathlib import Path
 import sys
 
+import pytest
+
 from .helpers import init_governance_repo, read_yaml, set_idle_control_plane, write_yaml
 from .test_roadmap_candidate_index import _candidate, _write_backlog
 
@@ -115,3 +117,78 @@ def test_evaluator_exposes_reason_taxonomy_and_release_forecast(tmp_path: Path) 
     assert by_id["stage1-core-contract"]["release_forecast"]["unlock_count"] == 2
     assert by_id["stage1-source-family-cn"]["blocking_reason_codes"] == ["dependency_wait"]
     assert by_id["stage1-source-family-cn"]["upstream_blocker_candidates"] == ["stage1-core-contract"]
+
+
+def test_evaluator_blocks_out_of_mvp_scope(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    out_of_scope = _candidate("stage9-core-contract", status="planned", priority=100, stage="stage9")
+    _write_backlog(repo, [out_of_scope])
+
+    payload = MODULE.evaluate_roadmap_candidates(repo)
+    candidate = next(item for item in payload["candidates"] if item["candidate_id"] == "stage9-core-contract")
+
+    assert candidate["status"] == "blocked"
+    assert "out_of_mvp_scope" in candidate["blocking_reason_codes"]
+
+
+def test_evaluator_blocks_unregistered_coverage(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    candidate = _candidate(
+        "stage2-global-slice",
+        status="planned",
+        priority=100,
+        coverage_regions=["GLOBAL"],
+    )
+    _write_backlog(repo, [candidate])
+
+    payload = MODULE.evaluate_roadmap_candidates(repo)
+    item = next(item for item in payload["candidates"] if item["candidate_id"] == "stage2-global-slice")
+
+    assert item["status"] == "blocked"
+    assert "coverage_not_registered" in item["blocking_reason_codes"]
+
+
+def test_evaluator_blocks_pilot_only_without_enablement(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    candidate = _candidate("stage2-pilot-slice", status="planned", priority=100, pilot_only=True)
+    _write_backlog(repo, [candidate])
+
+    payload = MODULE.evaluate_roadmap_candidates(repo)
+    item = next(item for item in payload["candidates"] if item["candidate_id"] == "stage2-pilot-slice")
+
+    assert item["status"] == "blocked"
+    assert "pilot_only" in item["blocking_reason_codes"]
+
+
+def test_evaluator_blocks_missing_planned_write_paths(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    candidate = _candidate(
+        "stage2-missing-path-slice",
+        status="planned",
+        priority=100,
+        allow_create_paths=False,
+    )
+    candidate["planned_write_paths"] = ["src/missing_path/"]
+    _write_backlog(repo, [candidate])
+
+    payload = MODULE.evaluate_roadmap_candidates(repo)
+    item = next(item for item in payload["candidates"] if item["candidate_id"] == "stage2-missing-path-slice")
+
+    assert item["status"] == "blocked"
+    assert "planned_write_path_missing" in item["blocking_reason_codes"]
+
+
+def test_evaluator_rejects_inline_candidates_when_compiled_mode(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate("stage2-core-contract", status="planned", priority=100)])
+    backlog = read_yaml(repo / "docs/governance/ROADMAP_BACKLOG.yaml")
+    backlog["compiler_policy"]["mode"] = "module_graph_compiler"
+    write_yaml(repo / "docs/governance/ROADMAP_BACKLOG.yaml", backlog)
+
+    with pytest.raises(MODULE.GovernanceError):
+        MODULE.evaluate_roadmap_candidates(repo)

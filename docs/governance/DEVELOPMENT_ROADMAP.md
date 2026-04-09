@@ -1,6 +1,6 @@
 ---
-current_phase: governance-console-refresh-fix-v1
-current_task_id: TASK-GOV-063
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -10,7 +10,8 @@ priority_order:
 - authority_chain
 - business_automation
 business_automation_enabled: true
-business_automation_scope: stage1_to_stage9
+business_automation_scope: stage2_to_stage6
+pilot_enabled_candidates: []
 parallel_strategy: dependency_aware_disjoint_writes
 max_parallel_workers: 9
 spec_source_policy: baseline_contracts_task_package
@@ -35,9 +36,12 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Task
 
-- `TASK-GOV-063`: `Governance console refresh and git no-window fix` is the live coordination task for `governance-console-refresh-fix-v1`.
+- `idle`: no live current task; ready for next activation.
 ## Recently Closed
 
+- `TASK-GOV-066`: enforced compiled-only candidate source and added path/pilot gates for roadmap evaluation.
+- `TASK-GOV-065`: bound MVP scope and coverage gates to roadmap evaluation and automation scope.
+- `TASK-GOV-064`: enforced single-ledger control-plane writes with ledger divergence detection.
 - `TASK-GOV-037`: blocked idle/no-successor roadmap continuation with a deterministic governance error instead of a ready/no-op mismatch.
 - `TASK-GOV-035`: separated live governance surfaces from historical audit artifacts and search inputs.
 - `TASK-GOV-034`: narrowed governance test triggering so ordinary governance edits no longer default to the full governance and automation suites.
@@ -46,9 +50,7 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Phase Goal
 
-- Repair the idle/no-successor continuation path so roadmap automation no longer reports `ready` while `continue-roadmap` cannot advance.
-- Keep missing-successor generation inside governed task lifecycle and planner surfaces.
-- Preserve closed and absorbed task artifacts as historical evidence; do not use them as current successor sources.
+- Await next governance activation with MVP/coverage hard gates and single-ledger controls in place.
 
 ## Internal Gates
 

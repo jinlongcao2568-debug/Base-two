@@ -9,7 +9,7 @@ from governance_lib import (
     GovernanceError,
     append_runlog_bullets,
     dump_yaml,
-    find_repo_root,
+    # find_repo_root removed; control-plane writes must resolve the main root.
     git,
     iso_now,
     load_task_registry,
@@ -42,6 +42,7 @@ from orchestration_runtime import (
     update_execution_runtime_entry,
 )
 from task_coordination_lease import claim_coordination_lease, coordination_thread_id, current_session_id
+from control_plane_root import resolve_control_plane_root
 from task_handoff import write_handoff
 from task_rendering import (
     enforce_execution_split_guards,
@@ -112,6 +113,11 @@ def _mark_task_review_ready(task: dict, now: str) -> None:
 
 
 def _record_finish_artifacts(root: Path, task: dict, args: argparse.Namespace, now: str) -> None:
+    roadmap_closeout_note = (
+        "Run closeout from the main control plane so the roadmap claim, full-clone slot, and candidate cache are released together."
+        if task.get("roadmap_candidate_id")
+        else None
+    )
     update_current_task_if_active(root, task, "Worker finished implementation; the task is now review-ready.")
     append_runlog_bullets(root, task, "Execution Log", [f"`{now}`: worker-finish `{args.summary}`"])
     reported_tests = _reported_tests(args)
@@ -127,12 +133,16 @@ def _record_finish_artifacts(root: Path, task: dict, args: argparse.Namespace, n
         remaining_items=_reported_remaining_items(args)
         or ["Validate the review-ready evidence and close the task if eligible."],
         next_step=getattr(args, "next_step", None)
+        or roadmap_closeout_note
         or "Review the required tests and use continue-current or close to finish the task.",
         next_tests=_reported_next_tests(args) or list(task.get("required_tests") or []),
         current_risks=_reported_risks(args) or [],
         candidate_write_paths=_reported_candidate_write_paths(args),
         candidate_test_paths=_reported_candidate_test_paths(args),
-        resume_notes=_reported_resume_notes(args, f"Worker finish summary: {args.summary}"),
+        resume_notes=_reported_resume_notes(
+            args,
+            roadmap_closeout_note if roadmap_closeout_note else f"Worker finish summary: {args.summary}",
+        ),
         append_resume_notes=True,
     )
 
@@ -222,7 +232,7 @@ def _reported_resume_notes(args: argparse.Namespace, fallback_note: str | None =
 
 
 def cmd_worker_start(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
@@ -288,7 +298,7 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_report(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
@@ -353,7 +363,7 @@ def cmd_worker_report(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_blocked(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
@@ -412,7 +422,7 @@ def cmd_worker_blocked(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_finish(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
@@ -477,7 +487,7 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_design_confirm(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
@@ -499,7 +509,7 @@ def cmd_worker_design_confirm(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_plan(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task, entry, context, worktree_path = _load_child_bundle(root, registry, worktrees, args.task_id)
@@ -529,7 +539,7 @@ def cmd_worker_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_test_first(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
@@ -551,7 +561,7 @@ def cmd_worker_test_first(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_spec_review(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
@@ -577,7 +587,7 @@ def cmd_worker_spec_review(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_quality_review(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task, entry, context, _ = _load_child_bundle(root, registry, worktrees, args.task_id)
@@ -603,7 +613,7 @@ def cmd_worker_quality_review(args: argparse.Namespace) -> int:
 
 
 def cmd_worker_heartbeat(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
@@ -933,7 +943,7 @@ def _promote_parent_after_children(
 
 
 def cmd_auto_close_children(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     parent = find_task(registry["tasks"], args.parent_task_id)

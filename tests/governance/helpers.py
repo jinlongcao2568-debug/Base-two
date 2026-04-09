@@ -671,6 +671,53 @@ def write_governance_files(repo: Path) -> None:
             ],
         },
     )
+    (repo / "docs/product").mkdir(parents=True, exist_ok=True)
+    (repo / "docs/contracts").mkdir(parents=True, exist_ok=True)
+    (repo / "docs/product/MVP_SCOPE.md").write_text(
+        (
+            "---\n"
+            "mvp_scope: stage2_to_stage6\n"
+            "included_stages:\n"
+            "- stage2\n"
+            "- stage3\n"
+            "- stage4\n"
+            "- stage5\n"
+            "- stage6\n"
+            "excluded_stages:\n"
+            "- stage1\n"
+            "- stage7\n"
+            "- stage8\n"
+            "- stage9\n"
+            "updated_at: '2026-04-04T00:00:00+08:00'\n"
+            "---\n\n"
+            "# MVP Scope\n"
+        ),
+        encoding="utf-8",
+    )
+    write_yaml(
+        repo / "docs/contracts/region_coverage_registry.yaml",
+        {
+            "version": "1.0",
+            "regions": [
+                {
+                    "region_code": "CN",
+                    "is_sellable": True,
+                }
+            ],
+        },
+    )
+    write_yaml(
+        repo / "docs/contracts/sources_registry.yaml",
+        {
+            "version": "1.0",
+            "sources": [
+                {
+                    "source_id": "TEST-SOURCE",
+                    "coverage_regions": ["CN"],
+                }
+            ],
+        },
+    )
     (repo / "docs/governance/tasks/TASK-BASE-001.md").write_text(base_task_markdown(), encoding="utf-8")
     (repo / "docs/governance/runlogs/TASK-BASE-001-RUNLOG.md").write_text(base_runlog_markdown(), encoding="utf-8")
 

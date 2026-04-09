@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
+import os
+from pathlib import Path
 
 from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError, configure_utf8_stdio
+from control_plane_root import resolve_control_plane_root
 from task_publish_ops import (
     PUBLISH_ACTIONS,
     cmd_checkpoint_task_results,
@@ -64,6 +68,40 @@ from task_worktree_ops import (
     cmd_worktree_create,
     cmd_worktree_release,
 )
+
+LOCAL_EXECUTION_COMMANDS = {
+    "checkpoint-task-results",
+    "commit-task-results",
+    "push-task-branch",
+    "create-task-pr",
+    "publish-task-results",
+    "publish-preflight",
+    "worker-self-loop-once",
+    "worker-self-loop-loop",
+}
+
+
+def _command_cwd(args: argparse.Namespace) -> Path:
+    current = Path.cwd().resolve()
+    if getattr(args, "command", None) in LOCAL_EXECUTION_COMMANDS:
+        return current
+    try:
+        return resolve_control_plane_root(current)
+    except GovernanceError:
+        return current
+
+
+@contextmanager
+def _command_root(args: argparse.Namespace):
+    current = Path.cwd().resolve()
+    target = _command_cwd(args)
+    if target != current:
+        os.chdir(target)
+    try:
+        yield
+    finally:
+        if target != current:
+            os.chdir(current)
 
 
 def add_coordination_commands(subparsers) -> None:
@@ -448,7 +486,8 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        return args.func(args)
+        with _command_root(args):
+            return args.func(args)
     except GovernanceError as error:
         print(f"[ERROR] {error}")
         return 1

@@ -14,7 +14,8 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 import webbrowser
 
-from governance_lib import GovernanceError, configure_utf8_stdio, find_repo_root
+from governance_lib import GovernanceError, configure_utf8_stdio
+from control_plane_root import detect_ledger_divergences, resolve_control_plane_root
 from governance_runtime import load_yaml
 from roadmap_explain import (
     explain_candidate,
@@ -29,6 +30,11 @@ DEFAULT_PORT = 8765
 PAGE_TITLE = "AX9 治理操作员控制台"
 INDEX_FILE = Path(".codex/local/roadmap_candidates/index.yaml")
 SUMMARY_FILE = Path(".codex/local/roadmap_candidates/summary.yaml")
+TASK_REGISTRY_FILE = Path("docs/governance/TASK_REGISTRY.yaml")
+FULL_CLONE_POOL_FILE = Path("docs/governance/FULL_CLONE_POOL.yaml")
+CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
+AUTO_REFRESH_FOREGROUND_SECONDS = 20
+AUTO_REFRESH_BACKGROUND_SECONDS = 60
 
 ACTION_COMMANDS: dict[str, tuple[str, ...]] = {
     "compile-roadmap-candidates": ("compile-roadmap-candidates",),
@@ -79,6 +85,10 @@ BLOCKER_LABELS_ZH: dict[str, str] = {
     "capacity_exhausted": "并行窗口已满",
     "scope_conflict": "作用域冲突",
     "manual_gate": "需要人工确认",
+    "out_of_mvp_scope": "超出MVP范围",
+    "coverage_not_registered": "覆盖未登记",
+    "pilot_only": "试点候选未启用",
+    "planned_write_path_missing": "计划路径未物化",
     "stale_takeover_ready": "陈旧候选可接管",
     "stale_takeover_blocked": "陈旧候选接管受阻",
 }
@@ -128,7 +138,7 @@ DOMAIN_TITLE_TRANSLATIONS: dict[str, str] = {
 
 
 def _repo_root() -> Path:
-    return find_repo_root()
+    return resolve_control_plane_root()
 
 
 def _script_dir() -> Path:
@@ -312,6 +322,39 @@ def _candidate_summary(candidate: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _tasks_by_id(payload: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    return {
+        str(task.get("task_id")): task
+        for task in (payload or {}).get("tasks", []) or []
+        if task.get("task_id")
+    }
+
+
+def _ledger_divergences(root: Path) -> list[dict[str, Any]]:
+    return detect_ledger_divergences(root)
+
+
+def _apply_divergence_to_candidate(summary: dict[str, Any], divergence_map: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    candidate_id = str(summary.get("candidate_id") or "")
+    direct = divergence_map.get(candidate_id)
+    upstream = [str(item) for item in summary.get("upstream_blocker_candidates", []) if item]
+    inherited = next((divergence_map[item] for item in upstream if item in divergence_map), None)
+    divergence = direct or inherited
+    if divergence is None:
+        return summary
+
+    if direct is not None:
+        reason = f"主控制面与 {divergence['slot_id']} 工作树账本不一致：{divergence['summary_zh']}"
+    else:
+        blocker_id = str(inherited.get("candidate_id") or upstream[0])
+        reason = f"上游候选 {blocker_id} 存在账本分叉：{inherited['summary_zh']}。先修复主控制面，再判断当前候选。"
+    summary["operator_reason"] = reason
+    summary["copy_instruction"] = "先修复主控制面与工作树台账分叉，再继续判断、续接或接单。"
+    summary["copy_reason"] = reason
+    summary["ledger_divergence"] = divergence
+    return summary
+
+
 def _decorate_candidate_payload(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
     candidate = _candidate_lookup(root, payload.get("candidate_id", ""))
     if candidate:
@@ -326,7 +369,12 @@ def _decorate_candidate_payload(root: Path, payload: dict[str, Any]) -> dict[str
     payload.setdefault("operator_reason", _candidate_operator_reason(payload))
     payload.setdefault("copy_instruction", _candidate_copy_instruction(payload))
     payload.setdefault("copy_reason", _candidate_copy_reason(payload))
-    return payload
+    divergence_map = {
+        str(item.get("candidate_id")): item
+        for item in _ledger_divergences(root)
+        if item.get("candidate_id")
+    }
+    return _apply_divergence_to_candidate(payload, divergence_map)
 
 
 def _decorate_claim_payload(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
@@ -381,6 +429,15 @@ def _decorate_release_chain_payload(root: Path, payload: dict[str, Any]) -> dict
 def _review_pool_payload() -> dict[str, Any]:
     root = _repo_root()
     payload = review_pool(root)
+    divergences = _ledger_divergences(root)
+    payload["ledger_divergence_count"] = len(divergences)
+    payload["ledger_divergences"] = divergences
+    if divergences:
+        issues = list(payload.get("issues") or [])
+        issues.append(f"检测到 {len(divergences)} 条主控制面与工作树账本分叉。")
+        payload["issues"] = issues
+        if payload.get("status") == "healthy":
+            payload["status"] = "degraded"
     payload["status_zh"] = _status_label_zh(payload.get("status"))
     return payload
 
@@ -390,9 +447,21 @@ def _cached_pool_payload() -> dict[str, Any]:
     summary = load_yaml(root / SUMMARY_FILE) if (root / SUMMARY_FILE).exists() else {}
     index = _load_candidate_index(root)
     candidates = index.get("candidates", [])
-    visible_candidates = [_candidate_summary(candidate) for candidate in candidates[:12]]
+    divergences = _ledger_divergences(root)
+    divergence_map = {
+        str(item.get("candidate_id")): item
+        for item in divergences
+        if item.get("candidate_id")
+    }
+    visible_candidates = [
+        _apply_divergence_to_candidate(_candidate_summary(candidate), divergence_map)
+        for candidate in candidates[:12]
+    ]
+    summary["generated_at"] = summary.get("generated_at") or index.get("generated_at")
+    summary["ledger_divergence_count"] = len(divergences)
     return {
         "summary": summary,
+        "ledger_divergences": divergences,
         "fresh_claimable": [candidate["candidate_id"] for candidate in candidates if candidate.get("fresh_claimable")],
         "takeover_claimable": [candidate["candidate_id"] for candidate in candidates if candidate.get("takeover_claimable")],
         "visible_candidates": visible_candidates,
@@ -487,6 +556,28 @@ def _render_style_block() -> str:
       padding: 12px;
       background: rgba(255,255,255,0.6);
     }
+    .status-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      color: var(--ink);
+      background: rgba(255,255,255,0.72);
+    }
+    .status-banner.visible {
+      display: flex;
+    }
+    .status-banner.warning {
+      border: 1px solid rgba(185, 96, 28, 0.24);
+      background: linear-gradient(135deg, rgba(255,244,227,0.95), rgba(255,238,213,0.86));
+    }
+    .status-banner strong {
+      font-size: 14px;
+    }
+    .status-banner span {
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
     button {
       appearance: none;
       border: 0;
@@ -560,6 +651,11 @@ def _render_style_block() -> str:
       margin-top: 4px;
       color: var(--ink-soft);
       font-size: 13px;
+    }
+    .panel-meta {
+      margin-top: 6px;
+      color: var(--ink-soft);
+      font-size: 12px;
     }
     .candidate-list {
       padding: 10px 12px 14px;
@@ -886,6 +982,8 @@ def _render_shell_html() -> str:
       <button type="button" class="secondary" onclick="loadReview(this)">复核候选池</button>
     </section>
 
+    <section id="divergence_banner" class="surface status-banner" aria-live="polite"></section>
+
     <section class="metrics">
       <article class="surface metric-card">
         <div class="label zh">候选任务总数</div>
@@ -947,6 +1045,7 @@ def _render_shell_html() -> str:
       <article class="surface panel ops-panel">
         <div class="panel-header">
           <div class="panel-title">控制台总览</div>
+          <div class="panel-meta" id="refresh_meta">最后刷新：-</div>
         </div>
         <div class="ops-body">
           <div class="summary-grid" id="snapshot_body">
@@ -969,11 +1068,18 @@ def _render_script_block() -> str:
     action_labels = json.dumps(ACTION_LABELS_ZH, ensure_ascii=False)
     return f"""<script>
     const ACTION_LABELS = {action_labels};
+    const AUTO_REFRESH_FOREGROUND_MS = {AUTO_REFRESH_FOREGROUND_SECONDS * 1000};
+    const AUTO_REFRESH_BACKGROUND_MS = {AUTO_REFRESH_BACKGROUND_SECONDS * 1000};
     let currentCandidateId = new URL(window.location.href).searchParams.get('candidate_id') || '';
+    let currentDetailMode = 'candidate';
     let feedbackTimer = null;
+    let autoRefreshTimer = null;
+    let lastRefreshAt = null;
+    let focusInitialized = false;
     window.__candidateRows = {{}};
     window.__lastCopiedShortcut = '';
     window.__lastFeedback = null;
+    window.__lastPoolPayload = null;
 
     function escapeHtml(value) {{
       return String(value ?? '')
@@ -997,6 +1103,36 @@ def _render_script_block() -> str:
 
     function statusClass(status) {{
       return `status-${{(status || '').toLowerCase()}}`;
+    }}
+
+    function formatTimestamp(value) {{
+      if (!value) return '-';
+      const timestamp = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(timestamp.getTime())) {{
+        return String(value);
+      }}
+      return timestamp.toLocaleString('zh-CN', {{
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }});
+    }}
+
+    function currentRefreshIntervalMs() {{
+      return document.hidden ? AUTO_REFRESH_BACKGROUND_MS : AUTO_REFRESH_FOREGROUND_MS;
+    }}
+
+    function scheduleAutoRefresh() {{
+      if (autoRefreshTimer) {{
+        window.clearTimeout(autoRefreshTimer);
+      }}
+      autoRefreshTimer = window.setTimeout(() => {{
+        loadAll(null, true).catch(() => {{}});
+      }}, currentRefreshIntervalMs());
     }}
 
     function showFeedback(kind, message, persist = false) {{
@@ -1129,6 +1265,39 @@ def _render_script_block() -> str:
       return items.map(item => `<div class="detail-card"><div class="detail-key">${{escapeHtml(item.label)}}</div><div class="detail-value">${{escapeHtml(item.value || '无')}}</div></div>`).join('');
     }}
 
+    function renderRuntimeSignals(pool) {{
+      window.__lastPoolPayload = pool;
+      lastRefreshAt = new Date();
+      const summary = pool.summary || {{}};
+      const divergences = pool.ledger_divergences || [];
+      const refreshMeta = document.getElementById('refresh_meta');
+      if (refreshMeta) {{
+        const parts = [
+          `最后刷新：${{formatTimestamp(lastRefreshAt)}}`,
+          `候选快照：${{formatTimestamp(summary.generated_at)}}`,
+          `自动刷新：${{document.hidden ? {AUTO_REFRESH_BACKGROUND_SECONDS} : {AUTO_REFRESH_FOREGROUND_SECONDS}}} 秒`,
+        ];
+        if (divergences.length) {{
+          parts.push(`账本分叉：${{divergences.length}}`);
+        }}
+        refreshMeta.textContent = parts.join(' · ');
+      }}
+      const banner = document.getElementById('divergence_banner');
+      if (!banner) return;
+      if (!divergences.length) {{
+        banner.className = 'surface status-banner';
+        banner.innerHTML = '';
+        return;
+      }}
+      const preview = divergences
+        .slice(0, 2)
+        .map(item => `${{escapeHtml(item.slot_id || '-')}}：${{escapeHtml(item.summary_zh || '状态不一致')}}`)
+        .join('；');
+      const extra = divergences.length > 2 ? `；另有 ${{divergences.length - 2}} 条` : '';
+      banner.className = 'surface status-banner warning visible';
+      banner.innerHTML = `<strong>检测到 ${{divergences.length}} 条账本分叉</strong><span>先修复主控制面与工作树状态，再判断接单、续接和自动释放。${{preview ? ` ${{preview}}${{extra}}` : ''}}</span>`;
+    }}
+
     function renderPool(pool) {{
       const summary = pool.summary || {{}};
       metric('candidate_count', summary.candidate_count);
@@ -1182,12 +1351,16 @@ def _render_script_block() -> str:
         {{ label: '新鲜可认领', value: String(summary.fresh_claimable_count ?? '-') }},
         {{ label: '接管可认领', value: String(summary.takeover_claimable_count ?? '-') }},
         {{ label: '并行缺口', value: String(summary.parallelism_deficit ?? '-') }},
+        {{ label: '账本分叉', value: String(summary.ledger_divergence_count ?? 0) }},
+        {{ label: '候选快照时间', value: summary.generated_at || '-' }},
         {{ label: '头号候选任务', value: topCandidate ? `${{topCandidate.title_zh}} / ${{topCandidate.title}}` : '无' }},
         {{ label: '头号候选英文标识', value: topCandidate ? topCandidate.candidate_id : '无' }},
       ]) + renderJsonBlock(pool);
     }}
 
     function renderCandidateDetail(payload) {{
+      currentDetailMode = 'candidate';
+      focusInitialized = true;
       document.getElementById('detail_title').textContent = '候选任务解释';
       document.getElementById('detail_body').innerHTML = renderKeyValueCards([
         {{ label: '候选任务', value: `${{payload.title_zh || payload.title || payload.candidate_id}} / ${{payload.title || payload.candidate_id}}` }},
@@ -1207,6 +1380,8 @@ def _render_script_block() -> str:
     }}
 
     function renderClaimDecision(payload) {{
+      currentDetailMode = 'claim';
+      focusInitialized = true;
       document.getElementById('detail_title').textContent = '认领决策解释';
       const selected = payload.selected_candidate_id
         ? `${{payload.selected_candidate_title_zh || payload.selected_candidate_id}} / ${{payload.selected_candidate_title || payload.selected_candidate_id}}`
@@ -1222,6 +1397,8 @@ def _render_script_block() -> str:
     }}
 
     function renderReleaseChain(payload) {{
+      currentDetailMode = 'release';
+      focusInitialized = true;
       document.getElementById('detail_title').textContent = '释放链解释';
       const chain = (payload.downstream_chain || []).map(item => `${{item.title_zh || item.candidate_id}} / ${{item.candidate_id}} (${{item.status_zh || item.status || '-'}})`).join(' → ') || '无';
       document.getElementById('detail_body').innerHTML = renderKeyValueCards([
@@ -1236,12 +1413,19 @@ def _render_script_block() -> str:
     function renderReview(payload) {{
       const staleClaims = (payload.stale_claims || []).map(item => `${{item.candidate_id || '-'}} -> ${{item.formal_task_id || '-'}}`).join('；') || '无';
       const incompleteTasks = (payload.incomplete_tasks || []).map(item => `${{item.task_id || '-'}} (${{item.status || '-'}})`).join('；') || '无';
+      const divergenceSummary = (payload.ledger_divergences || [])
+        .map(item => `${{item.slot_id || '-'}} / ${{item.candidate_id || item.task_id || '-'}} / ${{item.summary_zh || '状态不一致'}}`)
+        .join('；') || '无';
+      currentDetailMode = 'review';
+      focusInitialized = true;
       document.getElementById('detail_title').textContent = '候选池复核';
       document.getElementById('detail_body').innerHTML = renderKeyValueCards([
         {{ label: '控制面状态', value: payload.status_zh || payload.status || '-' }},
         {{ label: '正式主根数量', value: String(payload.formal_root_count ?? '-') }},
         {{ label: '预览主根数量', value: String(payload.preview_root_count ?? '-') }},
         {{ label: '遗留兼容候选', value: String(payload.legacy_candidate_count ?? '-') }},
+        {{ label: '账本分叉数量', value: String(payload.ledger_divergence_count ?? 0) }},
+        {{ label: '账本分叉详情', value: divergenceSummary }},
         {{ label: '待人工续接/清理', value: staleClaims }},
         {{ label: '未完正式任务', value: incompleteTasks }},
         {{ label: '就绪关闭执行任务', value: String(payload.closeout_ready_execution_count ?? '-') }},
@@ -1257,7 +1441,7 @@ def _render_script_block() -> str:
       document.getElementById('action_output').textContent = [`动作：${{label}}`, `命令：${{(payload.argv || []).join(' ')}}`, `返回码：${{payload.returncode}}`, '', stdout, '', stderr].join('\\n');
     }}
 
-    async function loadAll(triggerButton = null) {{
+    async function loadAll(triggerButton = null, quietError = false) {{
       if (triggerButton) {{
         setBusyState(triggerButton, true, '刷新中…');
         showFeedback('pending', '正在刷新页面快照…', true);
@@ -1265,8 +1449,14 @@ def _render_script_block() -> str:
       try {{
         const payload = await fetchJson('/api/pool');
         renderPool(payload);
+        renderRuntimeSignals(payload);
         renderPoolSnapshot(payload);
-        const nextCandidateId = currentCandidateId || payload.top_candidate?.candidate_id;
+        let nextCandidateId = null;
+        if (currentDetailMode === 'candidate') {{
+          nextCandidateId = currentCandidateId || payload.top_candidate?.candidate_id;
+        }} else if (!focusInitialized) {{
+          nextCandidateId = currentCandidateId || payload.top_candidate?.candidate_id;
+        }}
         if (nextCandidateId) {{
           try {{
             await loadCandidateById(nextCandidateId, null, true);
@@ -1280,19 +1470,25 @@ def _render_script_block() -> str:
               document.getElementById('detail_body').innerHTML = `<div class="placeholder">${{escapeHtml(String(error))}}</div>`;
             }}
           }}
+        }} else if (!focusInitialized) {{
+          focusInitialized = true;
         }}
         if (triggerButton) {{
           showFeedback('success', '页面快照已刷新');
         }}
       }} catch (error) {{
-        showFeedback('error', `刷新失败：${{String(error)}}`, true);
+        if (!quietError) {{
+          showFeedback('error', `刷新失败：${{String(error)}}`, true);
+        }}
         throw error;
       }} finally {{
         setBusyState(triggerButton, false);
+        scheduleAutoRefresh();
       }}
     }}
 
     async function loadCandidateById(candidateId, triggerElement = null, silentFeedback = false) {{
+      currentDetailMode = 'candidate';
       currentCandidateId = candidateId;
       setCandidateQuery(candidateId);
       highlightCandidateRow(candidateId);
@@ -1328,6 +1524,11 @@ def _render_script_block() -> str:
     async function loadReleaseChain(triggerButton = null) {{
       const candidateId = document.getElementById('release_candidate_id').value.trim();
       if (!candidateId) return;
+      currentDetailMode = 'release';
+      currentCandidateId = candidateId;
+      setCandidateQuery(candidateId);
+      highlightCandidateRow(candidateId);
+      document.getElementById('candidate_id').value = candidateId;
       setBusyState(triggerButton, true, '加载中…');
       showFeedback('pending', `正在解释释放链：${{candidateId}}`, true);
       try {{
@@ -1343,6 +1544,8 @@ def _render_script_block() -> str:
     }}
 
     async function loadClaimDecision(triggerButton = null) {{
+      currentDetailMode = 'claim';
+      focusInitialized = true;
       currentCandidateId = '';
       setCandidateQuery('');
       highlightCandidateRow('');
@@ -1361,6 +1564,8 @@ def _render_script_block() -> str:
     }}
 
     async function loadReview(triggerButton = null) {{
+      currentDetailMode = 'review';
+      focusInitialized = true;
       currentCandidateId = '';
       setCandidateQuery('');
       highlightCandidateRow('');
@@ -1397,6 +1602,13 @@ def _render_script_block() -> str:
         setBusyState(triggerButton, false);
       }}
     }}
+
+    document.addEventListener('visibilitychange', () => {{
+      if (window.__lastPoolPayload) {{
+        renderRuntimeSignals(window.__lastPoolPayload);
+      }}
+      scheduleAutoRefresh();
+    }});
 
     loadAll().catch(error => {{
       document.getElementById('detail_title').textContent = '加载失败';

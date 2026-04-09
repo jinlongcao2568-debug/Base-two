@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from governance_lib import GovernanceError, find_repo_root, load_task_registry, missing_required_tests
+from governance_lib import GovernanceError, load_task_registry, missing_required_tests
+from control_plane_root import resolve_control_plane_root
 
 
 def list_closeout_ready_execution_tasks(root) -> list[dict[str, Any]]:
@@ -39,7 +40,7 @@ def close_ready_execution_tasks(root) -> dict[str, Any]:
 
 
 def main() -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     payload = close_ready_execution_tasks(root)
     if payload["closed_task_ids"]:
         print(f"[OK] closed ready execution tasks: {', '.join(payload['closed_task_ids'])}")

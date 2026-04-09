@@ -5,17 +5,17 @@
 - `task_id`: `TASK-RM-STAGE1-CORE-CONTRACT`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `paused`
+- `status`: `done`
 - `stage`: `stage1`
 - `branch`: `codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_task`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 ## Primary Goals
 
 - to-be-filled
@@ -48,27 +48,27 @@
 - `src/stage6_facts/`
 ## Narrative Assertions
 
-- `narrative_status`: `paused`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `resume_required`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `paused`
+- `status`: `done`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_task`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
-- `review_bundle_status`: `not_applicable`
+- `review_bundle_status`: `pending`
 - `reserved_paths`: `src/stage2_ingestion/, src/stage6_facts/`
 - `branch`: `codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract`
-- `updated_at`: `2026-04-07T21:32:57+08:00`
+- `updated_at`: `2026-04-08T21:41:23+08:00`
 <!-- generated:task-meta:end -->

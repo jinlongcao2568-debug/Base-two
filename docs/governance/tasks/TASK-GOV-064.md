@@ -5,19 +5,18 @@
 - `task_id`: `TASK-GOV-064`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `planned`
+- `status`: `done`
 - `stage`: `governance-control-plane-single-ledger-hardening-v1`
 - `branch`: `codex/TASK-GOV-064-single-ledger-hardening`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-
 ## Primary Goals
 
 - Enforce the rule that governance lifecycle writes from full-clone workers must resolve to the main control plane.
@@ -81,6 +80,13 @@
 - `scripts/task_runtime_ops.py`
 - `scripts/task_lifecycle_ops.py`
 - `scripts/task_worker_ops.py`
+- `scripts/task_coordination_ops.py`
+- `scripts/task_worktree_ops.py`
+- `scripts/roadmap_claim_next.py`
+- `scripts/roadmap_execution_closeout.py`
+- `scripts/full_clone_pool.py`
+- `scripts/roadmap_candidate_maintainer.py`
+- `scripts/review_candidate_pool.py`
 - `scripts/control_plane_root.py`
 - `scripts/governance_console.py`
 - `tests/governance/`
@@ -120,22 +126,21 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `planned`
-- `closeout_state`: `not_started`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `full_task_remaining`
-- `next_gate`: `control_plane_write_path_hardening`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `planned`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -144,5 +149,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
 - `branch`: `codex/TASK-GOV-064-single-ledger-hardening`
-- `updated_at`: `2026-04-08T22:10:00+08:00`
+- `updated_at`: `2026-04-09T11:07:00+08:00`
 <!-- generated:task-meta:end -->

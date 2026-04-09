@@ -70,11 +70,14 @@ def _candidate(
     candidate_intent: str | None = None,
     root_kind: str | None = None,
     release_evidence: list[str] | None = None,
+    pilot_only: bool | None = None,
+    allow_create_paths: bool | None = None,
+    coverage_regions: list[str] | None = None,
 ) -> dict[str, Any]:
     conflict_policy = "require_disjoint_child_slice" if lane_type == "stage_internal_parallel" else "choose_next_safe_candidate"
     if candidate_kind == "integration_gate" or lane_type == "fact_surface_gate":
         conflict_policy = "strict_single_writer"
-    return {
+    payload = {
         "candidate_id": candidate_id,
         "title": title,
         "stage": stage,
@@ -114,6 +117,13 @@ def _candidate(
         "root_kind": root_kind or candidate_kind,
         "release_evidence": release_evidence or [],
     }
+    if pilot_only is not None:
+        payload["pilot_only"] = pilot_only
+    if allow_create_paths is not None:
+        payload["allow_create_paths"] = allow_create_paths
+    if coverage_regions is not None:
+        payload["coverage_regions"] = coverage_regions
+    return payload
 
 
 def _module_test_paths(module: dict[str, Any]) -> list[str]:
@@ -327,6 +337,8 @@ def _compile_stage1(module: dict[str, Any]) -> list[dict[str, Any]]:
         candidate_intent="module_slice",
         root_kind="child_slice",
         release_evidence=["stage1_core_contract_done"],
+        pilot_only=True,
+        coverage_regions=["CN"],
     )
     global_slice = _candidate(
         candidate_id="stage1-source-family-global",
@@ -350,6 +362,8 @@ def _compile_stage1(module: dict[str, Any]) -> list[dict[str, Any]]:
         candidate_intent="module_slice",
         root_kind="child_slice",
         release_evidence=["stage1_core_contract_done"],
+        pilot_only=True,
+        coverage_regions=["GLOBAL"],
     )
     gate = _candidate(
         candidate_id="stage1-source-family-integration-gate",

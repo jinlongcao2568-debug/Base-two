@@ -157,6 +157,15 @@ candidate_field_rules:
   planned_write_paths:
     type: list
     requirement: used for write-path lock and dirty-state checks
+  allow_create_paths:
+    type: boolean
+    requirement: optional; when true, planned_write_paths may be missing and will not block candidate readiness
+  pilot_only:
+    type: boolean
+    requirement: optional; when true, candidate is blocked unless explicitly enabled by control-plane policy
+  coverage_regions:
+    type: list
+    requirement: optional; explicit region codes used by MVP/coverage gating
   planned_test_paths:
     type: list
     requirement: used for test scope and conflict analysis

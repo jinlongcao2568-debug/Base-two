@@ -5,6 +5,8 @@ from pathlib import Path
 import re
 from typing import Any
 
+import yaml
+
 from governance_lib import (
     EXECUTION_CONTEXT_FILE,
     GovernanceError,
@@ -18,12 +20,16 @@ from governance_lib import (
     load_yaml,
 )
 from child_execution_flow import transient_child_paths
+from governance_runtime import read_roadmap
 from roadmap_candidate_compiler import COMPILED_GRAPH_FILE, GRAPH_VERSION
 
 
 ROADMAP_BACKLOG_FILE = Path("docs/governance/ROADMAP_BACKLOG.yaml")
 ROADMAP_BACKLOG_SCHEMA_FILE = Path("docs/governance/ROADMAP_BACKLOG_SCHEMA.yaml")
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
+MVP_SCOPE_FILE = Path("docs/product/MVP_SCOPE.md")
+REGION_COVERAGE_REGISTRY_FILE = Path("docs/contracts/region_coverage_registry.yaml")
+SOURCE_REGISTRY_FILE = Path("docs/contracts/sources_registry.yaml")
 
 EVALUATOR_VERSION = "roadmap_scheduler_eval_v2"
 COMPILED_FORMAT_VERSION = "roadmap_candidate_index_v2"
@@ -52,6 +58,10 @@ REASON_CODES = {
     "formal_task_blocked",
     "active_claim",
     "capacity_limit",
+    "out_of_mvp_scope",
+    "coverage_not_registered",
+    "pilot_only",
+    "planned_write_path_missing",
     "write_path_overlap",
     "protected_path_conflict",
     "single_writer_root_conflict",
@@ -139,6 +149,84 @@ def _load_yaml_map(path: Path, *, missing_ok: bool = False) -> dict[str, Any]:
     return payload
 
 
+def _read_frontmatter(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise GovernanceError(f"missing required frontmatter file: {path.as_posix()}")
+    text = path.read_text(encoding="utf-8")
+    match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+    if not match:
+        raise GovernanceError(f"frontmatter missing or malformed: {path.as_posix()}")
+    return yaml.safe_load(match.group(1)) or {}
+
+
+def _load_mvp_policy(root: Path) -> dict[str, Any]:
+    frontmatter = _read_frontmatter(root / MVP_SCOPE_FILE)
+    scope = str(frontmatter.get("mvp_scope") or "").strip()
+    included = [str(stage) for stage in (frontmatter.get("included_stages") or []) if stage]
+    if included:
+        allowed = set(included)
+    elif scope == "stage2_to_stage6":
+        allowed = {"stage2", "stage3", "stage4", "stage5", "stage6"}
+    else:
+        raise GovernanceError("MVP scope frontmatter is missing or invalid")
+    return {"scope": scope or "custom", "allowed_stages": allowed}
+
+
+def _load_sellable_regions(root: Path) -> set[str]:
+    payload = _load_yaml_map(root / REGION_COVERAGE_REGISTRY_FILE)
+    regions = payload.get("regions") or []
+    return {
+        str(region.get("region_code"))
+        for region in regions
+        if region.get("region_code") and region.get("is_sellable") is True
+    }
+
+
+def _load_source_regions(root: Path) -> set[str]:
+    payload = _load_yaml_map(root / SOURCE_REGISTRY_FILE)
+    sources = payload.get("sources") or []
+    regions: set[str] = set()
+    for source in sources:
+        for region in source.get("coverage_regions") or []:
+            if region:
+                regions.add(str(region))
+    return regions
+
+
+def _load_pilot_enabled_candidates(root: Path) -> set[str]:
+    frontmatter, _ = read_roadmap(root)
+    enabled = frontmatter.get("pilot_enabled_candidates") or []
+    if not isinstance(enabled, list):
+        raise GovernanceError("roadmap pilot_enabled_candidates must be a list when present")
+    return {str(item) for item in enabled if item}
+
+
+def _candidate_regions(candidate: dict[str, Any]) -> list[str]:
+    explicit = candidate.get("coverage_regions") or candidate.get("coverage_region") or candidate.get("region_code")
+    if explicit:
+        if isinstance(explicit, list):
+            return [str(item) for item in explicit if item]
+        return [str(explicit)]
+    candidate_id = str(candidate.get("candidate_id") or "").lower()
+    planned_paths = [str(path).lower() for path in candidate.get("planned_write_paths") or []]
+    if "global" in candidate_id or any("/global/" in path for path in planned_paths):
+        return ["GLOBAL"]
+    if "cn" in candidate_id or any("/cn/" in path for path in planned_paths):
+        return ["CN"]
+    return ["CN"]
+
+
+def _missing_planned_paths(root: Path, planned_paths: list[str]) -> list[str]:
+    missing: list[str] = []
+    for raw in planned_paths:
+        normalized = actual_path(str(raw))
+        if not normalized:
+            continue
+        if not (root / normalized).exists():
+            missing.append(normalized)
+    return missing
+
+
 def _load_backlog(root: Path) -> dict[str, Any]:
     path = root / ROADMAP_BACKLOG_FILE
     if not path.exists():
@@ -191,6 +279,9 @@ def _load_candidate_source(root: Path, backlog: dict[str, Any]) -> tuple[list[di
             "module_map_version": None,
             "policy_version": None,
         }
+    inline_candidates = list(backlog.get("candidates") or [])
+    if inline_candidates:
+        raise GovernanceError("inline candidates are forbidden when compiled_mode=module_graph_compiler")
     path = _compiled_graph_path(root, backlog)
     if not path.exists():
         raise GovernanceError(f"compiled roadmap candidate graph missing: {path.as_posix()}")
@@ -535,6 +626,7 @@ class CandidateEvaluator:
         candidates: list[dict[str, Any]],
         claims: dict[str, Any],
         now: datetime,
+        scope_policy: dict[str, Any],
     ) -> None:
         self.root = root
         self.backlog = backlog
@@ -542,6 +634,10 @@ class CandidateEvaluator:
         self.candidates_by_id = {candidate["candidate_id"]: candidate for candidate in candidates}
         self.claims_by_candidate = _claim_by_candidate(claims)
         self.now = now
+        self.mvp_stage_ids = set(scope_policy.get("mvp_stage_ids") or [])
+        self.sellable_regions = set(scope_policy.get("sellable_regions") or [])
+        self.source_regions = set(scope_policy.get("source_regions") or [])
+        self.pilot_enabled_candidates = set(scope_policy.get("pilot_enabled_candidates") or [])
         self.single_writer_roots = _single_writer_roots(backlog)
         self.tasks_by_candidate = _tasks_by_candidate(root, candidates)
         self.active_conflict_tasks = [
@@ -610,6 +706,21 @@ class CandidateEvaluator:
         blockers: list[str] = []
         active_conflict_set: list[str] = []
 
+        stage_id = str(candidate.get("stage") or "")
+        if stage_id.startswith("stage") and self.mvp_stage_ids and stage_id not in self.mvp_stage_ids:
+            blockers.append(f"out of MVP scope: {stage_id}")
+            _append_reason(reason_codes, "out_of_mvp_scope")
+
+        if candidate.get("pilot_only") and candidate_id not in self.pilot_enabled_candidates:
+            blockers.append("pilot-only candidate requires control-plane enablement")
+            _append_reason(reason_codes, "pilot_only")
+
+        candidate_regions = _candidate_regions(candidate)
+        for region in candidate_regions:
+            if region not in self.sellable_regions or region not in self.source_regions:
+                blockers.append(f"coverage not registered for region {region}")
+                _append_reason(reason_codes, "coverage_not_registered")
+
         if claim and _claim_is_stale(self.root, claim, self.now):
             stale_blockers = _takeover_blockers(self.root, candidate, claim, primary_task)
             if stale_blockers:
@@ -638,6 +749,11 @@ class CandidateEvaluator:
 
         candidate_paths = list(candidate.get("planned_write_paths") or [])
         protected_paths = list(candidate.get("protected_paths") or [])
+        allow_create_paths = bool(candidate.get("allow_create_paths") or candidate.get("bootstrap_required"))
+        missing_paths = [] if allow_create_paths else _missing_planned_paths(self.root, candidate_paths)
+        if missing_paths:
+            blockers.append(f"planned write paths missing: {', '.join(missing_paths)}")
+            _append_reason(reason_codes, "planned_write_path_missing")
         same_formal_task_id = primary_task.get("task_id") if primary_task else None
         for task in self.active_conflict_tasks:
             if same_formal_task_id and task.get("task_id") == same_formal_task_id:
@@ -833,7 +949,22 @@ def evaluate_roadmap_candidates(root: Path, *, now: datetime | None = None) -> d
     backlog_with_candidates = dict(backlog)
     backlog_with_candidates["candidates"] = candidate_source
     candidates = _validate_backlog_shape(backlog_with_candidates, schema)
-    evaluator = CandidateEvaluator(root=root, backlog=backlog, candidates=candidates, claims=claims, now=now or _now())
+    mvp_policy = _load_mvp_policy(root)
+    scope_policy = {
+        "mvp_scope": mvp_policy["scope"],
+        "mvp_stage_ids": mvp_policy["allowed_stages"],
+        "sellable_regions": _load_sellable_regions(root),
+        "source_regions": _load_source_regions(root),
+        "pilot_enabled_candidates": _load_pilot_enabled_candidates(root),
+    }
+    evaluator = CandidateEvaluator(
+        root=root,
+        backlog=backlog,
+        candidates=candidates,
+        claims=claims,
+        now=now or _now(),
+        scope_policy=scope_policy,
+    )
     indexed = [evaluator.evaluate(candidate["candidate_id"]) for candidate in candidates]
     indexed.sort(
         key=lambda item: (

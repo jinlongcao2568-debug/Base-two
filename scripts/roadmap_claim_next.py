@@ -14,7 +14,7 @@ from governance_lib import (
     branch_exists,
     configure_utf8_stdio,
     dump_yaml,
-    find_repo_root,
+    # find_repo_root removed; control-plane writes must resolve the main root.
     git,
     iso_now,
     load_task_registry,
@@ -22,7 +22,14 @@ from governance_lib import (
     load_yaml,
     validate_task,
 )
-from control_plane_root import FULL_CLONE_POOL_FILE, default_full_clone_idle_branch, load_full_clone_pool, slot_by_id
+from control_plane_root import (
+    FULL_CLONE_POOL_FILE,
+    default_full_clone_idle_branch,
+    detect_ledger_divergences,
+    load_full_clone_pool,
+    resolve_control_plane_root,
+    slot_by_id,
+)
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
 from child_execution_flow import transient_child_paths
 from roadmap_execution_closeout import close_ready_execution_tasks
@@ -359,7 +366,7 @@ def _ranked_safe_candidates(
 
 def _single_writer_roots(index: dict[str, Any]) -> list[str]:
     # The index intentionally stays small; look up the policy from the source backlog.
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     backlog = load_yaml(root / "docs/governance/ROADMAP_BACKLOG.yaml") or {}
     return list((backlog.get("scheduler_policy") or {}).get("single_writer_roots") or [])
 
@@ -753,9 +760,16 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
 
 
 def cmd_claim_next(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     if args.promote_task:
         args.write_claim = True
+    divergences = detect_ledger_divergences(root)
+    if divergences:
+        summary = "; ".join(
+            f"{item.get('slot_id')}/{item.get('task_id') or item.get('candidate_id') or 'unknown'}"
+            for item in divergences
+        )
+        raise GovernanceError(f"ledger divergence detected; repair control plane before claim-next ({summary})")
     selected, blocked = claim_next(root, args)
     if selected is None:
         first_blocker = blocked[0] if blocked else {"candidate_id": "none", "blockers": ["no candidates"]}

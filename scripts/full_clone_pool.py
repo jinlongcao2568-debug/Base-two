@@ -9,13 +9,14 @@ from governance_lib import (
     GovernanceError,
     configure_utf8_stdio,
     dump_yaml,
-    find_repo_root,
+    # find_repo_root removed; control-plane writes must resolve the main root.
     git,
     iso_now,
     load_task_registry,
     load_worktree_registry,
     load_yaml,
 )
+from control_plane_root import resolve_control_plane_root
 
 
 FULL_CLONE_POOL_FILE = Path("docs/governance/FULL_CLONE_POOL.yaml")
@@ -180,7 +181,7 @@ def _provision_slot(root: Path, slot: dict[str, Any], *, refresh: bool) -> None:
 
 
 def cmd_provision_full_clone_pool(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     pool = _load_pool(root)
     provisioned: list[str] = []
     for slot in pool.get("slots", []):

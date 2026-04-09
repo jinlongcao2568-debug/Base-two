@@ -20,6 +20,11 @@ def test_render_index_html_contains_core_controls() -> None:
     assert "复制任务" in html
     assert "feedback_toast" in html
     assert "当前任务如下：" in html
+    assert "divergence_banner" in html
+    assert "refresh_meta" in html
+    assert "scheduleAutoRefresh" in html
+    assert "visibilitychange" in html
+    assert "AUTO_REFRESH_FOREGROUND_MS" in html
     assert "自动化开发底座" not in html
     assert "/api/pool" in html
 

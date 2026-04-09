@@ -1,12 +1,17 @@
 task_id: TASK-GOV-063
-summary_status: doing
-last_handoff_at: '2026-04-08T17:37:44+08:00'
-completed_items: []
+summary_status: paused
+last_handoff_at: '2026-04-09T11:20:00+08:00'
+completed_items:
+- Recorded control-plane decision to discard clone-only TASK-RM-STAGE1-SOURCE-FAMILY-CN.
+- Drafted TASK-GOV-065 (MVP/coverage hard gate + stage2_to_stage6 scope).
+- Drafted TASK-GOV-066 (candidate source unification + path/pilot gate + test ID cleanup).
 remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Continue the scoped implementation and keep the control plane aligned.
+- Review whether TASK-GOV-063 still needs reactivation now that TASK-GOV-064/065/066
+  have closed.
+next_step: Reactivate TASK-GOV-063 only if console-refresh fixes are still required.
 next_tests:
 - pytest tests/governance/test_governance_console.py -q
+- pytest tests/governance/test_control_plane_single_ledger.py -q
 - python scripts/check_repo.py
 current_risks: []
 candidate_write_paths:
@@ -23,3 +28,4 @@ candidate_test_paths:
 resume_notes:
 - Formal handoff has not been recorded yet.
 - Task activated through queue-and-activate branch_action=current.
+- Task paused; resume requires explicit reactivation.

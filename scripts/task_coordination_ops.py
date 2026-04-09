@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import argparse
 
-from governance_lib import GovernanceError, append_runlog_bullets, dump_yaml, find_repo_root, iso_now, load_task_registry
+from governance_lib import GovernanceError, append_runlog_bullets, dump_yaml, iso_now, load_task_registry
+from control_plane_root import resolve_control_plane_root
 from orchestration_runtime import record_session_event, runtime_status_for_task
 from task_coordination_lease import (
     assess_coordination_lease,
@@ -37,7 +38,7 @@ def _touch_task_artifacts(root, registry: dict, task: dict) -> None:
 
 
 def cmd_handoff(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     if not assess_coordination_lease(root, task)["enforced"]:
@@ -84,7 +85,7 @@ def cmd_handoff(args: argparse.Namespace) -> int:
 
 
 def cmd_release(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     if not assess_coordination_lease(root, task)["enforced"]:
@@ -126,7 +127,7 @@ def cmd_release(args: argparse.Namespace) -> int:
 
 
 def cmd_takeover(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     task = find_task(registry["tasks"], args.task_id)
     if not assess_coordination_lease(root, task)["enforced"]:

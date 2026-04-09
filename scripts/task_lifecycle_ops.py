@@ -13,7 +13,7 @@ from governance_lib import (
     current_branch,
     dump_yaml,
     ensure_clean_worktree,
-    find_repo_root,
+    # find_repo_root removed; control-plane writes must resolve the main root.
     git,
     infer_default_automation_mode,
     infer_default_topology,
@@ -37,7 +37,7 @@ from governance_lib import (
 )
 from governance_markdown import extract_markdown_fields
 from orchestration_runtime import record_session_event, runtime_status_for_task
-from control_plane_root import default_full_clone_idle_branch, load_full_clone_pool, slot_by_id
+from control_plane_root import default_full_clone_idle_branch, load_full_clone_pool, resolve_control_plane_root, slot_by_id
 from roadmap_claim_next import CLAIMS_FILE
 from task_closeout import assess_live_closeout
 from task_coordination_lease import (
@@ -82,8 +82,16 @@ def _close_roadmap_claim_if_present(root, task: dict[str, Any]) -> None:
         dump_yaml(claims_path, claims)
 
 
+def _refresh_candidate_cache_if_needed(root, task: dict[str, Any]) -> None:
+    if not task.get("roadmap_candidate_id"):
+        return
+    from roadmap_candidate_maintainer import refresh_once
+
+    refresh_once(root)
+
+
 def cmd_new(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     tasks = registry.setdefault("tasks", [])
     if any(task["task_id"] == args.task_id for task in tasks):
@@ -179,7 +187,7 @@ def _activate_coordination_task(root, registry: dict, worktrees: dict, task: dic
 
 
 def cmd_activate(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
@@ -219,7 +227,7 @@ def cmd_activate(args: argparse.Namespace) -> int:
 
 
 def cmd_queue_and_activate(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
@@ -274,7 +282,7 @@ def cmd_queue_and_activate(args: argparse.Namespace) -> int:
 
 
 def cmd_pause(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
@@ -320,7 +328,7 @@ def cmd_pause(args: argparse.Namespace) -> int:
 
 
 def cmd_close(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
@@ -389,6 +397,7 @@ def cmd_close(args: argparse.Namespace) -> int:
         append_resume_notes=True,
     )
     _close_roadmap_claim_if_present(root, task)
+    _refresh_candidate_cache_if_needed(root, task)
     release_coordination_lease(root, task, reason="close")
     sync_task_artifacts(root, registry, touched_task_ids)
     record_session_event(
@@ -429,7 +438,7 @@ def _close_command_lease(
 
 
 def cmd_can_start(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     task, _, worktrees = resolve_query_task(root, args.task_id)
     current = load_current_task(root)
     if current.get("current_task_id") is None:
@@ -448,7 +457,7 @@ def cmd_can_start(args: argparse.Namespace) -> int:
 
 
 def cmd_can_close(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     task, _, _ = resolve_query_task(root, args.task_id)
     if task["status"] in {"queued", "paused", "blocked"}:
         raise GovernanceError("task cannot close from queued/paused/blocked state")
@@ -460,7 +469,7 @@ def cmd_can_close(args: argparse.Namespace) -> int:
 
 
 def cmd_sync(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     if args.write:
         sync_task_artifacts(root, registry)
@@ -482,7 +491,7 @@ def _coerce_reconciled_value(key: str, value: str):
 
 
 def cmd_reconcile_ledgers(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
@@ -600,7 +609,7 @@ LIVE_TASK_FILE_STATUSES = {"doing", "paused", "review", "blocked"}
 
 
 def cmd_derive_ledgers(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     current_task = load_current_task(root)
@@ -791,7 +800,7 @@ def _derive_ledgers_from_task_file(
 
 
 def cmd_split_check(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     task_policy = load_task_policy(root)
     tasks = [
@@ -809,7 +818,7 @@ def cmd_split_check(args: argparse.Namespace) -> int:
 
 
 def cmd_decide_topology(args: argparse.Namespace) -> int:
-    root = find_repo_root()
+    root = resolve_control_plane_root()
     registry = load_task_registry(root)
     task_policy = load_task_policy(root)
     task = find_task(registry["tasks"], args.task_id)

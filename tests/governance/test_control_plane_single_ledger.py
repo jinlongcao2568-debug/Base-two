@@ -1,0 +1,205 @@
+from __future__ import annotations
+
+from pathlib import Path
+import subprocess
+import sys
+
+from .helpers import TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, set_idle_control_plane, write_yaml
+from .test_roadmap_claim_promotion import _stage_candidate
+from .test_roadmap_candidate_index import _candidate, _write_backlog
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+import governance_console as console  # noqa: E402
+
+
+def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
+    write_yaml(
+        repo / "docs/governance/FULL_CLONE_POOL.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "control_plane_root": str(repo).replace("\\", "/"),
+            "slots": [
+                {
+                    "slot_id": "worker-01",
+                    "path": str(clone_path).replace("\\", "/"),
+                    "branch": "codex/worker-01-idle",
+                    "idle_branch": "codex/worker-01-idle",
+                    "status": "ready",
+                    "current_task_id": None,
+                    "last_provisioned_at": None,
+                    "last_claimed_at": None,
+                    "last_released_at": None,
+                }
+            ],
+        },
+    )
+
+
+def _clone_repo(repo: Path, clone_path: Path) -> None:
+    git_commit_all(repo, "prepare full clone worker slot")
+    subprocess.run(["git", "clone", "--local", str(repo), str(clone_path)], check=True, capture_output=True, text=True)
+
+
+def _dependent_stage1_candidate(candidate_id: str, *, priority: int) -> dict:
+    candidate = _candidate(candidate_id, status="waiting", priority=priority, depends_on=["stage1-core-contract"])
+    candidate["title"] = "Stage1 source-family integration gate"
+    candidate["lane_type"] = "integration_gate"
+    candidate["allowed_dirs"] = ["src/stage1_orchestration/source_families/cn/"]
+    candidate["planned_write_paths"] = ["src/stage1_orchestration/source_families/cn/"]
+    return candidate
+
+
+def test_clone_governance_writes_redirect_to_main_control_plane(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+    clone_pool = clone_path / "docs/governance/FULL_CLONE_POOL.yaml"
+    if clone_pool.exists():
+        clone_pool.unlink()
+    _write_backlog(
+        repo,
+        [
+            _stage_candidate("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"]),
+            _dependent_stage1_candidate("stage1-source-family-cn", priority=110),
+        ],
+    )
+
+    promoted = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "claim-next",
+        "--promote-task",
+        "--dispatch-target",
+        "full_clone",
+        "--full-clone-slot-id",
+        "worker-01",
+        "--window-id",
+        "worker-01",
+    )
+    finished = run_python(
+        TASK_OPS_SCRIPT,
+        clone_path,
+        "worker-finish",
+        "TASK-RM-STAGE1-CORE-CONTRACT",
+        "--summary",
+        "review ready",
+        "--tests",
+        "pytest tests/stage1 -q",
+    )
+    closed = run_python(TASK_OPS_SCRIPT, clone_path, "close-ready-execution-tasks")
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+    claims = read_yaml(repo / ".codex/local/roadmap_candidates/claims.yaml")
+    index = read_yaml(repo / ".codex/local/roadmap_candidates/index.yaml")
+    clone_registry = read_yaml(clone_path / "docs/governance/TASK_REGISTRY.yaml")
+    stage1_task = next(task for task in registry["tasks"] if task["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT")
+    slot = pool["slots"][0]
+    by_id = {candidate["candidate_id"]: candidate for candidate in index["candidates"]}
+
+    assert promoted.returncode == 0, promoted.stdout + promoted.stderr
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    assert closed.returncode == 0, closed.stdout + closed.stderr
+    assert stage1_task["status"] == "done"
+    assert slot["status"] == "ready"
+    assert slot["current_task_id"] is None
+    assert claims["claims"][0]["status"] == "closed"
+    assert by_id["stage1-source-family-cn"]["status"] == "ready"
+    assert all(task["task_id"] != "TASK-RM-STAGE1-CORE-CONTRACT" for task in clone_registry["tasks"])
+
+
+def test_console_detects_ledger_divergence_and_marks_candidate(monkeypatch, tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    clone_path.mkdir(parents=True, exist_ok=True)
+    _write_backlog(
+        repo,
+        [_stage_candidate("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])],
+    )
+    run_python(TASK_OPS_SCRIPT, repo, "plan-roadmap-candidates")
+    _write_full_clone_pool(repo, clone_path)
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+            "title": "Stage1 orchestration contract and fixture boundary",
+            "status": "paused",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage1",
+            "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "idle",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-08T00:00:00+08:00",
+            "topology": "single_task",
+            "allowed_dirs": ["src/stage1_orchestration/"],
+            "reserved_paths": ["src/stage6_facts/"],
+            "planned_write_paths": ["src/stage1_orchestration/"],
+            "planned_test_paths": ["tests/stage1/"],
+            "required_tests": ["pytest tests/stage1 -q"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "roadmap_candidate_id": "stage1-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    write_yaml(
+        repo / ".codex/local/roadmap_candidates/claims.yaml",
+        {
+            "version": "0.1",
+            "claims": [
+                {
+                    "candidate_id": "stage1-core-contract",
+                    "status": "taken_over",
+                    "formal_task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                }
+            ],
+        },
+    )
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+    pool["slots"][0]["status"] = "active"
+    pool["slots"][0]["current_task_id"] = "TASK-RM-STAGE1-CORE-CONTRACT"
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [
+                {
+                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "status": "done",
+                    "roadmap_candidate_id": "stage1-core-contract",
+                }
+            ],
+        },
+    )
+
+    monkeypatch.setattr(console, "_repo_root", lambda: repo)
+    divergences = console._ledger_divergences(repo)
+    payload = console._cached_pool_payload()
+    row = payload["visible_candidates"][0]
+
+    assert len(divergences) == 1
+    assert divergences[0]["candidate_id"] == "stage1-core-contract"
+    assert divergences[0]["main_status"] == "paused"
+    assert divergences[0]["clone_status"] == "done"
+    assert payload["summary"]["ledger_divergence_count"] == 1
+    assert row["ledger_divergence"]["slot_id"] == "worker-01"
+    assert row["copy_instruction"] == "先修复主控制面与工作树台账分叉，再继续判断、续接或接单。"
+    assert "主控制面" in row["operator_reason"]

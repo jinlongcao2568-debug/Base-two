@@ -1,0 +1,41 @@
+task_id: TASK-GOV-064
+summary_status: done
+last_handoff_at: '2026-04-09T11:07:00+08:00'
+completed_items:
+- Enforced control-plane root for lifecycle writes across task/runtime/worktree/claim/closeout entrypoints.
+- Added ledger divergence detection and surfaced it in the console and candidate review payloads.
+- Blocked claim-next on ledger divergence to prevent clone-only progression.
+remaining_items: []
+next_step: Task closed; no further action required.
+next_tests:
+- pytest tests/governance -q
+- python scripts/check_repo.py
+current_risks:
+- check_repo fails when idle with dirty paths; rerun after committing or activating the next task.
+candidate_write_paths:
+- docs/governance/CONTROL_PLANE_SINGLE_LEDGER_PRINCIPLES.md
+- docs/governance/tasks/TASK-GOV-064.md
+- docs/governance/runlogs/TASK-GOV-064-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-064.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/FULL_CLONE_POOL.yaml
+- .codex/local/roadmap_candidates/claims.yaml
+- scripts/task_runtime_ops.py
+- scripts/task_lifecycle_ops.py
+- scripts/task_worker_ops.py
+- scripts/task_coordination_ops.py
+- scripts/task_worktree_ops.py
+- scripts/roadmap_claim_next.py
+- scripts/roadmap_execution_closeout.py
+- scripts/full_clone_pool.py
+- scripts/roadmap_candidate_maintainer.py
+- scripts/review_candidate_pool.py
+- scripts/control_plane_root.py
+- scripts/governance_console.py
+- tests/governance/
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Handoff recorded after closure.

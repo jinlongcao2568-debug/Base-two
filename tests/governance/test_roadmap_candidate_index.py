@@ -74,12 +74,16 @@ def _candidate(
     depends_on: list[str] | None = None,
     candidate_kind: str = "lane_slice",
     claimable: bool = True,
+    stage: str = "stage2",
+    allow_create_paths: bool = True,
+    pilot_only: bool = False,
+    coverage_regions: list[str] | None = None,
 ) -> dict:
     scope_path = f"src/governance_test/{candidate_id}/"
-    return {
+    payload = {
         "candidate_id": candidate_id,
         "title": candidate_id,
-        "stage": "stage1",
+        "stage": stage,
         "module_id": "stage1_orchestration",
         "candidate_kind": candidate_kind,
         "claimable": claimable,
@@ -95,6 +99,8 @@ def _candidate(
         "planned_write_paths": [scope_path],
         "planned_test_paths": ["tests/governance/"],
         "required_tests": ["python scripts/check_repo.py"],
+        "allow_create_paths": allow_create_paths,
+        "pilot_only": pilot_only,
         "branch_template": "codex/{task_id}",
         "worktree_template": "../AX9.worktrees/{task_id}",
         "integration_gate": None,
@@ -112,6 +118,9 @@ def _candidate(
             "out_of_scope_dirty_policy": "block_for_human_decision",
         },
     }
+
+    payload["coverage_regions"] = coverage_regions if coverage_regions is not None else ["CN"]
+    return payload
 
 
 def _write_backlog(repo: Path, candidates: list[dict]) -> None:
@@ -146,7 +155,7 @@ def test_plan_roadmap_candidates_derives_ready_waiting_and_controlled_statuses(t
         repo,
         [
             _candidate("stage1-core-contract", status="planned", priority=100),
-            _candidate("stage1-source-family-lanes", status="waiting", priority=110, depends_on=["stage1-core-contract"]),
+            _candidate("stage1-source-family-cn", status="waiting", priority=110, depends_on=["stage1-core-contract"]),
             _candidate("stage1-blocked-lane", status="blocked", priority=120),
             _candidate("stage1-claimed-lane", status="claimed", priority=130),
             _candidate("stage1-stale-lane", status="stale", priority=140),
@@ -160,7 +169,7 @@ def test_plan_roadmap_candidates_derives_ready_waiting_and_controlled_statuses(t
     assert index["candidate_count"] == 5
     assert index["ready_candidate_ids"] == ["stage1-core-contract"]
     assert index["fresh_claimable_candidate_ids"] == ["stage1-core-contract"]
-    assert _candidate_by_id(index, "stage1-source-family-lanes")["status"] == "waiting"
+    assert _candidate_by_id(index, "stage1-source-family-cn")["status"] == "waiting"
     assert _candidate_by_id(index, "stage1-blocked-lane")["status"] == "blocked"
     assert _candidate_by_id(index, "stage1-claimed-lane")["status"] == "claimed"
     assert _candidate_by_id(index, "stage1-stale-lane")["status"] == "stale"
@@ -173,7 +182,7 @@ def test_plan_roadmap_candidates_unlocks_dependency_after_candidate_done(tmp_pat
         repo,
         [
             _candidate("stage1-core-contract", status="done", priority=100),
-            _candidate("stage1-source-family-lanes", status="waiting", priority=110, depends_on=["stage1-core-contract"]),
+            _candidate("stage1-source-family-cn", status="waiting", priority=110, depends_on=["stage1-core-contract"]),
         ],
     )
 
@@ -182,8 +191,8 @@ def test_plan_roadmap_candidates_unlocks_dependency_after_candidate_done(tmp_pat
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert _candidate_by_id(index, "stage1-core-contract")["status"] == "done"
-    assert _candidate_by_id(index, "stage1-source-family-lanes")["status"] == "ready"
-    assert _candidate_by_id(index, "stage1-source-family-lanes")["wait_reasons"] == []
+    assert _candidate_by_id(index, "stage1-source-family-cn")["status"] == "ready"
+    assert _candidate_by_id(index, "stage1-source-family-cn")["wait_reasons"] == []
 
 
 def test_plan_roadmap_candidates_marks_expired_promoted_claim_as_takeover_not_ready(tmp_path: Path) -> None:
