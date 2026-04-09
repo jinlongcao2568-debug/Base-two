@@ -1,7 +1,7 @@
 version: '1.0'
-updated_at: '2026-04-09T14:35:01+08:00'
+updated_at: '2026-04-09T15:31:56+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
-status: blocked
+status: active
 root_path: D:/Base One/Base-two/AX9.clones
 control_plane_root: D:/Base One/Base-two/AX9
 slot_status_values:
@@ -24,88 +24,88 @@ slots:
 - slot_id: worker-02
   path: D:/Base One/Base-two/AX9.clones/worker-02
   branch: codex/worker-02-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-02-idle
-  blocked_reason: stale-mirror freeze pending control-plane rebuild
-  stale_runtime: true
-  last_provisioned_at: '2026-04-08T10:00:59+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:29:35+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-03
   path: D:/Base One/Base-two/AX9.clones/worker-03
   branch: codex/worker-03-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-03-idle
-  blocked_reason: stale-mirror freeze pending control-plane rebuild
-  stale_runtime: true
-  last_provisioned_at: '2026-04-08T10:01:00+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:29:46+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-04
   path: D:/Base One/Base-two/AX9.clones/worker-04
   branch: codex/worker-04-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-04-idle
-  blocked_reason: stale-mirror freeze pending committed control-plane rollout
-  stale_runtime: true
-  last_provisioned_at: '2026-04-09T14:32:24+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:29:56+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-05
   path: D:/Base One/Base-two/AX9.clones/worker-05
   branch: codex/worker-05-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-05-idle
-  blocked_reason: stale-mirror freeze pending control-plane rebuild
-  stale_runtime: true
-  last_provisioned_at: '2026-04-08T10:01:07+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:30:06+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-06
   path: D:/Base One/Base-two/AX9.clones/worker-06
   branch: codex/worker-06-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-06-idle
-  blocked_reason: stale-mirror freeze pending control-plane rebuild
-  stale_runtime: true
-  last_provisioned_at: '2026-04-08T10:01:11+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:30:17+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-07
   path: D:/Base One/Base-two/AX9.clones/worker-07
   branch: codex/worker-07-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-07-idle
-  blocked_reason: stale-mirror freeze pending control-plane rebuild
-  stale_runtime: true
-  last_provisioned_at: '2026-04-08T10:01:15+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:30:27+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-08
   path: D:/Base One/Base-two/AX9.clones/worker-08
   branch: codex/worker-08-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-08-idle
-  blocked_reason: stale-mirror freeze pending committed control-plane rollout
-  stale_runtime: true
-  last_provisioned_at: '2026-04-09T14:35:01+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:30:38+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-09
   path: D:/Base One/Base-two/AX9.clones/worker-09
   branch: codex/worker-09-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-09-idle
-  blocked_reason: stale-mirror freeze pending committed control-plane rollout
-  stale_runtime: true
-  last_provisioned_at: '2026-04-09T14:32:53+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T15:30:48+08:00'
   last_claimed_at: null
   last_released_at: null
