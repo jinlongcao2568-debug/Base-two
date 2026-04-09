@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-09T20:52:47+08:00'
-revision: 3
+updated_at: '2026-04-09T20:58:11+08:00'
+revision: 7
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -15,3 +15,16 @@ leases:
   started_at: '2026-04-09T20:41:24+08:00'
   heartbeat_at: '2026-04-09T20:52:47+08:00'
   closed_at: '2026-04-09T20:52:47+08:00'
+- lease_id: lease-task-gov-077-control-plane-main
+  task_id: TASK-GOV-077
+  task_kind: coordination
+  stage: governance-transactional-write-lock-v1
+  branch: codex/TASK-GOV-077-write-lock-and-revision-guard
+  candidate_id: null
+  executor_id: control-plane-main
+  executor_type: control_plane
+  status: closed
+  owner_session_id: 019d71c6-a58a-7af1-9126-49880b901b46
+  started_at: '2026-04-09T20:53:47+08:00'
+  heartbeat_at: '2026-04-09T20:58:11+08:00'
+  closed_at: '2026-04-09T20:58:11+08:00'

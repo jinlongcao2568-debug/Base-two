@@ -4,9 +4,18 @@ import argparse
 from contextlib import contextmanager
 import os
 from pathlib import Path
+import uuid
 
+import control_plane_root as control_plane_root_module
+import full_clone_pool as full_clone_pool_module
+import governance_lib as governance_lib_module
+import roadmap_claim_next as roadmap_claim_next_module
+import task_lifecycle_ops as task_lifecycle_ops_module
+import task_rendering as task_rendering_module
+import task_worker_ops as task_worker_ops_module
+import task_worktree_ops as task_worktree_ops_module
 from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError, configure_utf8_stdio
-from control_plane_root import resolve_control_plane_root
+from control_plane_root import CLAIMS_FILE, EXECUTION_LEASES_FILE, FULL_CLONE_POOL_FILE, resolve_control_plane_root
 from task_publish_ops import (
     PUBLISH_ACTIONS,
     cmd_checkpoint_task_results,
@@ -85,6 +94,61 @@ LOCAL_EXECUTION_COMMANDS = {
     "worker-self-loop-once",
     "worker-self-loop-loop",
 }
+CONTROL_PLANE_WRITE_LOCK_FILE = Path(".codex/local/governance_runtime/control_plane_write.lock")
+CONTROL_PLANE_WRITE_STATE_FILE = Path(".codex/local/governance_runtime/control_plane_write_state.yaml")
+GOVERNANCE_WRITE_COMMANDS = {
+    "new",
+    "queue-and-activate",
+    "activate",
+    "pause",
+    "close",
+    "sync",
+    "reconcile-ledgers",
+    "derive-ledgers",
+    "decide-topology",
+    "claim-next",
+    "handoff",
+    "release",
+    "takeover",
+    "close-ready-execution-tasks",
+    "provision-full-clone-pool",
+    "refresh-full-clone-pool",
+    "rebuild-full-clone-pool",
+    "prewarm-worktree-pool",
+    "prepare-child-execution",
+    "worktree-create",
+    "worktree-release",
+    "cleanup-orphans",
+    "worker-start",
+    "worker-report",
+    "worker-blocked",
+    "worker-finish",
+    "worker-design-confirm",
+    "worker-plan",
+    "worker-test-first",
+    "worker-spec-review",
+    "worker-quality-review",
+    "worker-heartbeat",
+    "auto-close-children",
+}
+REVISION_TRACKED_FILES = (
+    Path("docs/governance/CURRENT_TASK.yaml"),
+    Path("docs/governance/TASK_REGISTRY.yaml"),
+    Path("docs/governance/WORKTREE_REGISTRY.yaml"),
+    EXECUTION_LEASES_FILE,
+    CLAIMS_FILE,
+    FULL_CLONE_POOL_FILE,
+)
+ATOMIC_DUMP_MODULES = (
+    governance_lib_module,
+    control_plane_root_module,
+    full_clone_pool_module,
+    roadmap_claim_next_module,
+    task_lifecycle_ops_module,
+    task_rendering_module,
+    task_worker_ops_module,
+    task_worktree_ops_module,
+)
 
 
 def _ensure_control_plane_only(command_name: str) -> None:
@@ -92,6 +156,124 @@ def _ensure_control_plane_only(command_name: str) -> None:
     control_root = resolve_control_plane_root(current)
     if current != control_root:
         raise GovernanceError(f"{command_name} must run from the main control plane; clone-side {command_name} is frozen")
+
+
+def control_plane_write_state_defaults() -> dict[str, object]:
+    return {
+        "version": "1.0",
+        "updated_at": None,
+        "revision": 0,
+        "last_writer": None,
+    }
+
+
+def load_control_plane_write_state(root: Path) -> dict[str, object]:
+    path = root / CONTROL_PLANE_WRITE_STATE_FILE
+    if not path.exists():
+        return control_plane_write_state_defaults()
+    payload = governance_lib_module.load_yaml(path) or {}
+    merged = control_plane_write_state_defaults()
+    merged.update(payload)
+    merged["revision"] = int(merged.get("revision") or 0)
+    return merged
+
+
+def validate_control_plane_write_revision(root: Path, expected_revision: int) -> dict[str, object]:
+    payload = load_control_plane_write_state(root)
+    actual_revision = int(payload.get("revision") or 0)
+    if actual_revision != expected_revision:
+        raise GovernanceError(
+            f"governance revision mismatch: expected {expected_revision}, actual {actual_revision}"
+        )
+    return payload
+
+
+def _atomic_dump_yaml(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.parent / f".{path.name}.tmp-{uuid.uuid4().hex}"
+    try:
+        with temp_path.open("w", encoding="utf-8", newline="\n") as handle:
+            import yaml
+
+            yaml.safe_dump(data, handle, allow_unicode=True, sort_keys=False)
+        os.replace(temp_path, path)
+    finally:
+        try:
+            if temp_path.exists():
+                temp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+@contextmanager
+def _patched_atomic_dump_yaml():
+    originals: list[tuple[object, object]] = []
+    for module in ATOMIC_DUMP_MODULES:
+        if not hasattr(module, "dump_yaml"):
+            continue
+        originals.append((module, getattr(module, "dump_yaml")))
+        setattr(module, "dump_yaml", _atomic_dump_yaml)
+    try:
+        yield
+    finally:
+        for module, original in originals:
+            setattr(module, "dump_yaml", original)
+
+
+def _command_writes_control_plane(args: argparse.Namespace) -> bool:
+    command = getattr(args, "command", None)
+    if command not in GOVERNANCE_WRITE_COMMANDS:
+        return False
+    if command in {"sync", "reconcile-ledgers", "derive-ledgers"}:
+        return bool(getattr(args, "write", False))
+    if command == "claim-next":
+        return bool(getattr(args, "write_claim", False) or getattr(args, "promote_task", False))
+    return True
+
+
+@contextmanager
+def _control_plane_write_lock(root: Path, command_name: str):
+    lock_path = root / CONTROL_PLANE_WRITE_LOCK_FILE
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError as error:
+        owner = ""
+        if lock_path.exists():
+            owner = (lock_path.read_text(encoding="utf-8") or "").strip()
+        detail = f": {owner}" if owner else ""
+        raise GovernanceError(f"governance write lock already held{detail}") from error
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(f"command={command_name}\npid={os.getpid()}\nacquired_at={governance_lib_module.iso_now()}\n")
+        yield
+    finally:
+        try:
+            lock_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+@contextmanager
+def _governance_write_transaction(args: argparse.Namespace):
+    if not _command_writes_control_plane(args):
+        yield
+        return
+    root = Path.cwd().resolve()
+    with _control_plane_write_lock(root, str(getattr(args, "command", "unknown"))):
+        state = load_control_plane_write_state(root)
+        expected_revision = int(state.get("revision") or 0)
+        with _patched_atomic_dump_yaml():
+            yield
+        validate_control_plane_write_revision(root, expected_revision)
+        updated_state = dict(state)
+        updated_state["revision"] = expected_revision + 1
+        updated_state["updated_at"] = governance_lib_module.iso_now()
+        updated_state["last_writer"] = {
+            "command": getattr(args, "command", None),
+            "pid": os.getpid(),
+        }
+        _atomic_dump_yaml(root / CONTROL_PLANE_WRITE_STATE_FILE, updated_state)
 
 
 def _cmd_close_ready_execution_tasks(args: argparse.Namespace) -> int:
@@ -517,7 +699,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         with _command_root(args):
-            return args.func(args)
+            with _governance_write_transaction(args):
+                return args.func(args)
     except GovernanceError as error:
         print(f"[ERROR] {error}")
         return 1

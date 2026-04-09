@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T20:52:47+08:00'
+updated_at: '2026-04-09T20:58:11+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1141,6 +1141,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-076-concurrent-execution-lease-ledger
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-077
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-077-write-lock-and-revision-guard
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

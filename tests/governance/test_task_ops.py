@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
+
+import pytest
 
 from .helpers import (
     CHECK_REPO_SCRIPT,
@@ -14,6 +17,18 @@ from .helpers import (
     write_yaml,
 )
 from .scenario_builders import create_review_ready_child
+
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+from governance_lib import GovernanceError  # noqa: E402
+from task_runtime_ops import (  # noqa: E402
+    CONTROL_PLANE_WRITE_LOCK_FILE,
+    CONTROL_PLANE_WRITE_STATE_FILE,
+    validate_control_plane_write_revision,
+)
 
 
 def test_pause_moves_active_task_to_paused(tmp_path: Path) -> None:
@@ -98,6 +113,46 @@ def test_activate_from_paused_refreshes_control_plane_execution_lease(tmp_path: 
     assert registry["tasks"][0]["status"] == "doing"
     assert leases["leases"][0]["executor_id"] == "control-plane-main"
     assert leases["leases"][0]["status"] == "running"
+
+
+def test_governance_write_lock_rejects_conflicting_writer(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    lock_path = repo / CONTROL_PLANE_WRITE_LOCK_FILE
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path.write_text("command=pause\npid=999\nacquired_at=2026-04-09T21:10:00+08:00\n", encoding="utf-8")
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "pause")
+
+    assert result.returncode == 1
+    assert "governance write lock already held" in result.stdout
+
+
+def test_governance_write_state_revision_advances_after_mutation(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "pause")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    state = read_yaml(repo / CONTROL_PLANE_WRITE_STATE_FILE)
+
+    assert state["revision"] == 1
+    assert state["last_writer"]["command"] == "pause"
+
+
+def test_validate_control_plane_write_revision_rejects_stale_revision(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    write_yaml(
+        repo / CONTROL_PLANE_WRITE_STATE_FILE,
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-09T21:15:00+08:00",
+            "revision": 3,
+            "last_writer": {"command": "pause", "pid": 123},
+        },
+    )
+
+    with pytest.raises(GovernanceError, match="governance revision mismatch"):
+        validate_control_plane_write_revision(repo, 2)
 
 
 def test_new_task_templates_include_narrative_assertions(tmp_path: Path) -> None:
