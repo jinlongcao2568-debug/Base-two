@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-067`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-control-plane-full-clone-runtime-hardening-v2`
 - `branch`: `codex/TASK-GOV-067-full-clone-runtime-hardening`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -34,21 +34,20 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-067`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-control-plane-full-clone-runtime-hardening-v2`
 - `branch`: `codex/TASK-GOV-067-full-clone-runtime-hardening`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`

@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T13:31:31+08:00'
+updated_at: '2026-04-09T15:50:12+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -3419,7 +3419,7 @@ tasks:
   closed_at: '2026-04-08T17:29:55+08:00'
 - task_id: TASK-GOV-063
   title: Governance console refresh, localization, and action verification
-  status: doing
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -3427,9 +3427,9 @@ tasks:
   branch: codex/TASK-GOV-063-console-refresh-no-window-fix
   size_class: standard
   automation_mode: manual
-  worker_state: running
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-09T13:10:29+08:00'
+  last_reported_at: '2026-04-09T15:50:12+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -3490,7 +3490,7 @@ tasks:
   successor_state: backlog
   created_at: '2026-04-08T17:37:43+08:00'
   activated_at: '2026-04-08T17:37:44+08:00'
-  closed_at: null
+  closed_at: '2026-04-09T15:50:12+08:00'
 - task_id: TASK-GOV-065
   title: MVP scope and coverage hard-gate alignment
   status: done
@@ -3684,7 +3684,7 @@ tasks:
   closed_at: '2026-04-09T11:07:00+08:00'
 - task_id: TASK-GOV-067
   title: Control-plane full-clone runtime hardening and stale-mirror containment
-  status: queued
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -3692,9 +3692,9 @@ tasks:
   branch: codex/TASK-GOV-067-full-clone-runtime-hardening
   size_class: heavy
   automation_mode: manual
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-09T13:31:31+08:00'
+  last_reported_at: '2026-04-09T15:48:06+08:00'
   topology: single_worker
   allowed_dirs:
   - docs/governance/
@@ -3760,5 +3760,5 @@ tasks:
   review_bundle_status: not_applicable
   successor_state: immediate
   created_at: '2026-04-09T13:31:31+08:00'
-  activated_at: null
-  closed_at: null
+  activated_at: '2026-04-09T15:46:30+08:00'
+  closed_at: '2026-04-09T15:48:06+08:00'

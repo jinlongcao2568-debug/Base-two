@@ -1,6 +1,6 @@
 ---
-current_phase: governance-console-refresh-fix-v1
-current_task_id: TASK-GOV-063
+current_phase: idle
+current_task_id: null
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -36,7 +36,7 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Task
 
-- `TASK-GOV-063`: `Governance console refresh, localization, and action verification` is the live coordination task for `governance-console-refresh-fix-v1`.
+- no live current task; waiting for explicit activation or roadmap continuation.
 ## Recently Closed
 
 - `TASK-GOV-066`: enforced compiled-only candidate source and added path/pilot gates for roadmap evaluation.

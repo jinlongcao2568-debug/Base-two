@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T13:10:29+08:00'
+updated_at: '2026-04-09T15:50:12+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -945,7 +945,7 @@ entries:
   parent_task_id: null
   branch: codex/TASK-GOV-063-console-refresh-no-window-fix
   path: D:/Base One/Base-two/AX9
-  status: active
+  status: closed
   cleanup_state: not_needed
   cleanup_attempts: 0
   last_cleanup_error: null
@@ -974,6 +974,16 @@ entries:
   work_mode: execution
   parent_task_id: null
   branch: codex/TASK-GOV-066-candidate-source-gate
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-067
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-067-full-clone-runtime-hardening
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

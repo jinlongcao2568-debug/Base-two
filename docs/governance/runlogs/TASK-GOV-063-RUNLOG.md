@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-GOV-063`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-console-refresh-fix-v1`
 - `branch`: `codex/TASK-GOV-063-console-refresh-no-window-fix`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -20,24 +20,26 @@
 
 ## Test Log
 
-- to-be-filled
+- `pytest tests/governance/test_governance_console.py -q` -> passed
+- `pytest tests/governance/test_control_plane_single_ledger.py -q` -> passed
+- `python scripts/check_repo.py` -> failed during ledger repair because governance closeout files were intentionally dirty outside checkpoint scope
 
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-GOV-063`
-- `status`: `doing`
+- `status`: `done`
 - `stage`: `governance-console-refresh-fix-v1`
 - `branch`: `codex/TASK-GOV-063-console-refresh-no-window-fix`
-- `worker_state`: `running`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
