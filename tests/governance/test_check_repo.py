@@ -14,6 +14,7 @@ from .helpers import (
     read_yaml,
     run_python,
     set_idle_control_plane,
+    write_mvp_scope,
     write_roadmap,
     write_yaml,
 )
@@ -279,6 +280,24 @@ def test_check_repo_fails_when_business_policy_is_invalid(tmp_path: Path) -> Non
     result = run_python(CHECK_REPO_SCRIPT, repo)
     assert result.returncode == 1
     assert "business_automation_scope" in result.stdout
+
+
+def test_check_repo_fails_when_mvp_scope_mismatches_business_automation_scope(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
+    roadmap = roadmap.replace("business_automation_enabled: false", "business_automation_enabled: true", 1)
+    (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+    write_mvp_scope(
+        repo,
+        scope="stage2_to_stage6",
+        included_stages=["stage2", "stage3", "stage4", "stage5", "stage6"],
+        excluded_stages=["stage1", "stage7", "stage8", "stage9"],
+    )
+
+    result = run_python(CHECK_REPO_SCRIPT, repo)
+
+    assert result.returncode == 1
+    assert "scope mismatch" in result.stdout
 
 
 def test_check_repo_fails_when_task_file_status_drifts(tmp_path: Path) -> None:

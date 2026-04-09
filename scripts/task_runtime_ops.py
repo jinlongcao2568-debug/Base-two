@@ -75,7 +75,6 @@ from task_worktree_ops import (
 )
 
 LOCAL_EXECUTION_COMMANDS = {
-    "claim-next",
     "close-ready-execution-tasks",
     "checkpoint-task-results",
     "commit-task-results",

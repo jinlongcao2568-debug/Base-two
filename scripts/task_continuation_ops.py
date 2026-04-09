@@ -97,7 +97,7 @@ def _read_roadmap_state(root):
     return read_roadmap(root)
 
 
-def _load_continuation_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
+def _load_continuation_policy(root, frontmatter: dict[str, Any]) -> dict[str, Any]:
     policy = {
         "advance_mode": frontmatter.get("advance_mode"),
         "auto_create_missing_task": frontmatter.get("auto_create_missing_task"),
@@ -120,7 +120,7 @@ def _load_continuation_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(policy["business_automation_enabled"], bool):
         raise GovernanceError("roadmap business_automation_enabled must be a boolean")
     if policy["business_automation_enabled"]:
-        load_business_policy(frontmatter)
+        load_business_policy(frontmatter, root=root)
     return policy
 
 
@@ -451,7 +451,7 @@ def _resolve_roadmap_successor(
     frontmatter: dict[str, Any],
     current_task_id: str | None,
 ):
-    policy = _load_continuation_policy(frontmatter)
+    policy = _load_continuation_policy(root, frontmatter)
     successor = _resolve_explicit_successor(registry, frontmatter, current_task_id)
     if successor is not None:
         return successor, "explicit"
@@ -871,7 +871,7 @@ def _resolve_roadmap_successor(
     frontmatter: dict[str, Any],
     current_task_id: str | None,
 ):
-    policy = _load_continuation_policy(frontmatter)
+    policy = _load_continuation_policy(root, frontmatter)
     explicit_successor, stale_explicit_id = _resolve_explicit_successor(registry, frontmatter, current_task_id)
     if explicit_successor is not None:
         return explicit_successor, "explicit"

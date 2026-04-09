@@ -13,6 +13,7 @@ from .helpers import (
     run_python_inline as run_python,
     set_live_task_review_without_evidence,
     set_idle_control_plane,
+    write_mvp_scope,
     write_yaml,
 )
 
@@ -156,6 +157,14 @@ def _enable_business_autopilot(repo: Path, *, include_downstream: bool = False) 
     roadmap = roadmap.replace("  stage5: not_established", "  stage5: bootstrap_required", 1)
     roadmap = roadmap.replace("  stage6: not_established", "  stage6: implementation_ready", 1)
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap, encoding="utf-8")
+
+
+def _set_business_scope(repo: Path, scope: str) -> None:
+    roadmap_path = repo / "docs/governance/DEVELOPMENT_ROADMAP.md"
+    roadmap = roadmap_path.read_text(encoding="utf-8")
+    for current in ("stage1_to_stage9", "stage1_to_stage6", "stage2_to_stage6"):
+        roadmap = roadmap.replace(f"business_automation_scope: {current}", f"business_automation_scope: {scope}")
+    roadmap_path.write_text(roadmap, encoding="utf-8")
 
 
 def test_continue_current_keeps_live_task_when_doing(tmp_path: Path) -> None:
@@ -648,6 +657,13 @@ def test_continue_roadmap_blocks_stage7_successor_until_downstream_capability_is
 def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_is_implemented(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     _enable_business_autopilot(repo, include_downstream=True)
+    _set_business_scope(repo, "stage1_to_stage9")
+    write_mvp_scope(
+        repo,
+        scope="stage1_to_stage9",
+        included_stages=["stage1", "stage2", "stage3", "stage4", "stage5", "stage6", "stage7", "stage8", "stage9"],
+        excluded_stages=[],
+    )
     roadmap = (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").read_text(encoding="utf-8")
     for stage_id in ("stage1", "stage2", "stage3", "stage4", "stage5", "stage6"):
         roadmap = roadmap.replace(f"  {stage_id}: bootstrap_required", f"  {stage_id}: implemented")
@@ -665,6 +681,23 @@ def test_continue_roadmap_generates_stage7_successor_when_downstream_capability_
     assert result.returncode == 0, result.stdout + result.stderr
     assert parent["topology"] == "parallel_parent"
     assert [child["module_id"] for child in children] == ["stage7_sales"]
+
+
+def test_continue_roadmap_fails_fast_when_mvp_scope_mismatches_business_scope(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    _enable_business_autopilot(repo)
+    write_mvp_scope(
+        repo,
+        scope="stage2_to_stage6",
+        included_stages=["stage2", "stage3", "stage4", "stage5", "stage6"],
+        excluded_stages=["stage1", "stage7", "stage8", "stage9"],
+    )
+    _mark_current_review_ready(repo)
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "continue-roadmap")
+
+    assert result.returncode == 1
+    assert "scope mismatch" in result.stdout
 
 
 def test_continue_roadmap_caps_business_children_at_four(tmp_path: Path) -> None:

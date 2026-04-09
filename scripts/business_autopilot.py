@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import re
 from typing import Any
 
@@ -13,6 +14,7 @@ from governance_lib import (
     task_required_tests_for_matrix,
     validate_task,
 )
+from roadmap_scope_policy import ensure_mvp_scope_matches_business_scope
 
 
 BUSINESS_AUTOPILOT_CAPABILITY_ID = "stage1_to_stage6_business_automation"
@@ -150,7 +152,7 @@ def _stage_capability_allows(stage_id: str, capability_map: dict[str, Any]) -> b
     return _downstream_capability_enabled(capability_map)
 
 
-def load_business_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
+def load_business_policy(frontmatter: dict[str, Any], *, root: Path | None = None) -> dict[str, Any]:
     scope = frontmatter.get("business_automation_scope")
     parallel_strategy = frontmatter.get("parallel_strategy")
     max_parallel_workers = frontmatter.get("max_parallel_workers")
@@ -159,6 +161,8 @@ def load_business_policy(frontmatter: dict[str, Any]) -> dict[str, Any]:
     stage_establishment = frontmatter.get("stage_establishment")
     if scope not in BUSINESS_SCOPE_VALUES:
         raise GovernanceError("roadmap business_automation_scope is missing or invalid")
+    if root is not None:
+        ensure_mvp_scope_matches_business_scope(root, scope)
     if parallel_strategy not in PARALLEL_STRATEGY_VALUES:
         raise GovernanceError("roadmap parallel_strategy is missing or invalid")
     if max_parallel_workers is not None and (not isinstance(max_parallel_workers, int) or max_parallel_workers < 1):
@@ -450,7 +454,7 @@ def build_business_successor_round(root, registry: dict[str, Any], task_policy: 
     from governance_lib import read_roadmap
 
     frontmatter, _ = read_roadmap(root)
-    policy = load_business_policy(frontmatter)
+    policy = load_business_policy(frontmatter, root=root)
     capability_map = load_capability_map(root)
     parent_blueprint = _find_blueprint(task_policy, BUSINESS_PARENT_BLUEPRINT_ID)
     lane_ceiling = dynamic_lane_ceiling(task_policy)

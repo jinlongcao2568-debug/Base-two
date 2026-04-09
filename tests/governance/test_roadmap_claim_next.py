@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 
-from .helpers import TASK_OPS_SCRIPT, read_yaml, run_python, set_idle_control_plane, write_yaml, init_governance_repo
+from .helpers import TASK_OPS_SCRIPT, read_yaml, run_python, set_idle_control_plane, write_mvp_scope, write_yaml, init_governance_repo
 from .test_roadmap_candidate_index import _candidate, _write_backlog
 
 
@@ -280,7 +280,7 @@ def test_claim_next_obeys_roadmap_claim_capacity_not_runner_lane_ceiling(tmp_pat
     assert "roadmap claim capacity reached (1/1)" in second.stdout
 
 
-def test_claim_next_rejects_clone_side_invocation(tmp_path: Path) -> None:
+def test_claim_next_from_clone_side_task_ops_resolves_control_plane_truth(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
     clone_path = tmp_path / "clone-worker-01"
@@ -290,8 +290,25 @@ def test_claim_next_rejects_clone_side_invocation(tmp_path: Path) -> None:
 
     result = run_python(TASK_OPS_SCRIPT, clone_path, "claim-next")
 
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "candidate_id=stage1-core-contract" in result.stdout
+
+
+def test_claim_next_fails_fast_when_mvp_scope_mismatches_business_automation_scope(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+    write_mvp_scope(
+        repo,
+        scope="stage2_to_stage6",
+        included_stages=["stage2", "stage3", "stage4", "stage5", "stage6"],
+        excluded_stages=["stage1", "stage7", "stage8", "stage9"],
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "claim-next")
+
     assert result.returncode == 1
-    assert "clone-side claim-next is frozen" in result.stdout
+    assert "scope mismatch" in result.stdout
 
 
 def test_claim_next_blocks_ready_full_clone_slot_with_live_runtime_drift(tmp_path: Path) -> None:

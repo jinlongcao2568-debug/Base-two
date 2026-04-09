@@ -5,8 +5,6 @@ from pathlib import Path
 import re
 from typing import Any
 
-import yaml
-
 from governance_lib import (
     EXECUTION_CONTEXT_FILE,
     GovernanceError,
@@ -22,12 +20,12 @@ from governance_lib import (
 from child_execution_flow import transient_child_paths
 from governance_runtime import read_roadmap
 from roadmap_candidate_compiler import COMPILED_GRAPH_FILE, GRAPH_VERSION
+from roadmap_scope_policy import ensure_mvp_scope_matches_business_scope
 
 
 ROADMAP_BACKLOG_FILE = Path("docs/governance/ROADMAP_BACKLOG.yaml")
 ROADMAP_BACKLOG_SCHEMA_FILE = Path("docs/governance/ROADMAP_BACKLOG_SCHEMA.yaml")
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
-MVP_SCOPE_FILE = Path("docs/product/MVP_SCOPE.md")
 REGION_COVERAGE_REGISTRY_FILE = Path("docs/contracts/region_coverage_registry.yaml")
 SOURCE_REGISTRY_FILE = Path("docs/contracts/sources_registry.yaml")
 
@@ -147,29 +145,6 @@ def _load_yaml_map(path: Path, *, missing_ok: bool = False) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise GovernanceError(f"expected mapping payload: {path.as_posix()}")
     return payload
-
-
-def _read_frontmatter(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        raise GovernanceError(f"missing required frontmatter file: {path.as_posix()}")
-    text = path.read_text(encoding="utf-8")
-    match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
-    if not match:
-        raise GovernanceError(f"frontmatter missing or malformed: {path.as_posix()}")
-    return yaml.safe_load(match.group(1)) or {}
-
-
-def _load_mvp_policy(root: Path) -> dict[str, Any]:
-    frontmatter = _read_frontmatter(root / MVP_SCOPE_FILE)
-    scope = str(frontmatter.get("mvp_scope") or "").strip()
-    included = [str(stage) for stage in (frontmatter.get("included_stages") or []) if stage]
-    if included:
-        allowed = set(included)
-    elif scope == "stage2_to_stage6":
-        allowed = {"stage2", "stage3", "stage4", "stage5", "stage6"}
-    else:
-        raise GovernanceError("MVP scope frontmatter is missing or invalid")
-    return {"scope": scope or "custom", "allowed_stages": allowed}
 
 
 def _load_sellable_regions(root: Path) -> set[str]:
@@ -816,10 +791,14 @@ class CandidateEvaluator:
         declared_status = str(candidate.get("status"))
         claimable_declared = bool(candidate.get("claimable", True))
         effective_status = declared_status
+        scope_blocked = "out_of_mvp_scope" in reason_codes and primary_task is None
         if declared_status in TERMINAL_STATUSES:
             claimable = False
         elif primary_task is not None and primary_task.get("status") == "done":
             effective_status = "done"
+            claimable = False
+        elif scope_blocked:
+            effective_status = "blocked"
             claimable = False
         elif takeover_mode != "none":
             effective_status = "stale"
@@ -949,7 +928,8 @@ def evaluate_roadmap_candidates(root: Path, *, now: datetime | None = None) -> d
     backlog_with_candidates = dict(backlog)
     backlog_with_candidates["candidates"] = candidate_source
     candidates = _validate_backlog_shape(backlog_with_candidates, schema)
-    mvp_policy = _load_mvp_policy(root)
+    roadmap_frontmatter, _ = read_roadmap(root)
+    mvp_policy = ensure_mvp_scope_matches_business_scope(root, roadmap_frontmatter.get("business_automation_scope"))
     scope_policy = {
         "mvp_scope": mvp_policy["scope"],
         "mvp_stage_ids": mvp_policy["allowed_stages"],

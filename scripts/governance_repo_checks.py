@@ -142,7 +142,7 @@ def _validate_idle_worktree_state(worktrees: dict[str, Any]) -> None:
         raise GovernanceError(f"idle current state cannot keep active coordination worktrees: {task_ids}")
 
 
-def _validate_roadmap_policy(roadmap_frontmatter: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]]) -> None:
+def _validate_roadmap_policy(root, roadmap_frontmatter: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]]) -> None:
     if roadmap_frontmatter.get("advance_mode") not in ROADMAP_ADVANCE_MODES:
         raise GovernanceError("roadmap advance_mode is missing or invalid")
     if not isinstance(roadmap_frontmatter.get("auto_create_missing_task"), bool):
@@ -159,7 +159,7 @@ def _validate_roadmap_policy(roadmap_frontmatter: dict[str, Any], tasks_by_id: d
     if not isinstance(roadmap_frontmatter.get("business_automation_enabled"), bool):
         raise GovernanceError("roadmap business_automation_enabled must be a boolean")
     if roadmap_frontmatter.get("business_automation_enabled"):
-        load_business_policy(roadmap_frontmatter)
+        load_business_policy(roadmap_frontmatter, root=root)
     next_task_id = roadmap_frontmatter.get("next_recommended_task_id")
     if next_task_id is not None and next_task_id not in tasks_by_id:
         raise GovernanceError("roadmap next_recommended_task_id missing from registry")
@@ -167,7 +167,7 @@ def _validate_roadmap_policy(roadmap_frontmatter: dict[str, Any], tasks_by_id: d
 
 def _validate_roadmap_alignment(root, current_state: dict[str, Any], tasks_by_id: dict[str, dict[str, Any]]) -> None:
     roadmap_frontmatter, roadmap_body = read_roadmap(root)
-    _validate_roadmap_policy(roadmap_frontmatter, tasks_by_id)
+    _validate_roadmap_policy(root, roadmap_frontmatter, tasks_by_id)
     if is_idle_current_payload(current_state):
         if roadmap_frontmatter.get("current_task_id") is not None:
             raise GovernanceError("roadmap current_task_id mismatch for idle current state")
