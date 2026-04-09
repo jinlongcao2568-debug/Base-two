@@ -51,6 +51,23 @@
 
 任务包若不存在，可以先起草任务包，但不得跳过任务包直接写代码。
 
+### 3.1 Windows / PowerShell 检索约定
+
+- 在 Windows / PowerShell 环境中做全文检索、查引用或定位字段时，优先使用 `scripts/search.ps1`；
+- 不要直接假设 `rg` 可执行，也不要默认手写裸 `Get-ChildItem ... | Select-String`；
+- `scripts/search.ps1` 负责统一处理 `rg` 可执行、`rg` 被执行环境阻断，以及 PowerShell fallback；
+- 若 `Get-Command rg` 可发现但执行失败，必须表述为“`rg` 在当前代理执行环境中不可执行”，不得表述为“系统中不存在 `rg`”；
+- 默认调用方式：
+  - `powershell -ExecutionPolicy Bypass -File .\scripts\search.ps1 -Pattern "claim-next"`
+
+### 3.2 本机开发工具偏好
+
+- 本机已安装并优先可用的标准工具包括：`rg`、`fd`、`jq`、`yq`、`delta`、`bat`、`fzf`、`uv`、`pnpm`、`eza`；
+- 查文本 / 查引用优先 `scripts/search.ps1` 或 `rg`；查文件优先 `fd`；查 JSON / YAML 优先 `jq` / `yq`；
+- 查看 diff / patch / blame 时，允许直接使用已配置好的 `delta`；
+- 上述工具属于开发效率增强工具，不等于仓库正式运行时依赖；未经任务明确要求，不得把它们写成生产脚本、CI 或正式契约的唯一前提；
+- 不要依赖用户 PowerShell profile 中的自定义 alias / function 作为唯一入口；仓库内应优先使用显式命令或仓库脚本。
+
 ## 4. 核心硬约束
 
 ### 4.1 阶段约束
