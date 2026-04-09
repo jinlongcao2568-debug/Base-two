@@ -1,0 +1,44 @@
+task_id: TASK-GOV-070
+summary_status: done
+last_handoff_at: '2026-04-09T17:21:55+08:00'
+completed_items:
+- Added a Python-based governance console launcher that performs service reachability
+  checks, starts governance_console.py with --no-browser, and opens the extensionless
+  dedicated browser app window.
+- Reduced governance_console_launcher.vbs to a compatibility bridge and updated the
+  desktop AX9 Governance Console shortcut to target pythonw.exe with governance_console_launcher.py
+  directly, removing wscript from the normal click path.
+- Extended governance console launcher regression tests to cover the Python launcher
+  command construction, local profile isolation, and VBS bridge behavior.
+- Verified through direct shortcut startup and full refresh-cycle monitoring that
+  the AX9 launcher tree did not create descendant cmd/conhost/powershell/wscript/python
+  popup processes while the console remained reachable on 127.0.0.1:8765.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- pytest tests/governance/test_governance_console.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-070.md
+- docs/governance/tasks/
+- docs/governance/runlogs/TASK-GOV-070-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-070.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
+- docs/governance/WORKTREE_REGISTRY.yaml
+- scripts/governance_console_launcher.py
+- scripts/governance_console_launcher.vbs
+- tests/governance/test_governance_console.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
+- Implementation complete; awaiting can-close/close from the control plane.
+- 'Worker finish summary: Replaced the desktop entry path with pythonw-driven launcher
+  code and verified the AX9 governance console startup plus full auto-refresh window
+  no longer create popup-capable descendant cmd/conhost/wscript processes inside the
+  AX9 process tree.'
+- Task closed.

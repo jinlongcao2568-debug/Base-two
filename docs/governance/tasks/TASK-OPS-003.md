@@ -90,5 +90,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/`
 - `branch`: `feat/TASK-OPS-003-ledger-residual-cleanup`
-- `updated_at`: `2026-04-09T17:03:35+08:00`
+- `updated_at`: `2026-04-09T17:21:54+08:00`
 <!-- generated:task-meta:end -->

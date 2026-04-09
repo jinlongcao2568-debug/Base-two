@@ -84,7 +84,7 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-AUTO-001-automation-control-plane`
-- `updated_at`: `2026-04-09T17:02:25+08:00`
+- `updated_at`: `2026-04-09T17:21:54+08:00`
 <!-- generated:task-meta:end -->
 
 ## Narrative Assertions

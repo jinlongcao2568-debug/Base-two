@@ -1,13 +1,13 @@
-# TASK-GOV-044 Roadmap worktree pool dispatch
+# TASK-GOV-070 Governance console popup eradication and safe launcher containment
 
 ## Task Baseline
 
-- `task_id`: `TASK-GOV-044`
+- `task_id`: `TASK-GOV-070`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `status`: `done`
-- `stage`: `governance-roadmap-worktree-pool-dispatch-v1`
-- `branch`: `codex/TASK-GOV-044-roadmap-worktree-pool-dispatch`
+- `stage`: `governance-console-popup-eradication-v1`
+- `branch`: `codex/TASK-GOV-070-console-popup-eradication`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
@@ -19,46 +19,44 @@
 - `successor_state`: `backlog`
 ## Primary Goals
 
-- Add a tracked `WORKTREE_POOL.yaml` registry for fixed worker slots.
-- Allocate promoted roadmap tasks from idle pool slots instead of ad-hoc paths.
-- Block promotion when no idle pool slot is available.
-- Release pool slots back to `idle` when execution worktrees are released.
+- Identify the exact process chain that still produces visible black popup windows when the desktop AX9 governance console shortcut is clicked or left running.
+- Eliminate popup-generating launcher behavior without breaking the governance console service, local `127.0.0.1:8765` UI, or operator shortcut workflow.
+- Keep the final launcher path auditable and regression-tested so future console starts and auto-refresh cycles remain popup-free.
 
 ## Explicitly Not Doing
 
-- Do not change business code under `src/`, contracts, migrations, stage6 facts behavior, or customer-visible outputs.
-- Do not add more than the default tracked pool definition and dispatch logic.
-- Do not bypass the existing execution worktree validation rules.
+- Do not change candidate pool logic, governance task actions, refresh cadence semantics, or any Stage1-Stage9 business behavior.
+- Do not modify contracts, database migrations, customer-visible delivery outputs, or any non-console runtime outside the launcher containment scope.
+- Do not perform global uninstall or policy changes for third-party security software; only contain its effect on the AX9 console entry path if needed.
 
 ## Allowed Dirs
 
-- `.codex/local/roadmap_candidates/`
 - `docs/governance/`
 - `scripts/`
 - `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
-- `.codex/local/roadmap_candidates/`
-- `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
+- `docs/governance/tasks/TASK-GOV-070.md`
+- `docs/governance/tasks/`
+- `docs/governance/runlogs/TASK-GOV-070-RUNLOG.md`
+- `docs/governance/handoffs/TASK-GOV-070.yaml`
+- `docs/governance/CURRENT_TASK.yaml`
+- `docs/governance/TASK_REGISTRY.yaml`
+- `docs/governance/DEVELOPMENT_ROADMAP.md`
+- `docs/governance/WORKTREE_REGISTRY.yaml`
+- `scripts/governance_console_launcher.py`
+- `scripts/governance_console_launcher.vbs`
+- `tests/governance/test_governance_console.py`
 
 ## Planned Test Paths
 
 - `tests/governance/`
-- `tests/automation/`
 
 ## Required Tests
 
-- `pytest tests/governance/test_worktree_pool_dispatch.py -q`
-- `pytest tests/governance/test_roadmap_claim_promotion.py -q`
-- `pytest tests/governance/test_roadmap_takeover.py -q`
+- `pytest tests/governance/test_governance_console.py -q`
 - `python scripts/check_repo.py`
-- `python scripts/check_hygiene.py src docs tests`
-- `python scripts/check_authority_alignment.py`
 
 ## Reserved Paths
 
@@ -101,6 +99,6 @@
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
-- `branch`: `codex/TASK-GOV-044-roadmap-worktree-pool-dispatch`
-- `updated_at`: `2026-04-09T17:21:54+08:00`
+- `branch`: `codex/TASK-GOV-070-console-popup-eradication`
+- `updated_at`: `2026-04-09T17:21:56+08:00`
 <!-- generated:task-meta:end -->

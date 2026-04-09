@@ -9,6 +9,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 import governance_console as console  # noqa: E402
+import governance_console_launcher as launcher  # noqa: E402
 
 
 def test_render_index_html_contains_core_controls() -> None:
@@ -100,18 +101,27 @@ def test_start_console_respects_no_browser_on_new_server(monkeypatch) -> None:
     assert opened == []
 
 
-def test_launcher_script_starts_background_service_before_opening_page() -> None:
+def test_launcher_script_delegates_to_python_launcher() -> None:
     launcher = (ROOT / "scripts" / "governance_console_launcher.vbs").read_text(encoding="utf-8")
-    assert "--no-browser" in launcher
-    assert "http://127.0.0.1:8765/" in launcher
-    assert "WinHttp.WinHttpRequest.5.1" in launcher
-    assert "If Not IsConsoleReachable(ConsoleUrl) Then" in launcher
-    assert "LaunchConsoleWindow ConsoleUrl" in launcher
-    assert "--app=" in launcher
-    assert "--disable-extensions" in launcher
-    assert "--disable-component-extensions-with-background-pages" in launcher
-    assert "--user-data-dir=" in launcher
-    assert "DetectBrowserPath()" in launcher
+    assert "governance_console_launcher.py" in launcher
+    assert "pythonw.exe" in launcher
+    assert "shell.Run Quote(PythonwPath) & \" \" & Quote(LauncherScript), 0, False" in launcher
+
+
+def test_python_launcher_builds_extensionless_browser_command() -> None:
+    browser = Path("C:/Program Files/Google/Chrome/Application/chrome.exe")
+    profile = Path("C:/Users/test/AppData/Local/AX9/GovernanceConsoleBrowser")
+    command = launcher.build_browser_command(browser, "http://127.0.0.1:8765/", profile)
+    assert command[0] == str(browser)
+    assert "--app=http://127.0.0.1:8765/" in command
+    assert f"--user-data-dir={profile}" in command
+    assert "--disable-extensions" in command
+    assert "--disable-component-extensions-with-background-pages" in command
+
+
+def test_python_launcher_uses_ax9_local_profile_dir(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    assert launcher.browser_profile_dir() == tmp_path / "AX9" / "GovernanceConsoleBrowser"
 
 
 def test_translate_candidate_title_to_chinese() -> None:

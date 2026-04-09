@@ -82,5 +82,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/`
 - `branch`: `feat/TASK-OPS-002-worker01-recovery`
-- `updated_at`: `2026-04-09T17:02:25+08:00`
+- `updated_at`: `2026-04-09T17:21:54+08:00`
 <!-- generated:task-meta:end -->
