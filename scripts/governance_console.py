@@ -1079,7 +1079,7 @@ def _render_script_block() -> str:
     const ACTION_LABELS = {action_labels};
     const AUTO_REFRESH_FOREGROUND_MS = {AUTO_REFRESH_FOREGROUND_SECONDS * 1000};
     const AUTO_REFRESH_BACKGROUND_MS = {AUTO_REFRESH_BACKGROUND_SECONDS * 1000};
-    const AUTO_REFRESH_FOREGROUND_DEFAULT = false;
+    const AUTO_REFRESH_FOREGROUND_DEFAULT = true;
     const FOREGROUND_AUTO_REFRESH_STORAGE_KEY = 'ax9.console.foregroundAutoRefresh';
     let currentCandidateId = new URL(window.location.href).searchParams.get('candidate_id') || '';
     let currentDetailMode = 'candidate';
@@ -1089,6 +1089,7 @@ def _render_script_block() -> str:
     let focusInitialized = false;
     let foregroundAutoRefreshEnabled = readForegroundAutoRefreshEnabled();
     window.__candidateRows = {{}};
+    window.__lastPoolRenderSignature = '';
     window.__lastCopiedShortcut = '';
     window.__lastFeedback = null;
     window.__lastPoolPayload = null;
@@ -1193,7 +1194,8 @@ def _render_script_block() -> str:
         return;
       }}
       autoRefreshTimer = window.setTimeout(() => {{
-        loadAll(null, true).catch(() => {{}});
+        const refreshPromise = document.hidden ? loadAll(null, true) : refreshVisiblePool();
+        refreshPromise.catch(() => {{}});
       }}, intervalMs);
     }}
 
@@ -1365,6 +1367,27 @@ def _render_script_block() -> str:
       banner.innerHTML = `<strong>检测到 ${{divergences.length}} 条账本分叉</strong><span>先修复主控制面与工作树状态，再判断接单、续接和自动释放。${{preview ? ` ${{preview}}${{extra}}` : ''}}</span>`;
     }}
 
+    function buildPoolRenderSignature(pool) {{
+      const summary = pool.summary || {{}};
+      return JSON.stringify({{
+        generated_at: summary.generated_at || null,
+        candidate_count: summary.candidate_count ?? null,
+        fresh_claimable_count: summary.fresh_claimable_count ?? null,
+        takeover_claimable_count: summary.takeover_claimable_count ?? null,
+        parallelism_deficit: summary.parallelism_deficit ?? null,
+        divergence_count: (pool.ledger_divergences || []).length,
+        visible_candidates: (pool.visible_candidates || []).map((row) => [
+          row.candidate_id,
+          row.status,
+          row.unlock_count,
+          row.claimable,
+          row.fresh_claimable,
+          row.takeover_claimable,
+          row.operator_reason,
+        ]),
+      }});
+    }}
+
     function renderPool(pool) {{
       const summary = pool.summary || {{}};
       metric('candidate_count', summary.candidate_count);
@@ -1508,6 +1531,21 @@ def _render_script_block() -> str:
       document.getElementById('action_output').textContent = [`动作：${{label}}`, `命令：${{(payload.argv || []).join(' ')}}`, `返回码：${{payload.returncode}}`, '', stdout, '', stderr].join('\\n');
     }}
 
+    async function refreshVisiblePool() {{
+      try {{
+        const payload = await fetchJson('/api/pool');
+        renderRuntimeSignals(payload);
+        const signature = buildPoolRenderSignature(payload);
+        if (signature !== window.__lastPoolRenderSignature) {{
+          window.__lastPoolRenderSignature = signature;
+          renderPool(payload);
+          renderPoolSnapshot(payload);
+        }}
+      }} finally {{
+        scheduleAutoRefresh();
+      }}
+    }}
+
     async function loadAll(triggerButton = null, quietError = false) {{
       if (triggerButton) {{
         setBusyState(triggerButton, true, '刷新中…');
@@ -1515,6 +1553,7 @@ def _render_script_block() -> str:
       }}
       try {{
         const payload = await fetchJson('/api/pool');
+        window.__lastPoolRenderSignature = buildPoolRenderSignature(payload);
         renderPool(payload);
         renderRuntimeSignals(payload);
         renderPoolSnapshot(payload);

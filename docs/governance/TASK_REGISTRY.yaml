@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T17:48:11+08:00'
+updated_at: '2026-04-09T18:34:11+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4095,3 +4095,117 @@ tasks:
   created_at: '2026-04-09T17:37:58+08:00'
   activated_at: '2026-04-09T17:37:59+08:00'
   closed_at: '2026-04-09T17:48:11+08:00'
+- task_id: TASK-GOV-072
+  title: Candidate pool stale-claim cleanup and governance test hygiene remediation
+  status: done
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-candidate-pool-hygiene-remediation-v1
+  branch: codex/TASK-GOV-072-candidate-pool-hygiene-remediation
+  size_class: standard
+  automation_mode: manual
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-09T18:34:11+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/governance/
+  - scripts/
+  - tests/governance/
+  - tests/automation/
+  - .codex/local/roadmap_candidates/
+  reserved_paths:
+  - src/
+  - docs/contracts/
+  - db/migrations/
+  - README.md
+  - tests/contracts/
+  - tests/integration/
+  - tests/stage1/
+  - tests/stage2/
+  - tests/stage3/
+  - tests/stage4/
+  - tests/stage5/
+  - tests/stage6/
+  - tests/stage7/
+  - tests/stage8/
+  - tests/stage9/
+  planned_write_paths:
+  - docs/governance/tasks/TASK-GOV-072.md
+  - docs/governance/runlogs/TASK-GOV-072-RUNLOG.md
+  - docs/governance/handoffs/TASK-GOV-072.yaml
+  - docs/governance/CURRENT_TASK.yaml
+  - docs/governance/TASK_REGISTRY.yaml
+  - docs/governance/DEVELOPMENT_ROADMAP.md
+  - docs/governance/FULL_CLONE_POOL.yaml
+  - docs/governance/WORKTREE_REGISTRY.yaml
+  - .codex/local/roadmap_candidates/claims.yaml
+  - scripts/review_candidate_pool.py
+  - scripts/task_lifecycle_ops.py
+  - tests/governance/
+  - tests/automation/
+  planned_test_paths:
+  - tests/governance/
+  required_tests:
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  - pytest tests/governance/test_review_candidate_pool.py -q
+  - pytest tests/governance/test_control_plane_single_ledger.py -q
+  - pytest tests/governance/test_full_clone_pool.py -q
+  - pytest tests/governance/test_task_continuation.py tests/governance/test_task_continuation_business.py
+    -q
+  - pytest tests/governance/test_task_ops_worktree_runtime.py -q
+  - pytest tests/governance/test_task_ops_worktree_runtime.py::test_review_candidate_pool_from_clone_cwd_reads_control_plane_truth
+    -q
+  task_file: docs/governance/tasks/TASK-GOV-072.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-072-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: backlog
+  created_at: '2026-04-09T17:56:45+08:00'
+  activated_at: '2026-04-09T17:56:45+08:00'
+  closed_at: '2026-04-09T18:34:11+08:00'
+- task_id: TASK-RM-STAGE2-CORE-CONTRACT
+  title: Stage2 ingestion contract and raw payload fixture boundary
+  status: done
+  task_kind: execution
+  execution_mode: isolated_worktree
+  parent_task_id: null
+  stage: stage2
+  branch: codex/TASK-RM-STAGE2-CORE-CONTRACT-stage2-core-contract
+  size_class: standard
+  automation_mode: manual
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-09T18:15:27+08:00'
+  topology: single_task
+  allowed_dirs:
+  - src/stage2_ingestion/
+  - tests/stage2/
+  reserved_paths:
+  - docs/governance/
+  - tests/integration/
+  - docs/governance/INTERFACE_CATALOG.yaml
+  protected_paths: []
+  planned_write_paths:
+  - src/stage2_ingestion/
+  - tests/stage2/
+  planned_test_paths:
+  - tests/stage2/
+  required_tests:
+  - pytest tests/stage2 -q
+  task_file: docs/governance/tasks/TASK-RM-STAGE2-CORE-CONTRACT.md
+  runlog_file: docs/governance/runlogs/TASK-RM-STAGE2-CORE-CONTRACT-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: pending
+  successor_state: null
+  created_at: '2026-04-09T18:08:21+08:00'
+  activated_at: '2026-04-09T18:08:21+08:00'
+  closed_at: '2026-04-09T18:15:27+08:00'
+  roadmap_candidate_id: stage2-core-contract
+  integration_gate: stage2-integration-gate

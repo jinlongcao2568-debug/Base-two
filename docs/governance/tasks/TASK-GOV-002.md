@@ -87,5 +87,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-002-test-maintainability-hardening`
-- `updated_at`: `2026-04-09T17:48:10+08:00`
+- `updated_at`: `2026-04-09T18:03:36+08:00`
 <!-- generated:task-meta:end -->

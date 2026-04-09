@@ -1,0 +1,36 @@
+task_id: TASK-GOV-072
+summary_status: done
+last_handoff_at: '2026-04-09T18:34:11+08:00'
+completed_items: []
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- python scripts/check_repo.py
+- python scripts/check_hygiene.py src docs tests
+- pytest tests/governance/test_review_candidate_pool.py -q
+- pytest tests/governance/test_roadmap_execution_closeout.py -q
+- pytest tests/governance/test_control_plane_single_ledger.py -q
+- pytest tests/governance/test_task_continuation.py -q
+- pytest tests/governance/test_task_ops.py -q
+- pytest tests/automation/test_automation_runner.py -q
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-072.md
+- docs/governance/runlogs/TASK-GOV-072-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-072.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
+- docs/governance/WORKTREE_REGISTRY.yaml
+- .codex/local/roadmap_candidates/claims.yaml
+- scripts/review_candidate_pool.py
+- scripts/task_lifecycle_ops.py
+- tests/governance/
+- tests/automation/
+candidate_test_paths:
+- tests/governance/
+- tests/automation/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
+- Task closed.

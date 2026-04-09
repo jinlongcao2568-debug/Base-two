@@ -27,6 +27,13 @@ try:
         task_policy_payload,
         test_matrix_payload,
     )
+    from .governance_fixture_docs import (
+        write_coordination_planner_policy,
+        write_git_publish_policy,
+        write_handoff_policy,
+        write_live_governance_boundary,
+        write_prompt_governance_files,
+    )
     from .runtime_fixture_payloads import task_source_registry_payload, worker_registry_payload
 except ImportError:
     _AUTOMATION_FIXTURE_PATH = Path(__file__).with_name("automation_fixture_payloads.py")
@@ -50,6 +57,16 @@ except ImportError:
     roadmap_text = _FIXTURE_MODULE.roadmap_text
     task_policy_payload = _FIXTURE_MODULE.task_policy_payload
     test_matrix_payload = _FIXTURE_MODULE.test_matrix_payload
+    _GOV_DOCS_PATH = Path(__file__).with_name("governance_fixture_docs.py")
+    _GOV_DOCS_SPEC = importlib.util.spec_from_file_location("gov_fixture_docs", _GOV_DOCS_PATH)
+    _GOV_DOCS_MODULE = importlib.util.module_from_spec(_GOV_DOCS_SPEC)
+    assert _GOV_DOCS_SPEC is not None and _GOV_DOCS_SPEC.loader is not None
+    _GOV_DOCS_SPEC.loader.exec_module(_GOV_DOCS_MODULE)
+    write_coordination_planner_policy = _GOV_DOCS_MODULE.write_coordination_planner_policy
+    write_git_publish_policy = _GOV_DOCS_MODULE.write_git_publish_policy
+    write_handoff_policy = _GOV_DOCS_MODULE.write_handoff_policy
+    write_live_governance_boundary = _GOV_DOCS_MODULE.write_live_governance_boundary
+    write_prompt_governance_files = _GOV_DOCS_MODULE.write_prompt_governance_files
     _RUNTIME_FIXTURE_PATH = Path(__file__).with_name("runtime_fixture_payloads.py")
     _RUNTIME_FIXTURE_SPEC = importlib.util.spec_from_file_location("gov_runtime_fixture_payloads", _RUNTIME_FIXTURE_PATH)
     _RUNTIME_FIXTURE_MODULE = importlib.util.module_from_spec(_RUNTIME_FIXTURE_SPEC)
@@ -195,233 +212,6 @@ def run_python_inline(
 
 def _write_automation_intents_catalog(path: Path) -> None:
     write_yaml(path, automation_intents_payload())
-
-
-def _write_git_publish_policy(path: Path) -> None:
-    write_yaml(
-        path,
-        {
-            "version": "1.0",
-            "updated_at": "2026-04-05T00:00:00+08:00",
-            "authority_source": "docs/governance/OPERATOR_MANUAL.md",
-            "publish_mode": "explicit_on_demand_only",
-            "allowed_publish_statuses": ["review", "done"],
-            "default_remote": "origin",
-            "default_base_branch": "main",
-            "default_pr_mode": "draft",
-        },
-    )
-
-
-def _write_prompt_governance_files(root: Path) -> None:
-    _write_prompt_catalog(root)
-    _write_prompt_module_docs(root)
-
-
-def _write_coordination_planner_policy(path: Path) -> None:
-    path.write_text(
-        (
-            "version: '1.0'\n"
-            "updated_at: '2026-04-05T00:00:00+08:00'\n"
-            "authority_source: docs/governance/README.md\n"
-            "candidate_generation_mode: candidate_then_activate\n"
-            "candidate_output_dir: .codex/local/coordination_candidates/\n"
-            "allow_generated_blueprints_when_no_candidates: true\n"
-        ),
-        encoding="utf-8",
-    )
-
-
-def _write_prompt_catalog(root: Path) -> None:
-    (root / "docs/governance/PROMPT_MODULE_CATALOG.yaml").write_text(_prompt_catalog_text(), encoding="utf-8")
-
-
-def _prompt_catalog_text() -> str:
-    return "".join(
-        [
-            _prompt_catalog_header(),
-            _prompt_catalog_modules_section(),
-            _prompt_catalog_role_profiles_section(),
-            _prompt_catalog_policy_section(),
-            _prompt_catalog_runtime_profiles_section(),
-        ]
-    )
-
-
-def _prompt_catalog_header() -> str:
-    return (
-        "version: '1.0'\n"
-        "authority_source: docs/governance/README.md\n"
-        "source_root: docs/governance/prompt_modules/\n"
-    )
-
-
-def _prompt_catalog_modules_section() -> str:
-    return (
-        "modules:\n"
-        "  - module_id: boundary_first\n"
-        "    path: docs/governance/prompt_modules/boundary_first.md\n"
-        "    purpose: Define forbidden actions and scope boundaries before execution steps.\n"
-        "    roles:\n"
-        "      - coordinator\n"
-        "      - worker\n"
-        "      - reviewer\n"
-        "  - module_id: reporting_discipline\n"
-        "    path: docs/governance/prompt_modules/reporting_discipline.md\n"
-        "    purpose: Keep status reporting factual, bounded, and stop-aware.\n"
-        "    roles:\n"
-        "      - coordinator\n"
-        "      - worker\n"
-        "      - reviewer\n"
-        "  - module_id: tool_boundaries\n"
-        "    path: docs/governance/prompt_modules/tool_boundaries.md\n"
-        "    purpose: Bind tools to explicit scenarios and preserve auditability.\n"
-        "    roles:\n"
-        "      - worker\n"
-        "      - reviewer\n"
-        "  - module_id: role_overrides\n"
-        "    path: docs/governance/prompt_modules/role_overrides.md\n"
-        "    purpose: Add role-specific prompt overrides for coordinator, worker, and reviewer lanes.\n"
-        "    roles:\n"
-        "      - coordinator\n"
-        "      - worker\n"
-        "      - reviewer\n"
-    )
-
-
-def _prompt_catalog_role_profiles_section() -> str:
-    return (
-        "role_profiles:\n"
-        "  - role_id: coordinator\n"
-        "    modules:\n"
-        "      - boundary_first\n"
-        "      - reporting_discipline\n"
-        "      - role_overrides\n"
-        "    notes:\n"
-        "      - Resolve scope before execution.\n"
-        "      - Report blockers early.\n"
-        "      - Do not auto-expand into adjacent work.\n"
-        "  - role_id: worker\n"
-        "    modules:\n"
-        "      - boundary_first\n"
-        "      - tool_boundaries\n"
-        "      - role_overrides\n"
-        "    notes:\n"
-        "      - Stay inside allowed paths.\n"
-        "      - Read before editing.\n"
-        "      - Do not infer missing requirements.\n"
-        "  - role_id: reviewer\n"
-        "    modules:\n"
-        "      - boundary_first\n"
-        "      - reporting_discipline\n"
-        "      - tool_boundaries\n"
-        "      - role_overrides\n"
-        "    notes:\n"
-        "      - Default to finding gaps, not approving by inertia.\n"
-        "      - Keep review claims evidence-backed.\n"
-    )
-
-
-def _prompt_catalog_policy_section() -> str:
-    return (
-        "custom_instructions_policy:\n"
-        "  governance_source: repo_governance_only\n"
-        "  default_state: empty\n"
-        "  allowed_uses:\n"
-        "    - language preference\n"
-        "    - output style preference\n"
-        "  forbidden_uses:\n"
-        "    - task switching rules\n"
-        "    - successor selection rules\n"
-        "    - parallelism policy\n"
-        "    - closeout policy\n"
-        "    - scope or authority boundaries\n"
-    )
-
-
-def _prompt_catalog_runtime_profiles_section() -> str:
-    return (
-        "runtime_profiles:\n"
-        "  - profile_id: coordinator_profile\n"
-        "    role_id: coordinator\n"
-        "    output_path: docs/governance/runtime_prompts/coordinator.md\n"
-        "    mission:\n"
-        "      - Route tasks, validate boundaries, manage ledgers, and decide closeout gates.\n"
-        "      - Do not implement large feature work directly inside the coordinator lane.\n"
-        "  - profile_id: worker_profile\n"
-        "    role_id: worker\n"
-        "    output_path: docs/governance/runtime_prompts/worker.md\n"
-        "    mission:\n"
-        "      - Execute only inside the assigned task or lane scope.\n"
-        "      - Do not expand scope, invent interfaces, or perform opportunistic refactors.\n"
-        "  - profile_id: reviewer_profile\n"
-        "    role_id: reviewer\n"
-        "    output_path: docs/governance/runtime_prompts/reviewer.md\n"
-        "    mission:\n"
-        "      - Review for bugs, regressions, missing tests, and weak rollback stories.\n"
-        "      - Do not approve work by inertia or because a diff appears small.\n"
-    )
-
-
-def _write_prompt_module_docs(root: Path) -> None:
-    prompt_root = root / "docs/governance/prompt_modules"
-    prompt_root.mkdir(parents=True, exist_ok=True)
-    for relative_path, content in _prompt_module_files().items():
-        (prompt_root / relative_path).write_text(content, encoding="utf-8")
-
-
-def _prompt_module_files() -> dict[str, str]:
-    return {
-        "README.md": (
-            "# Prompt Modules\n\n"
-            "This directory is the governed prompt source of truth for AX9 automation roles.\n\n"
-            "Root-level scratch notes are not a live prompt source.\n"
-            "Historical task files, runlogs, handoffs, and registry rows are audit artifacts, not live prompt inputs.\n"
-        ),
-        "boundary_first.md": "# Boundary First\n\n- State forbidden actions before desired actions.\n",
-        "reporting_discipline.md": "# Reporting Discipline\n\n- Report facts before interpretation.\n",
-        "tool_boundaries.md": (
-            "# Tool Boundaries\n\n"
-            "- Match tools to scenarios instead of using every available tool by default.\n"
-        ),
-        "role_overrides.md": (
-            "# Role Overrides\n\n"
-            "## Coordinator\n\n"
-            "- Resolve ownership, scope, and next gate before assigning work.\n"
-        ),
-    }
-
-
-def _write_handoff_policy(path: Path) -> None:
-    path.write_text(
-        (
-            "version: '1.0'\n"
-            "updated_at: '2026-04-05T00:00:00+08:00'\n"
-            "authority_source: docs/governance/README.md\n"
-            "create_on_new_top_level_coordination_task: true\n"
-            "recovery_source_of_truth: docs/governance/handoffs/\n"
-            "fallback_mode: task_and_runlog\n"
-            "lease_mode: strict_lease\n"
-            "stale_after_minutes: 30\n"
-            "takeover_rules:\n"
-            "  - active_other_session_requires_explicit_takeover\n"
-            "  - stale_lease_allows_reclaim_on_continue_current\n"
-            "  - release_does_not_change_task_status\n"
-            "required_fields:\n"
-            "  - task_id\n"
-            "  - summary_status\n"
-            "  - last_handoff_at\n"
-            "  - completed_items\n"
-            "  - remaining_items\n"
-            "  - next_step\n"
-            "  - next_tests\n"
-            "  - current_risks\n"
-            "  - candidate_write_paths\n"
-            "  - candidate_test_paths\n"
-            "  - resume_notes\n"
-        ),
-        encoding="utf-8",
-    )
 
 
 def git_commit_all(repo: Path, message: str = "update") -> None:
@@ -606,30 +396,23 @@ def init_structure(repo: Path) -> None:
     )
 
 
-def write_governance_files(repo: Path) -> None:
-    task = base_task_payload()
+def _write_governance_catalogs(repo: Path) -> None:
     (repo / "docs/governance/DEVELOPMENT_ROADMAP.md").write_text(roadmap_text(), encoding="utf-8")
-    (repo / "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md").write_text(
-        (
-            "# Live Governance Boundary\n\n"
-            "`docs/governance/CURRENT_TASK.yaml` remains the only live execution entry.\n\n"
-            "Historical artifacts remain searchable for audit and recovery, but they are not the current default gate or prompt source.\n\n"
-            "- Closed task files, runlogs, handoffs, and registry rows must not redefine the current default governance gate.\n"
-            "- `docs/governance/TASK_REGISTRY.yaml` is a live ledger for task existence and state, but closed task rows and their `required_tests` remain historical audit evidence.\n"
-        ),
-        encoding="utf-8",
-    )
+    write_live_governance_boundary(repo / "docs/governance/LIVE_GOVERNANCE_BOUNDARY.md")
     (repo / "docs/governance/CODE_HYGIENE_POLICY.md").write_text("# Policy\n", encoding="utf-8")
     _write_automation_intents_catalog(repo / "docs/governance/AUTOMATION_INTENTS.yaml")
-    _write_git_publish_policy(repo / "docs/governance/GIT_PUBLISH_POLICY.yaml")
-    _write_handoff_policy(repo / "docs/governance/HANDOFF_POLICY.yaml")
-    _write_coordination_planner_policy(repo / "docs/governance/COORDINATION_PLANNER_POLICY.yaml")
-    _write_prompt_governance_files(repo)
+    write_git_publish_policy(repo / "docs/governance/GIT_PUBLISH_POLICY.yaml")
+    write_handoff_policy(repo / "docs/governance/HANDOFF_POLICY.yaml")
+    write_coordination_planner_policy(repo / "docs/governance/COORDINATION_PLANNER_POLICY.yaml")
+    write_prompt_governance_files(repo)
     write_yaml(repo / "docs/governance/MODULE_MAP.yaml", module_map_payload())
     write_yaml(repo / "docs/governance/TEST_MATRIX.yaml", test_matrix_payload())
     write_yaml(repo / "docs/governance/CAPABILITY_MAP.yaml", capability_map_payload())
     write_yaml(repo / "docs/governance/TASK_POLICY.yaml", task_policy_payload())
     write_yaml(repo / "docs/governance/TASK_SOURCE_REGISTRY.yaml", task_source_registry_payload())
+
+
+def _write_governance_ledgers(repo: Path, task: dict[str, Any]) -> None:
     worker_registry = worker_registry_payload()
     worker_registry["workers"][0]["last_heartbeat_at"] = "2026-04-04T00:00:00+08:00"
     write_yaml(repo / "docs/governance/WORKER_REGISTRY.yaml", worker_registry)
@@ -671,6 +454,9 @@ def write_governance_files(repo: Path) -> None:
             ],
         },
     )
+
+
+def _write_product_contract_fixtures(repo: Path) -> None:
     (repo / "docs/product").mkdir(parents=True, exist_ok=True)
     (repo / "docs/contracts").mkdir(parents=True, exist_ok=True)
     write_mvp_scope(
@@ -691,6 +477,13 @@ def write_governance_files(repo: Path) -> None:
             ],
         },
     )
+
+
+def write_governance_files(repo: Path) -> None:
+    task = base_task_payload()
+    _write_governance_catalogs(repo)
+    _write_governance_ledgers(repo, task)
+    _write_product_contract_fixtures(repo)
 
 
 def write_mvp_scope(repo: Path, *, scope: str, included_stages: list[str], excluded_stages: list[str]) -> None:

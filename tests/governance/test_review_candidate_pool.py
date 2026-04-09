@@ -76,6 +76,35 @@ def test_review_candidate_pool_reports_degraded_for_expired_promoted_claim(tmp_p
     assert payload["candidate_summary"]["ready_count"] == 0
 
 
+def test_review_candidate_pool_ignores_closed_claim_history(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate("stage1-core-contract", status="planned", priority=100)])
+    write_yaml(
+        repo / ".codex/local/roadmap_candidates/claims.yaml",
+        {
+            "version": "0.1",
+            "claims": [
+                {
+                    "candidate_id": "stage1-core-contract",
+                    "status": "closed",
+                    "formal_task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "expires_at": "2026-04-08T00:00:00+08:00",
+                    "closed_at": "2026-04-08T00:00:00+08:00",
+                }
+            ],
+        },
+    )
+
+    result = run_python(SCRIPT, repo)
+    payload = json.loads(result.stdout)
+
+    assert result.returncode == 0
+    assert payload["status"] == "ready"
+    assert payload["stale_claims"] == []
+    assert payload["candidate_summary"]["claim_status_counts"]["closed"] == 1
+
+
 def test_review_candidate_pool_is_ready_when_parallel_supply_is_sufficient(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)

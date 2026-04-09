@@ -95,5 +95,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `feat/TASK-GOV-016-local-multi-agent-dispatch`
-- `updated_at`: `2026-04-09T17:48:10+08:00`
+- `updated_at`: `2026-04-09T18:03:36+08:00`
 <!-- generated:task-meta:end -->

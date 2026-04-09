@@ -61,6 +61,93 @@ def _dependent_stage1_candidate(candidate_id: str, *, priority: int) -> dict:
     return candidate
 
 
+def _stage1_execution_task(*, status: str, worker_state: str, reserved_paths: list[str] | None = None) -> dict:
+    return {
+        "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+        "title": "Stage1 orchestration contract and fixture boundary",
+        "status": status,
+        "task_kind": "execution",
+        "execution_mode": "isolated_worktree",
+        "parent_task_id": None,
+        "stage": "stage1",
+        "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract",
+        "size_class": "standard",
+        "automation_mode": "manual",
+        "worker_state": worker_state,
+        "blocked_reason": None,
+        "last_reported_at": "2026-04-08T00:00:00+08:00",
+        "topology": "single_task",
+        "allowed_dirs": ["src/stage1_orchestration/"],
+        "reserved_paths": list(reserved_paths or []),
+        "planned_write_paths": ["src/stage1_orchestration/"],
+        "planned_test_paths": ["tests/stage1/"],
+        "required_tests": ["pytest tests/stage1 -q"],
+        "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
+        "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
+        "lane_count": 1,
+        "lane_index": None,
+        "parallelism_plan_id": None,
+        "review_bundle_status": "not_applicable",
+        "roadmap_candidate_id": "stage1-core-contract",
+    }
+
+
+def _append_stage1_execution_task(
+    repo: Path,
+    *,
+    status: str,
+    worker_state: str,
+    reserved_paths: list[str] | None = None,
+) -> None:
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        _stage1_execution_task(status=status, worker_state=worker_state, reserved_paths=reserved_paths)
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+
+
+def _write_stage1_claim(repo: Path, *, status: str) -> None:
+    write_yaml(
+        repo / ".codex/local/roadmap_candidates/claims.yaml",
+        {
+            "version": "0.1",
+            "claims": [
+                {
+                    "candidate_id": "stage1-core-contract",
+                    "status": status,
+                    "formal_task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                }
+            ],
+        },
+    )
+
+
+def _mark_slot_active(repo: Path, task_id: str) -> None:
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+    pool["slots"][0]["status"] = "active"
+    pool["slots"][0]["current_task_id"] = task_id
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+
+
+def _write_clone_stage1_registry(clone_path: Path, *, status: str, worker_state: str | None = None) -> None:
+    task = {
+        "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+        "status": status,
+        "roadmap_candidate_id": "stage1-core-contract",
+    }
+    if worker_state is not None:
+        task["task_kind"] = "execution"
+        task["worker_state"] = worker_state
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [task],
+        },
+    )
+
+
 def test_clone_governance_writes_redirect_to_main_control_plane(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
@@ -130,38 +217,7 @@ def test_detect_ledger_divergence_for_ready_slot_stale_mirror(tmp_path: Path) ->
     _write_full_clone_pool(repo, clone_path)
     _clone_repo(repo, clone_path)
 
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"].append(
-        {
-            "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
-            "title": "Stage1 orchestration contract and fixture boundary",
-            "status": "done",
-            "task_kind": "execution",
-            "execution_mode": "isolated_worktree",
-            "parent_task_id": None,
-            "stage": "stage1",
-            "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract",
-            "size_class": "standard",
-            "automation_mode": "manual",
-            "worker_state": "completed",
-            "blocked_reason": None,
-            "last_reported_at": "2026-04-08T00:00:00+08:00",
-            "topology": "single_task",
-            "allowed_dirs": ["src/stage1_orchestration/"],
-            "reserved_paths": [],
-            "planned_write_paths": ["src/stage1_orchestration/"],
-            "planned_test_paths": ["tests/stage1/"],
-            "required_tests": ["pytest tests/stage1 -q"],
-            "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
-            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
-            "lane_count": 1,
-            "lane_index": None,
-            "parallelism_plan_id": None,
-            "review_bundle_status": "not_applicable",
-            "roadmap_candidate_id": "stage1-core-contract",
-        }
-    )
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    _append_stage1_execution_task(repo, status="done", worker_state="completed")
     subprocess.run(
         ["git", "switch", "-c", "codex/TASK-RM-STAGE1-SOURCE-FAMILY-CN-stage1-source-family-cn"],
         cwd=clone_path,
@@ -169,22 +225,7 @@ def test_detect_ledger_divergence_for_ready_slot_stale_mirror(tmp_path: Path) ->
         capture_output=True,
         text=True,
     )
-    write_yaml(
-        clone_path / "docs/governance/TASK_REGISTRY.yaml",
-        {
-            "version": "1.0",
-            "updated_at": "2026-04-08T00:00:00+08:00",
-            "tasks": [
-                {
-                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
-                    "status": "doing",
-                    "task_kind": "execution",
-                    "worker_state": "running",
-                    "roadmap_candidate_id": "stage1-core-contract",
-                }
-            ],
-        },
-    )
+    _write_clone_stage1_registry(clone_path, status="doing", worker_state="running")
     write_yaml(
         clone_path / ".codex/local/roadmap_candidates/index.yaml",
         {
@@ -219,69 +260,10 @@ def test_console_detects_ledger_divergence_and_marks_candidate(monkeypatch, tmp_
     run_python(TASK_OPS_SCRIPT, repo, "plan-roadmap-candidates")
     _write_full_clone_pool(repo, clone_path)
 
-    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
-    registry["tasks"].append(
-        {
-            "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
-            "title": "Stage1 orchestration contract and fixture boundary",
-            "status": "paused",
-            "task_kind": "execution",
-            "execution_mode": "isolated_worktree",
-            "parent_task_id": None,
-            "stage": "stage1",
-            "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract",
-            "size_class": "standard",
-            "automation_mode": "manual",
-            "worker_state": "idle",
-            "blocked_reason": None,
-            "last_reported_at": "2026-04-08T00:00:00+08:00",
-            "topology": "single_task",
-            "allowed_dirs": ["src/stage1_orchestration/"],
-            "reserved_paths": ["src/stage6_facts/"],
-            "planned_write_paths": ["src/stage1_orchestration/"],
-            "planned_test_paths": ["tests/stage1/"],
-            "required_tests": ["pytest tests/stage1 -q"],
-            "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
-            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
-            "lane_count": 1,
-            "lane_index": None,
-            "parallelism_plan_id": None,
-            "review_bundle_status": "not_applicable",
-            "roadmap_candidate_id": "stage1-core-contract",
-        }
-    )
-    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
-    write_yaml(
-        repo / ".codex/local/roadmap_candidates/claims.yaml",
-        {
-            "version": "0.1",
-            "claims": [
-                {
-                    "candidate_id": "stage1-core-contract",
-                    "status": "taken_over",
-                    "formal_task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
-                }
-            ],
-        },
-    )
-    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
-    pool["slots"][0]["status"] = "active"
-    pool["slots"][0]["current_task_id"] = "TASK-RM-STAGE1-CORE-CONTRACT"
-    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", pool)
-    write_yaml(
-        clone_path / "docs/governance/TASK_REGISTRY.yaml",
-        {
-            "version": "1.0",
-            "updated_at": "2026-04-08T00:00:00+08:00",
-            "tasks": [
-                {
-                    "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
-                    "status": "done",
-                    "roadmap_candidate_id": "stage1-core-contract",
-                }
-            ],
-        },
-    )
+    _append_stage1_execution_task(repo, status="paused", worker_state="idle", reserved_paths=["src/stage6_facts/"])
+    _write_stage1_claim(repo, status="taken_over")
+    _mark_slot_active(repo, "TASK-RM-STAGE1-CORE-CONTRACT")
+    _write_clone_stage1_registry(clone_path, status="done")
 
     monkeypatch.setattr(console, "_repo_root", lambda: repo)
     divergences = console._ledger_divergences(repo)

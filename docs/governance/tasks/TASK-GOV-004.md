@@ -88,5 +88,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-GOV-004-governance-control-kernel-split`
-- `updated_at`: `2026-04-09T17:48:10+08:00`
+- `updated_at`: `2026-04-09T18:03:36+08:00`
 <!-- generated:task-meta:end -->
