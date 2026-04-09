@@ -1,52 +1,27 @@
-current_task_id: TASK-GOV-075
-title: quarantined full-clone slot semantics and candidate-pool compatibility
-status: doing
-task_kind: coordination
-execution_mode: shared_coordination
+current_task_id: null
+title: null
+status: idle
+task_kind: null
+execution_mode: null
 parent_task_id: null
-stage: governance-quarantined-slot-compatibility-v1
-branch: codex/TASK-GOV-075-quarantined-slot-compatibility
-size_class: standard
-automation_mode: manual
-worker_state: running
+stage: null
+branch: null
+size_class: null
+automation_mode: null
+worker_state: idle
 blocked_reason: null
-last_reported_at: '2026-04-09T19:27:38+08:00'
-topology: single_worker
-allowed_dirs:
-- docs/governance/
-- scripts/
-- tests/governance/
-reserved_paths:
-- src/
-- tests/stage2/
-- docs/contracts/
-- db/migrations/
-- tests/integration/
-planned_write_paths:
-- docs/governance/tasks/TASK-GOV-075.md
-- docs/governance/runlogs/TASK-GOV-075-RUNLOG.md
-- docs/governance/handoffs/TASK-GOV-075.yaml
-- docs/governance/CURRENT_TASK.yaml
-- docs/governance/TASK_REGISTRY.yaml
-- docs/governance/WORKTREE_REGISTRY.yaml
-- docs/governance/DEVELOPMENT_ROADMAP.md
-- scripts/control_plane_root.py
-- scripts/review_candidate_pool.py
-- scripts/roadmap_claim_next.py
-- tests/governance/test_control_plane_single_ledger.py
-- tests/governance/test_review_candidate_pool.py
-- tests/governance/test_roadmap_claim_next.py
-planned_test_paths:
-- tests/governance/
-required_tests:
-- pytest tests/governance/test_control_plane_single_ledger.py -q
-- pytest tests/governance/test_review_candidate_pool.py -q
-- pytest tests/governance/test_roadmap_claim_next.py -q
-task_file: docs/governance/tasks/TASK-GOV-075.md
-runlog_file: docs/governance/runlogs/TASK-GOV-075-RUNLOG.md
-lane_count: 1
+last_reported_at: '2026-04-09T19:40:33+08:00'
+topology: null
+allowed_dirs: []
+reserved_paths: []
+planned_write_paths: []
+planned_test_paths: []
+required_tests: []
+task_file: null
+runlog_file: null
+lane_count: null
 lane_index: null
 parallelism_plan_id: null
-review_bundle_status: not_applicable
-next_action: Worker started and the task is actively running.
-updated_at: '2026-04-09T19:27:38+08:00'
+review_bundle_status: null
+next_action: wait_for_successor_or_explicit_activation
+updated_at: '2026-04-09T19:40:33+08:00'
