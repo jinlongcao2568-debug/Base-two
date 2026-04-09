@@ -1,0 +1,30 @@
+task_id: TASK-GOV-075
+summary_status: queued
+last_handoff_at: null
+completed_items: []
+remaining_items:
+- Complete the remaining scoped implementation for this task.
+next_step: Activate the task and begin scoped implementation inside the allowed directories.
+next_tests:
+- pytest tests/governance/test_control_plane_single_ledger.py -q
+- pytest tests/governance/test_review_candidate_pool.py -q
+- pytest tests/governance/test_roadmap_claim_next.py -q
+current_risks: []
+candidate_write_paths:
+- docs/governance/tasks/TASK-GOV-075.md
+- docs/governance/runlogs/TASK-GOV-075-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-075.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/DEVELOPMENT_ROADMAP.md
+- scripts/control_plane_root.py
+- scripts/review_candidate_pool.py
+- scripts/roadmap_claim_next.py
+- tests/governance/test_control_plane_single_ledger.py
+- tests/governance/test_review_candidate_pool.py
+- tests/governance/test_roadmap_claim_next.py
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
