@@ -1,0 +1,32 @@
+task_id: TASK-OPS-002
+summary_status: done
+last_handoff_at: '2026-04-09T16:30:20+08:00'
+completed_items:
+- Fetched worker-01 preserved commit into the main control plane as branch codex/TASK-RM-STAGE1-SOURCE-FAMILY-CN-stage1-source-family-cn
+  so rebuild would not lose the local commit.
+- Cleared worker-01 preserve-before-rebuild handling in the full clone pool and manually
+  reprovisioned D:/Base One/Base-two/AX9.clones/worker-01 back to codex/worker-01-idle.
+- Verified audit-full-clone-pool returns ledger_divergence_count=0, stale_runtime_count=0
+  and worker-01 claim-next dry-run matches the control plane candidate stage2-core-contract.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- python scripts/task_ops.py audit-full-clone-pool
+- python scripts/task_ops.py claim-next --now 2026-04-09T13:05:00+08:00
+current_risks: []
+candidate_write_paths:
+- docs/governance/FULL_CLONE_POOL.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
+- docs/governance/tasks/TASK-OPS-002.md
+- docs/governance/runlogs/TASK-OPS-002-RUNLOG.md
+- docs/governance/handoffs/TASK-OPS-002.yaml
+candidate_test_paths: []
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
+- Handoff recorded by session `019d70c2-04b5-7850-a734-e6d34216ef5c`.
+- worker-01 restored to ready idle state; preserved stage1 branch remains available
+  in the control plane repository under codex/TASK-RM-STAGE1-SOURCE-FAMILY-CN-stage1-source-family-cn.
+- Task closed.

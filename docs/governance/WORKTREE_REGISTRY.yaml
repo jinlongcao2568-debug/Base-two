@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T16:18:24+08:00'
+updated_at: '2026-04-09T16:30:19+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1004,6 +1004,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-069-console-extensionless-app-launch
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-OPS-002
+  work_mode: coordination
+  parent_task_id: null
+  branch: feat/TASK-OPS-002-worker01-recovery
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

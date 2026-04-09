@@ -12,13 +12,12 @@ slots:
 - slot_id: worker-01
   path: D:/Base One/Base-two/AX9.clones/worker-01
   branch: codex/worker-01-idle
-  status: blocked
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-01-idle
-  blocked_reason: preserve-before-rebuild; runtime diverged from idle slot
-  stale_runtime: true
-  preserve_before_rebuild: true
-  last_provisioned_at: '2026-04-08T10:00:57+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-09T16:28:32+08:00'
   last_claimed_at: '2026-04-08T17:30:53+08:00'
   last_released_at: '2026-04-08T21:41:14+08:00'
 - slot_id: worker-02
