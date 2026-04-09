@@ -5,12 +5,12 @@
 - `task_id`: `TASK-OPS-005`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-full-clone-parity-restoration-v1`
 - `branch`: `codex/TASK-OPS-005-full-clone-parity-restoration`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -65,22 +65,21 @@
 - `tests/integration/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -89,5 +88,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, tests/stage2/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `codex/TASK-OPS-005-full-clone-parity-restoration`
-- `updated_at`: `2026-04-09T19:41:55+08:00`
+- `updated_at`: `2026-04-09T19:56:12+08:00`
 <!-- generated:task-meta:end -->

@@ -1,10 +1,12 @@
 task_id: TASK-OPS-005
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+summary_status: done
+last_handoff_at: '2026-04-09T19:56:12+08:00'
+completed_items:
+- Restored worker-02..09 full-clone runtime parity, verified candidate pool is no
+  longer blocked by idle-slot divergence, and confirmed claim-next dry-run resumes
+  on healthy ready slots while worker-01 remains quarantined by design.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/task_ops.py audit-full-clone-pool
 - python scripts/review_candidate_pool.py
@@ -23,3 +25,7 @@ candidate_test_paths:
 - tests/governance/
 resume_notes:
 - Formal handoff has not been recorded yet.
+- 'Worker finish summary: Restored worker-02..09 full-clone runtime parity, verified
+  candidate pool is no longer blocked by idle-slot divergence, and confirmed claim-next
+  dry-run resumes on healthy ready slots while worker-01 remains quarantined by design.'
+- Task closed.
