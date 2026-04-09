@@ -182,6 +182,33 @@ Dispatch interpretation:
 
 This lets the pool know a task was started and is still unfinished without forcing the whole system into a false ledger divergence.
 
+## Operator Projection Rules
+
+The operator console should project, not invent, concurrency state.
+Its preferred display groups are:
+
+- `focus_current_task`
+- `running_execution_leases`
+- `ready_executors`
+- `quarantined_executors`
+
+Projection rules:
+
+- `focus_current_task` comes from `CURRENT_TASK.yaml`
+- `running_execution_leases` comes from live rows in `EXECUTION_LEASES.yaml`
+- `ready_executors` comes from `control-plane-main` idle state plus dispatch-eligible full-clone slots
+- `quarantined_executors` comes from full-clone audit rows where `quarantined=true`
+
+Normal concurrency is not ledger divergence.
+Ledger divergence is reserved for:
+
+- write-lock conflicts
+- revision mismatches
+- duplicate claims
+- duplicate execution leases
+- runtime drift on dispatch-eligible executors
+- ready-slot / mirror inconsistencies reported by the full-clone audit
+
 ## Migration Plan
 
 ### Stage 1

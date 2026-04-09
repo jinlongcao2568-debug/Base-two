@@ -14,7 +14,7 @@ from control_plane_root import (
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
 )
-from governance_lib import configure_utf8_stdio, find_repo_root, load_task_registry, load_yaml
+from governance_lib import configure_utf8_stdio, find_repo_root, load_current_task, load_task_registry, load_yaml
 from roadmap_candidate_maintainer import SUMMARY_FILE, refresh_once
 from roadmap_execution_closeout import list_closeout_ready_execution_tasks
 from roadmap_claim_next import CLAIMS_FILE
@@ -50,6 +50,7 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     summary = refresh_once(control_root)
     pool_audit = audit_full_clone_pool(control_root)
     dirty_runtime_paths = published_governance_runtime_dirty_paths(control_root)
+    current_task = load_current_task(control_root)
     registry = load_task_registry(control_root)
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
     execution_leases = load_execution_leases(control_root)
@@ -63,6 +64,16 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         for lease in execution_leases.get("leases", [])
         if str(lease.get("status") or "") != "closed"
     ]
+    focus_current_task = None
+    if str(current_task.get("status") or "") != "idle":
+        focus_current_task = {
+            "task_id": current_task.get("current_task_id"),
+            "title": current_task.get("title"),
+            "status": current_task.get("status"),
+            "stage": current_task.get("stage"),
+            "branch": current_task.get("branch"),
+            "worker_state": current_task.get("worker_state"),
+        }
     live_leases_by_task_id = {
         str(lease.get("task_id")): lease for lease in live_execution_leases if lease.get("task_id")
     }
@@ -150,6 +161,36 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         for slot in pool_audit.get("slots", [])
         if slot.get("quarantined")
     ]
+    ready_executors: list[dict[str, Any]] = []
+    if focus_current_task is None:
+        ready_executors.append(
+            {
+                "executor_id": "control-plane-main",
+                "executor_type": "control_plane",
+                "status": "ready",
+            }
+        )
+    ready_executors.extend(
+        {
+            "executor_id": slot["slot_id"],
+            "executor_type": "full_clone",
+            "status": "ready",
+            "branch": slot.get("observed_branch") or slot.get("idle_branch"),
+        }
+        for slot in pool_audit.get("slots", [])
+        if slot.get("dispatch_eligible")
+    )
+    quarantined_executors = [
+        {
+            "executor_id": slot["slot_id"],
+            "executor_type": "full_clone",
+            "status": "quarantined",
+            "summary_zh": slot["summary_zh"],
+            "runtime_drift": slot["runtime_drift"],
+        }
+        for slot in pool_audit.get("slots", [])
+        if slot.get("quarantined")
+    ]
     issues = [*slot_issues]
     if ledger_divergences:
         issues.append("ledger divergence detected")
@@ -178,6 +219,7 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "control_plane_root": str(control_root).replace("\\", "/"),
         "summary_file": str(SUMMARY_FILE).replace("\\", "/"),
         "candidate_summary": summary,
+        "focus_current_task": focus_current_task,
         "root_candidate_count": len(root_candidates),
         "formal_root_count": len(formal_roots),
         "preview_root_count": len(preview_roots),
@@ -190,6 +232,9 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "incomplete_tasks": incomplete_task_rows,
         "live_execution_lease_count": len(live_execution_leases),
         "live_execution_leases": live_execution_leases,
+        "running_execution_leases": live_execution_leases,
+        "ready_executors": ready_executors,
+        "quarantined_executors": quarantined_executors,
         "stale_claims": stale_claims,
         "slot_issues": slot_issues,
         "closeout_ready_execution_tasks": closeout_ready,

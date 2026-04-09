@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T21:13:00+08:00'
+updated_at: '2026-04-09T21:19:18+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1161,6 +1161,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-078-candidate-pool-concurrency-refactor
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-079
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-079-concurrent-executor-projection
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed
