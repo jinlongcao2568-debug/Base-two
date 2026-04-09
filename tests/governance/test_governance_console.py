@@ -26,6 +26,10 @@ def test_render_index_html_contains_core_controls() -> None:
     assert "scheduleAutoRefresh" in html
     assert "visibilitychange" in html
     assert "AUTO_REFRESH_FOREGROUND_MS" in html
+    assert "foreground_refresh_toggle" in html
+    assert "AUTO_REFRESH_FOREGROUND_DEFAULT = false" in html
+    assert "Foreground Auto Refresh: OFF" in html
+    assert "foreground manual" in html
     assert "自动化开发底座" not in html
     assert "/api/pool" in html
 

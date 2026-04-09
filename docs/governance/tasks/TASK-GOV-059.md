@@ -95,6 +95,6 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, tests/`
 - `branch`: `codex/TASK-GOV-059-roadmap-explain-commands`
-- `updated_at`: `2026-04-09T17:21:54+08:00`
+- `updated_at`: `2026-04-09T17:48:10+08:00`
 <!-- generated:task-meta:end -->
 

@@ -70,5 +70,5 @@
 - `review_bundle_status`: `pending`
 - `reserved_paths`: `src/stage2_ingestion/, src/stage6_facts/`
 - `branch`: `codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract`
-- `updated_at`: `2026-04-09T17:21:54+08:00`
+- `updated_at`: `2026-04-09T17:48:10+08:00`
 <!-- generated:task-meta:end -->

@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-09T17:21:55+08:00'
+updated_at: '2026-04-09T17:48:11+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1034,6 +1034,16 @@ entries:
   work_mode: coordination
   parent_task_id: null
   branch: codex/TASK-GOV-070-console-popup-eradication
+  path: D:/Base One/Base-two/AX9
+  status: closed
+  cleanup_state: not_needed
+  cleanup_attempts: 0
+  last_cleanup_error: null
+  worker_owner: coordinator
+- task_id: TASK-GOV-071
+  work_mode: coordination
+  parent_task_id: null
+  branch: codex/TASK-GOV-071-console-periodic-flash
   path: D:/Base One/Base-two/AX9
   status: closed
   cleanup_state: not_needed

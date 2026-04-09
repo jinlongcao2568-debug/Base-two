@@ -1,13 +1,13 @@
-# TASK-GOV-042 Roadmap claim promotion and worktree allocation
+# TASK-GOV-071 Governance console periodic flash diagnosis and containment
 
 ## Task Baseline
 
-- `task_id`: `TASK-GOV-042`
+- `task_id`: `TASK-GOV-071`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `status`: `done`
-- `stage`: `governance-roadmap-claim-promotion-worktree-v1`
-- `branch`: `codex/TASK-GOV-042-roadmap-claim-promotion-worktree`
+- `stage`: `governance-console-periodic-flash-containment-v1`
+- `branch`: `codex/TASK-GOV-071-console-periodic-flash`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
 - `worker_state`: `completed`
@@ -19,46 +19,44 @@
 - `successor_state`: `backlog`
 ## Primary Goals
 
-- Add `claim-next --promote-task` to turn a selected roadmap candidate into a formal `execution` task package.
-- Allocate a unique branch and isolated worktree for the promoted candidate without switching the main coordination worktree.
-- Update local claim metadata with the promoted task id and worktree path.
-- Preserve `claim-next` dry-run and local-only `--write-claim` behavior.
+- Confirm whether the recurring visible flash is caused by the governance console foreground auto-refresh loop.
+- Contain the flash without breaking the local console service, operator actions, or hidden-window/background refresh behavior.
+- Keep the resulting refresh behavior explicit and operator-controlled so the console can still be refreshed on demand.
 
 ## Explicitly Not Doing
 
-- Do not implement stale takeover, remote divergence recovery, publish, PR, or merge behavior; those remain for `TASK-GOV-043`.
-- Do not run business implementation in the promoted worker task.
-- Do not alter business code under `src/`, contracts under `docs/contracts/`, migrations, stage6 facts behavior, or customer-visible outputs.
+- Do not change candidate pool business decisions, task action semantics, or any Stage1-Stage9 pipeline logic.
+- Do not modify contracts, migrations, customer-visible delivery outputs, or unrelated desktop/browser software outside the AX9 console path.
+- Do not remove the existing manual refresh capability or the hidden-window background refresh path.
 
 ## Allowed Dirs
 
-- `.codex/local/roadmap_candidates/`
 - `docs/governance/`
 - `scripts/`
 - `tests/governance/`
-- `tests/automation/`
 
 ## Planned Write Paths
 
-- `.codex/local/roadmap_candidates/`
-- `docs/governance/`
-- `scripts/`
-- `tests/governance/`
-- `tests/automation/`
+- `docs/governance/tasks/TASK-GOV-071.md`
+- `docs/governance/runlogs/TASK-GOV-071-RUNLOG.md`
+- `docs/governance/handoffs/TASK-GOV-071.yaml`
+- `docs/governance/CURRENT_TASK.yaml`
+- `docs/governance/TASK_REGISTRY.yaml`
+- `docs/governance/DEVELOPMENT_ROADMAP.md`
+- `docs/governance/WORKTREE_REGISTRY.yaml`
+- `scripts/governance_console.py`
+- `scripts/governance_console_launcher.py`
+- `scripts/governance_console_launcher.vbs`
+- `tests/governance/test_governance_console.py`
 
 ## Planned Test Paths
 
 - `tests/governance/`
-- `tests/automation/`
 
 ## Required Tests
 
-- `pytest tests/governance/test_roadmap_claim_promotion.py -q`
-- `pytest tests/governance/test_roadmap_claim_next.py -q`
-- `pytest tests/governance/test_roadmap_candidate_index.py -q`
+- `pytest tests/governance/test_governance_console.py -q`
 - `python scripts/check_repo.py`
-- `python scripts/check_hygiene.py src docs tests`
-- `python scripts/check_authority_alignment.py`
 
 ## Reserved Paths
 
@@ -101,6 +99,6 @@
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
-- `branch`: `codex/TASK-GOV-042-roadmap-claim-promotion-worktree`
-- `updated_at`: `2026-04-09T17:48:10+08:00`
+- `branch`: `codex/TASK-GOV-071-console-periodic-flash`
+- `updated_at`: `2026-04-09T17:48:11+08:00`
 <!-- generated:task-meta:end -->

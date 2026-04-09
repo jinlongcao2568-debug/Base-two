@@ -985,8 +985,10 @@ def _render_shell_html() -> str:
       <button type="button" onclick="runAction('close-ready-execution-tasks', this)">关闭已就绪执行任务</button>
       <button type="button" onclick="runAction('continue-roadmap', this)">继续路线图</button>
       <button type="button" class="secondary" onclick="loadAll(this)">重载页面快照</button>
+      <button type="button" class="secondary" id="foreground_refresh_toggle" onclick="toggleForegroundAutoRefresh(this)"></button>
       <button type="button" class="secondary" onclick="loadClaimDecision(this)">解释认领决策</button>
       <button type="button" class="secondary" onclick="loadReview(this)">复核候选池</button>
+      <button type="button" class="secondary" id="foreground_refresh_toggle" onclick="toggleForegroundAutoRefresh(this)"></button>
     </section>
 
     <section id="divergence_banner" class="surface status-banner" aria-live="polite"></section>
@@ -1077,12 +1079,15 @@ def _render_script_block() -> str:
     const ACTION_LABELS = {action_labels};
     const AUTO_REFRESH_FOREGROUND_MS = {AUTO_REFRESH_FOREGROUND_SECONDS * 1000};
     const AUTO_REFRESH_BACKGROUND_MS = {AUTO_REFRESH_BACKGROUND_SECONDS * 1000};
+    const AUTO_REFRESH_FOREGROUND_DEFAULT = false;
+    const FOREGROUND_AUTO_REFRESH_STORAGE_KEY = 'ax9.console.foregroundAutoRefresh';
     let currentCandidateId = new URL(window.location.href).searchParams.get('candidate_id') || '';
     let currentDetailMode = 'candidate';
     let feedbackTimer = null;
     let autoRefreshTimer = null;
     let lastRefreshAt = null;
     let focusInitialized = false;
+    let foregroundAutoRefreshEnabled = readForegroundAutoRefreshEnabled();
     window.__candidateRows = {{}};
     window.__lastCopiedShortcut = '';
     window.__lastFeedback = null;
@@ -1129,17 +1134,67 @@ def _render_script_block() -> str:
       }});
     }}
 
+    function readForegroundAutoRefreshEnabled() {{
+      try {{
+        const stored = window.localStorage.getItem(FOREGROUND_AUTO_REFRESH_STORAGE_KEY);
+        if (stored === null) {{
+          return AUTO_REFRESH_FOREGROUND_DEFAULT;
+        }}
+        return stored === 'true';
+      }} catch (_error) {{
+        return AUTO_REFRESH_FOREGROUND_DEFAULT;
+      }}
+    }}
+
+    function renderAutoRefreshToggle() {{
+      const button = document.getElementById('foreground_refresh_toggle');
+      if (!button) return;
+      button.textContent = foregroundAutoRefreshEnabled ? 'Foreground Auto Refresh: ON' : 'Foreground Auto Refresh: OFF';
+      button.dataset.originalLabel = button.textContent;
+    }}
+
+    function setForegroundAutoRefreshEnabled(nextValue) {{
+      foregroundAutoRefreshEnabled = !!nextValue;
+      try {{
+        window.localStorage.setItem(
+          FOREGROUND_AUTO_REFRESH_STORAGE_KEY,
+          foregroundAutoRefreshEnabled ? 'true' : 'false',
+        );
+      }} catch (_error) {{}}
+      renderAutoRefreshToggle();
+      if (window.__lastPoolPayload) {{
+        renderRuntimeSignals(window.__lastPoolPayload);
+      }}
+      scheduleAutoRefresh();
+    }}
+
+    function toggleForegroundAutoRefresh(_triggerButton = null) {{
+      setForegroundAutoRefreshEnabled(!foregroundAutoRefreshEnabled);
+      showFeedback(
+        'success',
+        foregroundAutoRefreshEnabled ? 'Foreground auto refresh enabled' : 'Foreground auto refresh paused'
+      );
+    }}
+
     function currentRefreshIntervalMs() {{
-      return document.hidden ? AUTO_REFRESH_BACKGROUND_MS : AUTO_REFRESH_FOREGROUND_MS;
+      if (document.hidden) {{
+        return AUTO_REFRESH_BACKGROUND_MS;
+      }}
+      return foregroundAutoRefreshEnabled ? AUTO_REFRESH_FOREGROUND_MS : null;
     }}
 
     function scheduleAutoRefresh() {{
       if (autoRefreshTimer) {{
         window.clearTimeout(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }}
+      const intervalMs = currentRefreshIntervalMs();
+      if (!intervalMs) {{
+        return;
       }}
       autoRefreshTimer = window.setTimeout(() => {{
         loadAll(null, true).catch(() => {{}});
-      }}, currentRefreshIntervalMs());
+      }}, intervalMs);
     }}
 
     function showFeedback(kind, message, persist = false) {{
@@ -1169,7 +1224,7 @@ def _render_script_block() -> str:
       window.history.replaceState({{}}, '', url);
     }}
 
-    function highlightCandidateRow(candidateId) {{
+    function highlightCandidateRow(candidateId, scrollIntoViewEnabled = true) {{
       let active = null;
       document.querySelectorAll('.candidate-row').forEach((row) => {{
         const matched = !!candidateId && row.dataset.candidateId === candidateId;
@@ -1178,7 +1233,9 @@ def _render_script_block() -> str:
           active = row;
         }}
       }});
-      active?.scrollIntoView({{ block: 'nearest' }});
+      if (scrollIntoViewEnabled) {{
+        active?.scrollIntoView({{ block: 'nearest' }});
+      }}
     }}
 
     function withTemporaryButtonLabel(button, label, duration = 1200) {{
@@ -1279,10 +1336,13 @@ def _render_script_block() -> str:
       const divergences = pool.ledger_divergences || [];
       const refreshMeta = document.getElementById('refresh_meta');
       if (refreshMeta) {{
+        const autoRefreshLabel = document.hidden
+          ? '{AUTO_REFRESH_BACKGROUND_SECONDS}s background'
+          : (foregroundAutoRefreshEnabled ? '{AUTO_REFRESH_FOREGROUND_SECONDS}s foreground' : 'foreground manual');
         const parts = [
           `最后刷新：${{formatTimestamp(lastRefreshAt)}}`,
           `候选快照：${{formatTimestamp(summary.generated_at)}}`,
-          `自动刷新：${{document.hidden ? {AUTO_REFRESH_BACKGROUND_SECONDS} : {AUTO_REFRESH_FOREGROUND_SECONDS}}} 秒`,
+          `Auto refresh: ${{autoRefreshLabel}}`,
         ];
         if (divergences.length) {{
           parts.push(`账本分叉：${{divergences.length}}`);
@@ -1345,7 +1405,7 @@ def _render_script_block() -> str:
         </div>
       `).join('');
       document.getElementById('candidate_rows').innerHTML = rows || '<div class="placeholder">没有可展示候选。</div>';
-      highlightCandidateRow(currentCandidateId);
+      highlightCandidateRow(currentCandidateId, false);
     }}
 
     function renderPoolSnapshot(pool) {{
@@ -1617,6 +1677,7 @@ def _render_script_block() -> str:
       scheduleAutoRefresh();
     }});
 
+    renderAutoRefreshToggle();
     loadAll().catch(error => {{
       document.getElementById('detail_title').textContent = '加载失败';
       document.getElementById('detail_body').innerHTML = `<div class="placeholder">${{escapeHtml(String(error))}}</div>`;

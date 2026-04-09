@@ -99,5 +99,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, docs/contracts/, db/migrations/, README.md, tests/contracts/, tests/integration/, tests/stage1/, tests/stage2/, tests/stage3/, tests/stage4/, tests/stage5/, tests/stage6/, tests/stage7/, tests/stage8/, tests/stage9/`
 - `branch`: `codex/TASK-GOV-051-worker-capacity-seven`
-- `updated_at`: `2026-04-09T17:21:54+08:00`
+- `updated_at`: `2026-04-09T17:48:10+08:00`
 <!-- generated:task-meta:end -->
