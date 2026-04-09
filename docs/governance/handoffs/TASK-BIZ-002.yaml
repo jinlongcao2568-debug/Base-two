@@ -1,21 +1,16 @@
 task_id: TASK-BIZ-002
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Open governed successor generation for stage7, stage8, and stage9 behind capability gates.
-- Preserve the dependency order from stage6 to stage7/8 and from stage7/8 to stage9.
-- Extend continuation and runner logic without weakening existing hard gates.
-next_step: Activate the task after TASK-BIZ-001 closes, then wire downstream successor generation into the governance scripts and automation tests.
+summary_status: done
+last_handoff_at: '2026-04-09T16:49:55+08:00'
+completed_items:
+- Retained the task as a historical absorbed placeholder while closing its standalone queued
+  status noise in favor of `TASK-GOV-018`.
+- Confirmed the original implementation intent remains governed by `TASK-GOV-018` and
+  should not resume as an independent top-level task.
+remaining_items: []
+next_step: No further standalone implementation is required; this absorbed placeholder is closed.
 next_tests:
-- python scripts/check_repo.py
-- python scripts/check_hygiene.py
-- python scripts/check_authority_alignment.py
-- pytest tests/governance -q
-- pytest tests/automation -q
-current_risks:
-- Downstream generation must not bypass stage6 or allow stage9 to launch ahead of stage7 and stage8.
-- Capability hard gates must remain strict until downstream implementation is complete.
+- absorbed task; standalone test execution is not expected
+current_risks: []
 candidate_write_paths:
 - docs/governance/
 - scripts/
@@ -25,4 +20,4 @@ candidate_test_paths:
 - tests/governance/
 - tests/automation/
 resume_notes:
-- Queued after TASK-BIZ-001; no src changes belong in this governance phase.
+- Marked as absorbed by `TASK-GOV-018`; standalone activation is permanently closed.

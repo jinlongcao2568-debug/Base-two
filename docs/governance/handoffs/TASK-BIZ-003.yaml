@@ -1,27 +1,16 @@
 task_id: TASK-BIZ-003
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Implement the minimum stage7-stage9 runtime chain and customer-delivery output.
-- Add downstream integration smoke for the `stage6 -> stage7/8 -> stage9` path.
-- Promote the downstream business automation capability only after the smoke chain and governance checks pass.
-next_step: Activate the task after TASK-BIZ-002 closes, implement the minimum downstream chain, then run contracts, stage, integration, governance, and automation suites.
+summary_status: done
+last_handoff_at: '2026-04-09T16:49:55+08:00'
+completed_items:
+- Retained the task as a historical absorbed placeholder while closing its standalone paused
+  status noise in favor of `TASK-GOV-018`.
+- Confirmed the original downstream smoke intent remains governed by `TASK-GOV-018`
+  and should not resume as an independent top-level task.
+remaining_items: []
+next_step: No further standalone implementation is required; this absorbed placeholder is closed.
 next_tests:
-- python scripts/check_repo.py
-- python scripts/check_hygiene.py
-- python scripts/check_authority_alignment.py
-- python scripts/validate_contracts.py
-- pytest tests/contracts -q
-- pytest tests/stage7 -q
-- pytest tests/stage8 -q
-- pytest tests/stage9 -q
-- pytest tests/integration -q
-- pytest tests/governance -q
-- pytest tests/automation -q
-current_risks:
-- Stage9 must not rewrite stage6 facts or bypass customer-delivery guardrails.
-- This task crosses into `src/` and `tests/integration/`, so boundary control has to remain strict.
+- absorbed task; standalone test execution is not expected
+current_risks: []
 candidate_write_paths:
 - docs/governance/
 - docs/contracts/
@@ -44,4 +33,4 @@ candidate_test_paths:
 - tests/governance/
 - tests/automation/
 resume_notes:
-- Queued after TASK-BIZ-002; this is the first downstream implementation task.
+- Marked as absorbed by `TASK-GOV-018`; standalone activation is permanently closed.

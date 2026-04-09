@@ -116,5 +116,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `src/, docs/contracts/, tests/integration/, scripts/check_hygiene.py`
 - `branch`: `feat/TASK-GOV-001-authority-consistency-hardening`
-- `updated_at`: `2026-04-09T16:18:58+08:00`
+- `updated_at`: `2026-04-09T17:02:25+08:00`
 <!-- generated:task-meta:end -->

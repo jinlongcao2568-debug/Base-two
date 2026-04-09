@@ -121,5 +121,5 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `[]`
 - `branch`: `feat/TASK-AUTO-004-minimal-runtime-chain`
-- `updated_at`: `2026-04-09T16:18:58+08:00`
+- `updated_at`: `2026-04-09T17:02:25+08:00`
 <!-- generated:task-meta:end -->

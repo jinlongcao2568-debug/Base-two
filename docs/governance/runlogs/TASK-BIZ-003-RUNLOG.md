@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-BIZ-003`
-- `status`: `paused`
+- `status`: `done`
 - `stage`: `business-stage7-9-smoke-v1`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -16,6 +16,7 @@
 - `2026-04-05T18:54:21+08:00`: task package created
 - `2026-04-06T11:42:19+08:00`: marked as absorbed by `TASK-GOV-018`
 - `2026-04-06T11:42:19+08:00`: standalone activation is no longer allowed; execution continues inside the total-upgrade parent task
+- `2026-04-09T16:49:55+08:00`: absorbed placeholder closed as standalone backlog noise cleanup; historical implementation remains attached to `TASK-GOV-018`
 
 ## Test Log
 
@@ -29,20 +30,20 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `paused`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `active_progress`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `resume_required`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-BIZ-003`
-- `status`: `paused`
+- `status`: `done`
 - `stage`: `business-stage7-9-smoke-v1`
 - `branch`: `feat/TASK-BIZ-003-stage7-9-smoke`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
