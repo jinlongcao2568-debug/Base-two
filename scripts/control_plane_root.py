@@ -38,6 +38,7 @@ GOVERNANCE_RUNTIME_FILES = (
     Path("scripts/roadmap_candidate_compiler.py"),
     Path("scripts/roadmap_candidate_index.py"),
     Path("scripts/roadmap_claim_next.py"),
+    Path("scripts/roadmap_scope_policy.py"),
     Path("scripts/review_candidate_pool.py"),
     Path("scripts/task_continuation_ops.py"),
     Path("scripts/task_coordination_planner.py"),
@@ -95,7 +96,7 @@ def _hash_runtime_files(root: Path) -> str:
             continue
         digest.update(relative.as_posix().encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes())
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
         digest.update(b"\0")
     return digest.hexdigest()
 

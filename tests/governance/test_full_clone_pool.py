@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .helpers import TASK_OPS_SCRIPT, init_governance_repo, read_yaml, run_python, write_yaml
+from .helpers import TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
 
 
 def _pool(repo: Path) -> dict:
@@ -145,5 +145,21 @@ def test_audit_full_clone_pool_reports_ready_slot_runtime_drift(tmp_path: Path) 
     assert payload["ledger_divergence_count"] >= 1
     slot = next(item for item in payload["slots"] if item["slot_id"] == "worker-01")
     assert slot["divergent"] is True
-    assert any("clone 本地账本残留非终态执行任务" in reason for reason in slot["reasons"])
-    assert any("clone 候选池格式过期" in reason for reason in slot["reasons"])
+    assert slot["non_terminal_execution_tasks"]
+    assert slot["candidate_cache_issues"]
+
+
+def test_rebuild_full_clone_pool_restores_runtime_stamp_parity_for_idle_slot(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", _pool(repo))
+    git_commit_all(repo, "prepare committed runtime parity")
+
+    rebuilt = run_python(TASK_OPS_SCRIPT, repo, "rebuild-full-clone-pool", "--slot-id", "worker-01")
+    audit = run_python(TASK_OPS_SCRIPT, repo, "audit-full-clone-pool", "--slot-id", "worker-01")
+    payload = json.loads(audit.stdout)
+    slot = payload["slots"][0]
+
+    assert rebuilt.returncode == 0, rebuilt.stdout + rebuilt.stderr
+    assert audit.returncode == 0, audit.stdout + audit.stderr
+    assert slot["runtime_drift"] is False
+    assert slot["divergent"] is False
