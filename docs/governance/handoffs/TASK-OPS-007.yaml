@@ -1,10 +1,11 @@
 task_id: TASK-OPS-007
-summary_status: doing
-last_handoff_at: '2026-04-09T21:35:25+08:00'
-completed_items: []
-remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Continue the scoped implementation and keep the control plane aligned.
+summary_status: done
+last_handoff_at: '2026-04-09T21:43:35+08:00'
+completed_items:
+- Restored full-clone runtime parity, closed stale Stage2 source-family lanes execution
+  state, and returned claim-next to a dispatchable dry-run state.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/task_ops.py audit-full-clone-pool
 - python scripts/review_candidate_pool.py
@@ -28,3 +29,7 @@ candidate_test_paths:
 resume_notes:
 - Formal handoff has not been recorded yet.
 - Task activated in the main coordination worktree.
+- 'Worker finish summary: Restored full-clone runtime parity, closed stale Stage2
+  source-family lanes execution state, and returned claim-next to a dispatchable dry-run
+  state.'
+- Task closed.
