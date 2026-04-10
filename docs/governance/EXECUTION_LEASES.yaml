@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-10T10:13:09+08:00'
-revision: 37
+updated_at: '2026-04-10T10:28:29+08:00'
+revision: 40
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -171,3 +171,16 @@ leases:
   started_at: '2026-04-10T10:11:09+08:00'
   heartbeat_at: '2026-04-10T10:13:09+08:00'
   closed_at: '2026-04-10T10:13:09+08:00'
+- lease_id: lease-task-ops-008-control-plane-main
+  task_id: TASK-OPS-008
+  task_kind: coordination
+  stage: governance-worktree-cleanup-v1
+  branch: codex/TASK-OPS-008-worktree-cleanup
+  candidate_id: null
+  executor_id: control-plane-main
+  executor_type: control_plane
+  status: closed
+  owner_session_id: 019d74ea-c727-74c3-be18-f83f54a1be54
+  started_at: '2026-04-10T10:27:05+08:00'
+  heartbeat_at: '2026-04-10T10:28:29+08:00'
+  closed_at: '2026-04-10T10:28:29+08:00'

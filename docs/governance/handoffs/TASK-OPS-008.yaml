@@ -1,0 +1,20 @@
+task_id: TASK-OPS-008
+summary_status: done
+last_handoff_at: '2026-04-10T10:28:29+08:00'
+completed_items:
+- Released closed execution worktree for TASK-RM-STAGE2-INTEGRATION-GATE; governance
+  ledger now consistent; check_repo passed.
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
+next_tests:
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- docs/governance/
+candidate_test_paths: []
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task activated through queue-and-activate branch_action=created.
+- 'Worker finish summary: Released closed execution worktree for TASK-RM-STAGE2-INTEGRATION-GATE;
+  governance ledger now consistent; check_repo passed.'
+- Task closed.

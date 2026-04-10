@@ -86,5 +86,5 @@
 - `review_bundle_status`: `pending`
 - `reserved_paths`: `docs/governance/, tests/integration/, docs/governance/INTERFACE_CATALOG.yaml`
 - `branch`: `codex/TASK-RM-STAGE2-INTEGRATION-GATE-stage2-integration-gate`
-- `updated_at`: `2026-04-10T10:13:19+08:00`
+- `updated_at`: `2026-04-10T10:28:07+08:00`
 <!-- generated:task-meta:end -->

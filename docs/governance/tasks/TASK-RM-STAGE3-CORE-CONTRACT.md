@@ -5,7 +5,7 @@
 - `task_id`: `TASK-RM-STAGE3-CORE-CONTRACT`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `doing`
+- `status`: `paused`
 - `stage`: `stage3`
 - `branch`: `codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract`
 - `size_class`: `standard`
@@ -53,12 +53,12 @@
 - `docs/governance/INTERFACE_CATALOG.yaml`
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
 - `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
+- `next_gate`: `resume_required`
 ## Acceptance Criteria
 
 - Required tests pass: pytest tests/stage3 -q.
@@ -73,7 +73,7 @@
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `doing`
+- `status`: `paused`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
@@ -86,5 +86,5 @@
 - `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `docs/governance/, tests/integration/, docs/governance/INTERFACE_CATALOG.yaml`
 - `branch`: `codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract`
-- `updated_at`: `2026-04-10T10:04:17+08:00`
+- `updated_at`: `2026-04-10T10:27:05+08:00`
 <!-- generated:task-meta:end -->
