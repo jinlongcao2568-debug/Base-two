@@ -1,0 +1,43 @@
+task_id: TASK-GOV-089
+summary_status: doing
+last_handoff_at: '2026-04-10T14:37:20+08:00'
+completed_items:
+- Preserved the AX9 governance operator console and its launcher or runtime dependency chain.
+- Removed historical governance task packages, runlogs, handoffs, governance-only tests, and stale output artifacts within approved paths.
+- Ran validation for contracts, minimal product flow, and console runtime coverage with all checks passing.
+- Removed two stale dispatch brief files and cleared their residual execution records from the live governance ledgers.
+remaining_items:
+- Decide whether to keep pruning additional governance root files or formally close the live task through task_ops.
+next_step: Review the remaining live governance files, keep the console path intact, and close the task only when no more governance cleanup is needed.
+next_tests:
+- python scripts/validate_contracts.py
+- pytest tests/contracts -q
+- pytest tests/integration/test_stage3_stage4_stage6_minimal_flow.py -q
+- pytest tests/governance/test_governance_console.py -q
+current_risks:
+- Formal task closeout will mutate live control-plane ledgers again.
+- Additional deletions under docs/governance root can break operator workflows unless revalidated against the console test.
+candidate_write_paths:
+- docs/governance/
+- docs/product/
+- src/governance/
+- tests/contracts/
+- tests/governance/
+- tests/automation/
+- scripts/
+- .codex/
+- output/
+- README.md
+- docs/INDEX.md
+candidate_test_paths:
+- docs/contracts/
+- tests/contracts/
+- tests/integration/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
+- tests/governance/
+resume_notes:
+- Operator instruction: `AX9 治理操作员控制台` is a development console and must not be deleted.
+- Live task ledgers, task_ops runtime, and console verification test were intentionally retained.
+- Formal handoff recorded after deletion pass and validation.

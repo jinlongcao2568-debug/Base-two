@@ -1,6 +1,6 @@
 ---
-current_phase: governance-doc-entry-slimming-v1
-current_task_id: TASK-GOV-088
+current_phase: governance-surface-removal-v1
+current_task_id: TASK-GOV-089
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -36,7 +36,7 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Task
 
-- `TASK-GOV-088`: `Slim governance entry docs and route product-first` is the live coordination task for `governance-doc-entry-slimming-v1`.
+- `TASK-GOV-089`: `Delete non-essential governance surfaces and keep product chain only` is the live coordination task for `governance-surface-removal-v1`.
 ## Recently Closed
 
 - `TASK-GOV-066`: enforced compiled-only candidate source and added path/pilot gates for roadmap evaluation.

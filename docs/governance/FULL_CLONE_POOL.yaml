@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-10T12:29:04+08:00'
+updated_at: '2026-04-10T14:19:38+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 root_path: D:/Base One/Base-two/AX9.clones
@@ -18,7 +18,7 @@ slots:
   blocked_reason: null
   stale_runtime: false
   preserve_before_rebuild: false
-  last_provisioned_at: '2026-04-10T12:28:49+08:00'
+  last_provisioned_at: '2026-04-10T14:19:17+08:00'
   last_claimed_at: '2026-04-09T18:08:21+08:00'
   last_released_at: '2026-04-09T18:15:27+08:00'
 - slot_id: worker-02
@@ -29,7 +29,7 @@ slots:
   idle_branch: codex/worker-02-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:28:51+08:00'
+  last_provisioned_at: '2026-04-10T14:19:19+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-03
@@ -40,7 +40,7 @@ slots:
   idle_branch: codex/worker-03-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:28:53+08:00'
+  last_provisioned_at: '2026-04-10T14:19:27+08:00'
   last_claimed_at: null
   last_released_at: null
   preserve_before_rebuild: false
@@ -52,7 +52,7 @@ slots:
   idle_branch: codex/worker-04-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:28:55+08:00'
+  last_provisioned_at: '2026-04-10T14:19:29+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-05
@@ -63,7 +63,7 @@ slots:
   idle_branch: codex/worker-05-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:28:57+08:00'
+  last_provisioned_at: '2026-04-10T14:19:30+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-06
@@ -74,7 +74,7 @@ slots:
   idle_branch: codex/worker-06-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:28:58+08:00'
+  last_provisioned_at: '2026-04-10T14:19:32+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-07
@@ -85,7 +85,7 @@ slots:
   idle_branch: codex/worker-07-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:29:00+08:00'
+  last_provisioned_at: '2026-04-10T14:19:34+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-08
@@ -96,7 +96,7 @@ slots:
   idle_branch: codex/worker-08-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:29:02+08:00'
+  last_provisioned_at: '2026-04-10T14:19:35+08:00'
   last_claimed_at: null
   last_released_at: null
 - slot_id: worker-09
@@ -107,6 +107,6 @@ slots:
   idle_branch: codex/worker-09-idle
   blocked_reason: null
   stale_runtime: false
-  last_provisioned_at: '2026-04-10T12:29:04+08:00'
+  last_provisioned_at: '2026-04-10T14:19:37+08:00'
   last_claimed_at: null
   last_released_at: null

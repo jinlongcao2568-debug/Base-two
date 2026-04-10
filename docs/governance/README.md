@@ -1,89 +1,72 @@
 # AX9S Governance Index
 
-This directory is the live control plane for repository execution.
+This directory is the live control plane for repository execution. It is not the default onboarding path for ordinary product development.
 
 Conflict rule:
 - If this directory conflicts with `docs/product/AUTHORITY_SPEC.md`, the product authority wins.
 - If this directory conflicts with `docs/governance/OPERATOR_MANUAL.md`, the operator manual wins for execution procedure.
 - `CURRENT_TASK.yaml` remains the only live execution entry.
-  - It may hold either a live current-task payload or the formal `idle` zero-state.
+- `CURRENT_TASK.yaml` remains the only live execution focus entry.
 
-## Live Files
+## When To Enter Governance
 
+Read governance documents first only when one of the following is true:
+- you are activating, continuing, or closing a governed task
+- you need live task occupancy or worktree ownership
+- you are changing governance scripts, policies, or control-plane ledgers
+- you are auditing a historical task or recovering from governance drift
+
+For ordinary product and contract work, start from `docs/INDEX.md` and the product docs instead.
+
+## Minimum Live Surfaces
+
+These are the high-value governance files that should stay in the daily operator path:
+- `OPERATOR_MANUAL.md`
+  - the live execution procedure
 - `CURRENT_TASK.yaml`
-  - the only live task execution entry
+  - the only live focus entry
 - `TASK_REGISTRY.yaml`
-  - all known tasks and their current ledger state
+  - the live task ledger
 - `WORKTREE_REGISTRY.yaml`
-  - worktree and coordination ownership
-- `DEVELOPMENT_ROADMAP.md`
-  - live phase and current-task roadmap context
-- `LIVE_GOVERNANCE_BOUNDARY.md`
-  - live-vs-historical governance search boundary and default-gate interpretation rules
-- `AUTOMATION_INTENTS.yaml`
-  - natural-language intent routing policy for governed continuation entrypoints in `docs/governance/AUTOMATION_INTENTS.yaml`
-- `GIT_PUBLISH_POLICY.yaml`
-  - explicit on-demand Git publish policy for commit, push, and draft PR actions
+  - the live worktree and coordination ownership ledger
 - `DIRECTORY_MAP.md`
-  - repository boundary map
-- `PROMPT_MODULE_CATALOG.yaml`
-  - governed prompt module catalog and role assembly in `docs/governance/PROMPT_MODULE_CATALOG.yaml`
-- `runtime_prompts/`
-  - generated runtime prompts for coordinator, worker, and reviewer roles
-- `MODULE_MAP.yaml`
-  - machine-readable module boundaries and reserved paths
+  - repository boundary map when allowed paths are unclear
 - `TEST_MATRIX.yaml`
-  - machine-readable gates by size class, module, and authority-critical chain
-- `TASK_POLICY.yaml`
-  - task sizing, topology, automation mode, stop conditions, and blueprints
-- `AUTOMATION_OPERATING_MODEL.md`
-  - runner semantics and control-plane behavior
-- `CODE_HYGIENE_POLICY.md`
-  - repository hygiene rules
-- `CAPABILITY_MAP.yaml`
-  - live capability inventory and test linkage
-- `SCHEMA_REGISTRY.md`
-  - formal field and enum registry
-- `INTERFACE_CATALOG.yaml`
-  - formal interface catalog or professional zero-state
-- `owners.yaml`
-  - role-based ownership map for formal paths
-- `prompt_modules/`
-  - governed prompt rule modules for coordinator, worker, and reviewer roles
+  - the live gate map when test scope is unclear
+
+Use additional files only when the current task or the active operator action requires them.
+
+Additional live references that are still valid, but should be opened on demand instead of by default:
+- `docs/governance/LIVE_GOVERNANCE_BOUNDARY.md`
+- `docs/governance/AUTOMATION_INTENTS.yaml`
+- `docs/governance/PROMPT_MODULE_CATALOG.yaml`
+
+## Historical But Retained
+
+These governance surfaces still matter for audit and recovery, but they are not part of the default read path:
+- `tasks/`
+- `runlogs/`
+- `handoffs/`
+- `dispatch_briefs/`
+- `runtime_prompts/`
+- historical design, transition, and scheduler documents in this directory
+
+Retention rule:
+- keep them searchable
+- do not treat them as the first document a developer must read
+- do not let them override the live control-plane files
 
 ## Execution Order
 
 1. Read `docs/product/AUTHORITY_SPEC.md`.
 2. Read `docs/governance/OPERATOR_MANUAL.md`.
 3. Read `docs/governance/CURRENT_TASK.yaml`.
-4. Read the current task file and runlog.
-5. Run repository gates before implementation.
+4. Read the current task file and runlog only for the live task you are working on.
+5. Run the required task gates before implementation.
 
 ## Current State
 
 - The governance control plane is live and test-backed.
-- Contracts are formalized for `project_base`, `rule_hit`, `evidence`, `review_request`, `report_record`, and `project_fact`.
-- The minimum authority-critical chain `stage3 -> stage4 -> stage6` is covered by fixtures and integration tests.
-- No public business API is registered yet; the interface catalog stays in an explicit zero-state until one exists.
-- Continuation now has two formal entry points:
-  - `continue-current` keeps or reactivates the live current task and may close a review-ready live task back to formal idle.
-  - `continue-roadmap` closes a review-ready live task or resumes from the formal idle state, then resolves the next valid successor.
-- `python scripts/automation_intent.py preflight --utterance "<text>"` is the governed free-form continuation entrypoint.
-  - It may recognize broader natural-language continue requests.
-  - It still routes only to `continue-current` or `continue-roadmap`.
-  - Ambiguous requests must stop instead of guessing through a task switch.
-- Git publish is now a separate explicit control-plane action set.
-  - `commit-task-results`, `push-task-branch`, `create-task-pr`, and `publish-task-results` are manual release actions.
-  - They do not run from `continue-current`, `continue-roadmap`, or automatic closeout.
-  - They are gated by `docs/governance/GIT_PUBLISH_POLICY.yaml`.
-- `python scripts/task_ops.py orchestration-status --format yaml|json` now includes a `publish_readiness` block.
-  - It shows whether the live task is currently publishable.
-  - It also surfaces remote, `gh`, existing-PR, and missing-test blockers without mutating the repo.
-- Closing a live top-level coordination task without an immediately activated successor now moves the repository into a legal idle control-plane state.
-- Roadmap continuation now follows the module order in `docs/governance/MODULE_MAP.yaml`, starting with early-stage gaps and extending downstream when policy and dependencies allow.
-- `stage7-stage9` remain downstream-only stages and now require both dependency satisfaction and `stage7_to_stage9_business_automation=implemented` before automation may generate them.
-- Prompt source of truth now lives under `docs/governance/prompt_modules/`; root-level scratch notes are not live prompt inputs.
-- `docs/governance/LIVE_GOVERNANCE_BOUNDARY.md` defines the search boundary between live governance surfaces and historical audit artifacts.
-- Historical artifacts remain searchable for audit and recovery, but they do not override the current default gate recorded by live governance surfaces.
-- Generated runtime prompts now live under `docs/governance/runtime_prompts/`; they are derived artifacts, not a second prompt authority.
-- App-level custom instructions are not part of the governance control plane and should stay empty unless they are only carrying language or output-style preferences.
+- `CURRENT_TASK.yaml` is the only live focus entry; task files and runlogs are supporting evidence, not a second live truth.
+- Product docs and contracts remain the primary route for domain understanding.
+- Historical governance artifacts remain available for audit, recovery, and postmortem work, but they should not be the default developer entrance.

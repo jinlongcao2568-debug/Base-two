@@ -1,49 +1,82 @@
-current_task_id: TASK-GOV-088
-title: Slim governance entry docs and route product-first
+current_task_id: TASK-GOV-089
+title: Delete non-essential governance surfaces and keep product chain only
 status: doing
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: governance-doc-entry-slimming-v1
+stage: governance-surface-removal-v1
 branch: codex/TASK-OPS-009-full-clone-slot-release-hardening
-size_class: standard
+size_class: heavy
 automation_mode: assisted
 worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-10T14:15:52+08:00'
+last_reported_at: '2026-04-10T14:46:09+08:00'
 topology: single_worker
 allowed_dirs:
-- README.md
-- docs/
-reserved_paths:
-- src/
-- scripts/
-- tests/
-- db/migrations/
-- docs/contracts/
+- docs/governance/
 - docs/product/
+- src/governance/
+- tests/contracts/
+- tests/governance/
+- tests/automation/
+- scripts/
+- .codex/
+- output/
+- README.md
+- docs/INDEX.md
+reserved_paths:
+- docs/contracts/
+- src/domain/
+- src/shared/
+- src/stage1_orchestration/
+- src/stage2_ingestion/
+- src/stage3_parsing/
+- src/stage4_validation/
+- src/stage5_reporting/
+- src/stage6_facts/
+- src/stage7_sales/
+- src/stage8_contact/
+- src/stage9_delivery/
+- tests/integration/
+- tests/stage1/
+- tests/stage2/
+- tests/stage3/
+- tests/stage4/
+- tests/stage5/
+- tests/stage6/
+- tests/stage7/
+- tests/stage8/
+- tests/stage9/
+- db/migrations/
+- AGENTS.md
 planned_write_paths:
+- docs/governance/
+- docs/product/
+- src/governance/
+- tests/contracts/
+- tests/governance/
+- tests/automation/
+- scripts/
+- .codex/
+- output/
 - README.md
 - docs/INDEX.md
-- docs/governance/README.md
-- docs/governance/tasks/TASK-GOV-088.md
-- docs/governance/runlogs/TASK-GOV-088-RUNLOG.md
-- docs/governance/handoffs/TASK-GOV-088.yaml
-- docs/governance/TASK_REGISTRY.yaml
-- docs/governance/CURRENT_TASK.yaml
-- docs/governance/WORKTREE_REGISTRY.yaml
 planned_test_paths:
-- README.md
-- docs/INDEX.md
-- docs/governance/README.md
+- docs/contracts/
+- tests/contracts/
+- tests/integration/
+- tests/stage3/
+- tests/stage4/
+- tests/stage6/
 required_tests:
-- python scripts/check_authority_alignment.py
-- python scripts/check_repo.py
-task_file: docs/governance/tasks/TASK-GOV-088.md
-runlog_file: docs/governance/runlogs/TASK-GOV-088-RUNLOG.md
+- python scripts/validate_contracts.py
+- pytest tests/contracts -q
+- pytest tests/integration/test_stage3_stage4_stage6_minimal_flow.py -q
+task_file: docs/governance/tasks/TASK-GOV-089.md
+runlog_file: docs/governance/runlogs/TASK-GOV-089-RUNLOG.md
 lane_count: 1
 lane_index: null
 parallelism_plan_id: null
 review_bundle_status: not_applicable
-next_action: Implement the live task package and keep branch/control-plane state aligned.
-updated_at: '2026-04-10T14:15:52+08:00'
+next_action: Continue the live task after ledger derivation.
+updated_at: '2026-04-10T14:46:09+08:00'

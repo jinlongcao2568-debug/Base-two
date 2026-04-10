@@ -1,42 +1,33 @@
-# AX9S Authority-Aligned Engineering Baseline
+# AX9S Product Engineering Baseline
 
-This repository is the formal implementation baseline for the AX9S China engineering domain.
+This repository is the implementation baseline for the AX9S China engineering domain.
 
 Conflict rule:
 - Domain truth is owned by `docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md`.
-- Execution discipline is owned by `docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md`.
-- The live focus entry is `docs/governance/CURRENT_TASK.yaml`; execution occupancy truth lives in `docs/governance/EXECUTION_LEASES.yaml`.
+- Execution guidance is derived from the baseline documents under `docs/baseline/`.
 - If any downstream file drifts, fix the downstream file. Do not weaken the authority source.
 
-Documentation entry index: `docs/INDEX.md`
+## Start Here
 
-## Live Sources Of Truth
+Default reading order:
+- `docs/product/AUTHORITY_SPEC.md`
+- `docs/product/MVP_SCOPE.md`
+- `docs/product/PRODUCT_BOUNDARIES.md`
+- `docs/contracts/`
+- `docs/INDEX.md`
 
-- Authority index: `docs/product/AUTHORITY_SPEC.md`
-- Operator manual: `docs/governance/OPERATOR_MANUAL.md`
-- Live task entry: `docs/governance/CURRENT_TASK.yaml`
-- Execution occupancy: `docs/governance/EXECUTION_LEASES.yaml`
-- Task and worktree ledgers: `docs/governance/TASK_REGISTRY.yaml`, `docs/governance/WORKTREE_REGISTRY.yaml`
-- Structure and module boundaries: `docs/governance/DIRECTORY_MAP.md`, `docs/governance/MODULE_MAP.yaml`
-- Test gates: `docs/governance/TEST_MATRIX.yaml`
-- Formal contracts: `docs/contracts/`
+## What Stays Core
 
-## What Is Already Real
-
-- Governance control plane:
-  - `scripts/check_repo.py`
-  - `scripts/check_hygiene.py`
-  - `scripts/task_ops.py`
-  - `scripts/automation_runner.py`
-- Formal contract assets:
-  - `project_base`
-  - `rule_hit`
-  - `project_fact`
-- Authority-critical regression chain:
-  - `tests/stage3/`
-  - `tests/stage4/`
-  - `tests/stage6/`
-  - `tests/integration/test_stage3_stage4_stage6_minimal_flow.py`
+High-value repository content:
+- `docs/baseline/`
+- `docs/product/`
+- `docs/contracts/`
+- `src/domain/engineering/`
+- `src/shared/`
+- `src/stage2_ingestion/` to `src/stage6_facts/`
+- `tests/contracts/`
+- `tests/integration/`
+- `tests/stage2/` to `tests/stage6/`
 
 ## Product Scope Snapshot
 
@@ -48,15 +39,9 @@ Documentation entry index: `docs/INDEX.md`
 ## Local Validation
 
 ```powershell
-python scripts/check_authority_alignment.py
 python scripts/validate_contracts.py
-python scripts/check_repo.py
-python scripts/check_hygiene.py
 pytest tests/contracts -q
-pytest tests/governance -q
-pytest tests/automation -q
-pytest tests/integration -q
-pytest -q
+pytest tests/integration/test_stage3_stage4_stage6_minimal_flow.py -q
 ```
 
 ## Runtime Contract
@@ -77,23 +62,17 @@ If editable installs are not available, the compatible fallback is:
 python -m pip install -r requirements-dev.txt
 ```
 
-Governance subprocess rule:
-
-- Governance command strings may still be recorded as `python scripts/...` or `pytest ...`
-- Actual subprocess execution must reuse the current interpreter (`sys.executable`)
-- Governance Python subprocesses must not rely on `shell=True`
-
 ## Repository Layout
 
 - `docs/baseline/`: authority and execution baseline documents
-- `docs/product/`: derived product-facing execution documents
-- `docs/contracts/`: formal registries, schemas, examples, and field semantics
-- `docs/governance/`: live control-plane documents
-- `scripts/`: repository governance and validation entry points
-- `tests/`: governance, contracts, automation, stage, and integration tests
+- `docs/product/`: product-facing execution documents
+- `docs/contracts/`: registries, schemas, examples, and field semantics
+- `scripts/`: retained product and validation entry points
+- `src/`: domain, shared, and stage implementation code
+- `tests/`: contract, integration, and stage regression tests
 
 ## Current Non-Goals
 
 - No stage-directory renaming.
 - No second contracts root.
-- No new business-stage implementation logic under the current governance hardening task.
+- No new business-stage implementation logic outside the formal stage chain.

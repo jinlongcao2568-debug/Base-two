@@ -37,11 +37,11 @@ slots:
 - slot_id: worker-04
   worker_owner: worker-04
   path: D:/Base One/Base-two/AX9.worktrees/worker-04
-  status: active
-  current_task_id: TASK-RM-STAGE3-CORE-CONTRACT
-  branch: codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract
+  status: idle
+  current_task_id: null
+  branch: codex/worker-04-idle
   last_claimed_at: '2026-04-10T10:04:04+08:00'
-  last_released_at: null
+  last_released_at: '2026-04-10T14:54:58+08:00'
   idle_branch: codex/worker-04-idle
 - slot_id: worker-05
   worker_owner: worker-05
