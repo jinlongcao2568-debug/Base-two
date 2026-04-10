@@ -1,0 +1,20 @@
+task_id: TASK-OPS-009
+summary_status: queued
+last_handoff_at: null
+completed_items: []
+remaining_items:
+- Complete the remaining scoped implementation for this task.
+next_step: Activate the task and begin scoped implementation inside the allowed directories.
+next_tests:
+- pytest tests/governance/test_worker_self_loop.py -q
+- pytest tests/governance/test_full_clone_pool.py -q
+- python scripts/check_repo.py
+current_risks: []
+candidate_write_paths:
+- scripts/
+- tests/governance/
+- docs/governance/
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
