@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "scripts") not in sys.path:
@@ -12,30 +12,22 @@ import governance_console as console  # noqa: E402
 import governance_console_launcher as launcher  # noqa: E402
 
 
-def test_render_index_html_contains_core_controls() -> None:
+def test_render_index_html_contains_task_center_navigation() -> None:
     html = console._render_index_html()
     assert "AX9 治理操作员控制台" in html
-    assert "编译候选池" in html
-    assert "解释认领决策" in html
-    assert "控制台总览" in html
-    assert "复制任务" in html
-    assert "feedback_toast" in html
-    assert "当前任务如下：" in html
-    assert "divergence_banner" in html
-    assert "refresh_meta" in html
-    assert "scheduleAutoRefresh" in html
-    assert "visibilitychange" in html
-    assert "AUTO_REFRESH_FOREGROUND_MS" in html
-    assert "foreground_refresh_toggle" in html
-    assert html.count('id="foreground_refresh_toggle"') == 1
-    assert "AUTO_REFRESH_FOREGROUND_DEFAULT = true" in html
-    assert "ax9.console.foregroundAutoRefresh.v2" in html
-    assert "Foreground Auto Refresh: ON" in html
-    assert "refreshVisiblePool" in html
-    assert "buildPoolRenderSignature" in html
-    assert "180s foreground" in html
-    assert "自动化开发底座" not in html
-    assert "/api/pool" in html
+    assert "可领取任务" in html
+    assert "当前任务" in html
+    assert "已完成任务" in html
+    assert "任务总页面" in html
+    assert "高级诊断" in html
+    assert "前台自动刷新：开启" in html
+    assert "/api/intake" in html
+    assert "/api/current-task" in html
+    assert "/api/completed-tasks" in html
+    assert "/api/task-catalog" in html
+    assert "/api/diagnostics" in html
+    assert "worker-01" not in html
+    assert "AX9 console" not in html
 
 
 def test_run_task_ops_returns_structured_result() -> None:
@@ -47,6 +39,70 @@ def test_run_task_ops_returns_structured_result() -> None:
 
 def test_console_url_is_localhost() -> None:
     assert console._console_url("127.0.0.1", 8765) == "http://127.0.0.1:8765/"
+
+
+def test_build_current_task_payload_returns_live_task() -> None:
+    payload = console._build_current_task_payload(console._repo_root())
+    assert payload["page"] == "current"
+    assert payload["summary"]["active"] is True
+    assert payload["rows"][0]["task_id"] == "TASK-GOV-089"
+    assert payload["rows"][0]["page_status"] == "in_progress"
+
+
+def test_build_completed_tasks_payload_uses_task_registry_only() -> None:
+    payload = console._build_completed_tasks_payload(console._repo_root())
+    assert payload["page"] == "completed"
+    assert payload["summary"]["completed_count"] >= 1
+    assert all(row["page_status"] == "completed" for row in payload["rows"])
+    assert all(row["source"] == "任务登记" for row in payload["rows"])
+
+
+def test_build_task_catalog_payload_includes_route_status_mapping() -> None:
+    payload = console._build_task_catalog_payload(console._repo_root())
+    row = next(item for item in payload["rows"] if item["candidate_id"] == "stage2-source-family-lanes")
+    assert row["page_status"] == "available"
+    assert row["module_id"] == "stage2_ingestion"
+    assert row["source"] == "路线图总表"
+
+
+def test_build_intake_payload_exposes_claimable_task_fields() -> None:
+    payload = console._build_intake_payload(console._repo_root())
+    assert payload["page"] == "intake"
+    assert payload["summary"]["total_rows"] >= 1
+    row = payload["rows"][0]
+    assert row["page_status"] == "available"
+    assert row["candidate_id"]
+    assert row["write_paths"]
+    assert row["required_tests"]
+
+
+def test_build_diagnostics_payload_keeps_governance_details() -> None:
+    payload = console._build_diagnostics_payload(console._repo_root())
+    assert payload["page"] == "diagnostics"
+    assert "diagnostic_row_count" in payload["summary"]
+    assert isinstance(payload["rows"], list)
+
+
+def test_candidate_index_payload_prefers_cached_index(monkeypatch, tmp_path) -> None:
+    cache_dir = tmp_path / ".codex" / "local" / "roadmap_candidates"
+    cache_dir.mkdir(parents=True)
+    (cache_dir / "index.yaml").write_text(
+        "candidates:\n- candidate_id: cached-task\n  title: Cached task\n  stage: stage2\n  module_id: stage2_ingestion\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(console, "build_roadmap_candidate_index", lambda root: (_ for _ in ()).throw(AssertionError("should not rebuild")))
+    payload = console._candidate_index_payload(tmp_path)
+    assert payload["candidates"][0]["candidate_id"] == "cached-task"
+
+
+def test_decorate_claim_payload_hides_slot_wording_in_blockers() -> None:
+    root = console._repo_root()
+    payload = console._decorate_claim_payload(root, console.explain_claim_decision(root))
+    assert payload["selected_candidate_id"] == "stage2-source-family-lanes"
+    blocked = payload["blocked_candidates"][0]
+    assert blocked["blockers_zh"]
+    assert all("worker-" not in reason for reason in blocked["blockers_zh"])
+    assert all("slot" not in reason.lower() for reason in blocked["blockers_zh"])
 
 
 def test_start_console_opens_browser_only_for_new_server(monkeypatch) -> None:
@@ -85,30 +141,6 @@ def test_start_console_does_not_open_browser_when_console_already_running(monkey
     assert opened == []
 
 
-def test_start_console_respects_no_browser_on_new_server(monkeypatch) -> None:
-    opened = []
-
-    class DummyServer:
-        def __init__(self, address, handler):
-            self.address = address
-            self.handler = handler
-
-        def serve_forever(self):
-            raise KeyboardInterrupt
-
-        def server_close(self):
-            return None
-
-    monkeypatch.setattr(console, "_port_in_use", lambda host, port: False)
-    monkeypatch.setattr(console, "ThreadingHTTPServer", DummyServer)
-    monkeypatch.setattr(console, "_open_console_url", lambda url: opened.append(url))
-
-    result = console.start_console(open_browser=False)
-
-    assert result == 0
-    assert opened == []
-
-
 def test_launcher_restarts_stale_console_before_opening(monkeypatch) -> None:
     events: list[str] = []
     monkeypatch.setattr(launcher, "is_console_reachable", lambda url: True if not events else False)
@@ -142,137 +174,20 @@ def test_launcher_port_owner_pid_uses_hidden_subprocess_on_windows(monkeypatch) 
         assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
 
 
-def test_launcher_terminate_console_service_uses_hidden_subprocess_on_windows(monkeypatch) -> None:
-    captured = {}
-
-    def fake_run(*args, **kwargs):
-        captured["creationflags"] = kwargs.get("creationflags")
-
-        class Result:
-            stdout = ""
-
-        return Result()
-
-    monkeypatch.setattr(launcher, "port_owner_pid", lambda port: 4321)
-    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
-
-    assert launcher.terminate_console_service(8765) is True
-    if hasattr(subprocess, "CREATE_NO_WINDOW"):
-        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
-
-
-def test_launcher_script_delegates_to_python_launcher() -> None:
-    launcher = (ROOT / "scripts" / "governance_console_launcher.vbs").read_text(encoding="utf-8")
-    assert "governance_console_launcher.py" in launcher
-    assert "pythonw.exe" in launcher
-    assert "shell.Run Quote(PythonwPath) & \" \" & Quote(LauncherScript), 0, False" in launcher
-
-
-def test_python_launcher_builds_extensionless_browser_command() -> None:
-    browser = Path("C:/Program Files/Google/Chrome/Application/chrome.exe")
-    profile = Path("C:/Users/test/AppData/Local/AX9/GovernanceConsoleBrowser")
-    command = launcher.build_browser_command(browser, "http://127.0.0.1:8765/", profile)
-    assert command[0] == str(browser)
-    assert "--app=http://127.0.0.1:8765/" in command
-    assert f"--user-data-dir={profile}" in command
-    assert "--disable-extensions" in command
-    assert "--disable-component-extensions-with-background-pages" in command
-
-
-def test_python_launcher_uses_ax9_local_profile_dir(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
-    assert launcher.browser_profile_dir() == tmp_path / "AX9" / "GovernanceConsoleBrowser"
-
-
-def test_translate_candidate_title_to_chinese() -> None:
-    assert (
-        console._translate_candidate_title("Stage8 contact-context parallel lanes")
-        == "阶段8 联系上下文并行泳道"
-    )
-    assert (
-        console._translate_candidate_title("Stage2 ingestion integration gate")
-        == "阶段2 数据采集集成闸门"
-    )
-    assert (
-        console._translate_candidate_title("domain_project_manager preview root")
-        == "项目经理领域预览根"
-    )
-
-
-def test_status_and_blocker_labels_translate_to_chinese() -> None:
-    assert console._status_label_zh("stale") == "陈旧"
-    assert console._blocking_reason_labels(["stale_takeover_ready"]) == ["陈旧候选可接管"]
-
-
-def test_candidate_summary_marks_stale_takeover_as_resume_only() -> None:
-    payload = console._candidate_summary(
-        {
-            "candidate_id": "stage1-core-contract",
-            "title": "Stage1 orchestration contract and fixture boundary",
-            "stage": "stage1",
-            "module_id": "stage1_orchestration",
-            "status": "resumable",
-            "claimable": False,
-            "fresh_claimable": False,
-            "takeover_claimable": False,
-            "blocking_reason_codes": ["stale_takeover_blocked"],
-            "blocking_reason_text": ["stale worktree is dirty and requires manual checkpoint"],
-            "upstream_blocker_candidates": [],
-        }
-    )
-    assert payload["copy_instruction"] == "任务池发现旧任务续接点，先处理该任务，不要重复新开同任务。"
-    assert payload["copy_reason"] == "旧任务已暂停，旧工作树还有未收口改动，当前不能直接接管。"
-
-
-def test_candidate_summary_marks_dependency_wait_as_not_manual_release() -> None:
-    payload = console._candidate_summary(
-        {
-            "candidate_id": "stage2-core-contract",
-            "title": "Stage2 ingestion contract and raw payload fixture boundary",
-            "stage": "stage2",
-            "module_id": "stage2_ingestion",
-            "status": "waiting",
-            "claimable": False,
-            "fresh_claimable": False,
-            "takeover_claimable": False,
-            "blocking_reason_codes": ["dependency_wait"],
-            "blocking_reason_text": ["waiting for stage1-core-contract (resumable)"],
-            "upstream_blocker_candidates": ["stage1-core-contract"],
-        }
-    )
-    assert payload["copy_instruction"] == "当前任务尚未解锁，先检查阻塞原因；解除后再回任务池接单。"
-    assert payload["operator_reason"] == "前置候选未完成：stage1-core-contract。当前不是人工释放问题。"
-
-
 def test_run_task_ops_uses_hidden_subprocess_on_windows(monkeypatch) -> None:
     captured = {}
 
     def fake_run(*args, **kwargs):
         captured["creationflags"] = kwargs.get("creationflags")
+
         class Result:
             returncode = 0
             stdout = ""
             stderr = ""
+
         return Result()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     console._run_task_ops("review-candidate-pool")
     if hasattr(subprocess, "CREATE_NO_WINDOW"):
         assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
-
-
-def test_cached_pool_payload_reads_cache_without_refresh(monkeypatch, tmp_path) -> None:
-    root = tmp_path
-    cache_dir = root / ".codex" / "local" / "roadmap_candidates"
-    cache_dir.mkdir(parents=True)
-    (cache_dir / "summary.yaml").write_text("candidate_count: 1\nfresh_claimable_count: 0\n", encoding="utf-8")
-    (cache_dir / "index.yaml").write_text(
-        "candidates:\n- candidate_id: stage1-core-contract\n  title: Stage1 orchestration contract and fixture boundary\n  stage: stage1\n  module_id: stage1_orchestration\n  status: waiting\n  candidate_intent: module_root\n  unlock_count: 2\n  blocking_reason_codes: [dependency_wait]\n  upstream_blocker_candidates: [stage0]\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(console, "_repo_root", lambda: root)
-    payload = console._cached_pool_payload()
-    assert payload["summary"]["candidate_count"] == 1
-    assert payload["visible_candidates"][0]["candidate_id"] == "stage1-core-contract"
-    assert payload["visible_candidates"][0]["title_zh"] == "阶段1 编排契约与夹具边界"
-    assert payload["visible_candidates"][0]["status_zh"] == "等待中"

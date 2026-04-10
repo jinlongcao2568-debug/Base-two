@@ -17,6 +17,8 @@
 - `2026-04-10T14:30:34+08:00`: allowed scope expanded to include `docs/product/` and `tests/automation/` so governance cleanup could be checked against product-facing entry docs without touching product-stage code
 - `2026-04-10T14:37:20+08:00`: preserved `AX9 治理操作员控制台` runtime chain and removed historical governance burden inside approved paths (`342` files, `4` directories)
 - `2026-04-10T14:54:58+08:00`: removed stale `dispatch_briefs` for `TASK-RM-STAGE2-INTEGRATION-GATE` and `TASK-RM-STAGE3-CORE-CONTRACT`, cleared their residual task or worktree or lease rows, and released `worker-04` back to idle
+- `2026-04-10T15:55:00+08:00`: rebuilt the console as a task-centric surface with `可领取任务 / 当前任务 / 已完成任务 / 任务总页面 / 高级诊断`, while keeping candidate and release-chain APIs for compatibility
+- `2026-04-10T16:10:00+08:00`: changed `任务总页面` to prefer the cached roadmap snapshot so the catalog behaves as a static board with light task-ledger overlay
 
 ## Test Log
 
@@ -26,6 +28,8 @@
 - `PASS` `pytest tests/governance/test_governance_console.py -q` (`18 passed`)
 - `PASS` `pytest tests/contracts -q` (`19 passed`) after deleting `test_governance_contracts.py`
 - `PASS` `pytest tests/governance/test_governance_console.py -q` (`18 passed`) after dispatch-brief and ledger cleanup
+- `PASS` `pytest tests/governance/test_governance_console.py -q` (`14 passed`) after the console refactor to task-centered navigation
+- `PASS` `pytest tests/governance/test_governance_console.py -q` (`15 passed`) after switching the catalog page to cached-snapshot mode
 
 ## Narrative Assertions
 

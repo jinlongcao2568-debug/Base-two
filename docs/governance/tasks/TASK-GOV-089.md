@@ -21,6 +21,7 @@
 
 - Deliver `TASK-GOV-089`: delete non-essential governance surfaces and keep product chain only for stage `governance-surface-removal-v1`.
 - Preserve `AX9 治理操作员控制台` and its runtime chain while removing historical governance burden.
+- Refactor the operator console into a task-centric surface: default `可领取任务`, plus `当前任务 / 已完成任务 / 任务总页面 / 高级诊断`.
 - Implement planned write paths: docs/governance/, docs/product/, src/governance/, tests/contracts/, tests/governance/, tests/automation/, scripts/, .codex/, output/, README.md, docs/INDEX.md.
 - Keep required tests passing: python scripts/validate_contracts.py, pytest tests/contracts -q, pytest tests/integration/test_stage3_stage4_stage6_minimal_flow.py -q.
 
@@ -120,6 +121,8 @@
 - The AX9 operator console, launcher chain, live control-plane files, and console verification test were preserved by explicit user instruction.
 - Deletion pass removed `342` files and `4` directories inside the approved scope.
 - Follow-up cleanup removed two stale `dispatch_briefs` files plus their residual rows in `TASK_REGISTRY.yaml`, `WORKTREE_REGISTRY.yaml`, `WORKTREE_POOL.yaml`, and `EXECUTION_LEASES.yaml`.
+- Console read models and UI were reworked so the main path no longer centers `worker-01..09` slot semantics; slot or lease details remain only in `高级诊断`.
+- The task catalog now prefers the cached roadmap candidate snapshot, so the total-page view behaves like a static board with light ledger overlay instead of full live recomputation.
 
 ## Acceptance Criteria
 

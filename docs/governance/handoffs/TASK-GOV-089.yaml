@@ -1,14 +1,17 @@
 task_id: TASK-GOV-089
 summary_status: doing
-last_handoff_at: '2026-04-10T14:37:20+08:00'
+last_handoff_at: '2026-04-10T15:55:00+08:00'
 completed_items:
 - Preserved the AX9 governance operator console and its launcher or runtime dependency chain.
 - Removed historical governance task packages, runlogs, handoffs, governance-only tests, and stale output artifacts within approved paths.
 - Ran validation for contracts, minimal product flow, and console runtime coverage with all checks passing.
 - Removed two stale dispatch brief files and cleared their residual execution records from the live governance ledgers.
+- Rebuilt the console as a task-centric surface with intake, current, completed, catalog, and diagnostics pages.
+- Switched the catalog page to prefer the cached roadmap snapshot instead of full live recomputation.
 remaining_items:
+- Review whether the static snapshot behavior for the catalog page needs any extra operator hint text.
 - Decide whether to keep pruning additional governance root files or formally close the live task through task_ops.
-next_step: Review the remaining live governance files, keep the console path intact, and close the task only when no more governance cleanup is needed.
+next_step: Keep the console path intact, confirm the static catalog behavior is acceptable, and close the task only when the task-centered console change is accepted.
 next_tests:
 - python scripts/validate_contracts.py
 - pytest tests/contracts -q
@@ -38,6 +41,6 @@ candidate_test_paths:
 - tests/stage6/
 - tests/governance/
 resume_notes:
-- Operator instruction: `AX9 治理操作员控制台` is a development console and must not be deleted.
+- Operator instruction: AX9 治理操作员控制台 is a development console and must not be deleted.
 - Live task ledgers, task_ops runtime, and console verification test were intentionally retained.
 - Formal handoff recorded after deletion pass and validation.

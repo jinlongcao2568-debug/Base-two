@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -14,9 +15,10 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 import webbrowser
 
-from governance_lib import GovernanceError, configure_utf8_stdio
+from governance_lib import GovernanceError, configure_utf8_stdio, load_current_task, load_task_registry
 from control_plane_root import detect_ledger_divergences, resolve_control_plane_root
 from governance_runtime import load_yaml
+from roadmap_candidate_index import build_roadmap_candidate_index
 from roadmap_explain import (
     explain_candidate,
     explain_claim_decision,
@@ -404,6 +406,9 @@ def _decorate_claim_payload(root: Path, payload: dict[str, Any]) -> dict[str, An
         if candidate:
             payload["selected_candidate_title"] = candidate.get("title")
             payload["selected_candidate_title_zh"] = _translate_candidate_title(candidate.get("title"))
+            payload["selected_stage"] = candidate.get("stage")
+            payload["selected_stage_zh"] = _stage_label_zh(candidate.get("stage"))
+            payload["selected_module_id"] = candidate.get("module_id")
     safe_candidates = []
     for item in payload.get("safe_candidates", []):
         candidate = _candidate_lookup(root, item.get("candidate_id", ""))
@@ -415,10 +420,31 @@ def _decorate_claim_payload(root: Path, payload: dict[str, Any]) -> dict[str, An
                     "title_zh": _translate_candidate_title(candidate.get("title")),
                     "status": candidate.get("status"),
                     "status_zh": _status_label_zh(candidate.get("status")),
+                    "stage": candidate.get("stage"),
+                    "stage_zh": _stage_label_zh(candidate.get("stage")),
+                    "module_id": candidate.get("module_id"),
+                    "reasons_zh": [_task_friendly_blocker(text) for text in (candidate.get("blocking_reason_text") or [])],
                 }
             )
         safe_candidates.append(decorated)
     payload["safe_candidates"] = safe_candidates
+    blocked_candidates = []
+    for item in payload.get("blocked_candidates", []):
+        candidate = _candidate_lookup(root, item.get("candidate_id", ""))
+        decorated = dict(item)
+        if candidate:
+            decorated.update(
+                {
+                    "title": candidate.get("title"),
+                    "title_zh": _translate_candidate_title(candidate.get("title")),
+                    "stage": candidate.get("stage"),
+                    "stage_zh": _stage_label_zh(candidate.get("stage")),
+                    "module_id": candidate.get("module_id"),
+                }
+            )
+        decorated["blockers_zh"] = [_task_friendly_blocker(reason) for reason in (item.get("blockers") or [])]
+        blocked_candidates.append(decorated)
+    payload["blocked_candidates"] = blocked_candidates
     return payload
 
 
@@ -443,6 +469,484 @@ def _decorate_release_chain_payload(root: Path, payload: dict[str, Any]) -> dict
             )
         downstream_chain.append(decorated)
     payload["downstream_chain"] = downstream_chain
+    return payload
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _latest_timestamp(payload: dict[str, Any]) -> str | None:
+    for key in ("closed_at", "last_reported_at", "updated_at", "activated_at", "created_at"):
+        value = payload.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def _timestamp_sort_value(payload: dict[str, Any]) -> datetime:
+    return _parse_datetime(_latest_timestamp(payload)) or datetime.min
+
+
+def _candidate_index_payload(root: Path) -> dict[str, Any]:
+    cached = _load_candidate_index(root)
+    if cached.get("candidates"):
+        return cached
+    try:
+        return build_roadmap_candidate_index(root)
+    except Exception:  # noqa: BLE001
+        return cached
+
+
+def _candidate_map(root: Path) -> dict[str, dict[str, Any]]:
+    return {
+        str(candidate.get("candidate_id")): candidate
+        for candidate in _candidate_index_payload(root).get("candidates", [])
+        if candidate.get("candidate_id")
+    }
+
+
+def _task_rows(root: Path) -> list[dict[str, Any]]:
+    return list((load_task_registry(root) or {}).get("tasks", []) or [])
+
+
+def _task_rows_by_candidate(tasks: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    latest: dict[str, dict[str, Any]] = {}
+    for task in tasks:
+        candidate_id = str(task.get("roadmap_candidate_id") or "").strip()
+        if not candidate_id:
+            continue
+        current = latest.get(candidate_id)
+        if current is None or _timestamp_sort_value(task) >= _timestamp_sort_value(current):
+            latest[candidate_id] = task
+    return latest
+
+
+def _task_kind_label(task_kind: str | None) -> str:
+    mapping = {
+        "coordination": "协调任务",
+        "execution": "执行任务",
+    }
+    return mapping.get(str(task_kind or ""), str(task_kind or "-"))
+
+
+def _page_status_zh(status: str) -> str:
+    mapping = {
+        "not_started": "未开始",
+        "available": "可领取",
+        "in_progress": "进行中",
+        "review": "待复核",
+        "completed": "已完成",
+        "blocked": "阻塞",
+    }
+    return mapping.get(status, status)
+
+
+def _task_friendly_blocker(reason: Any) -> str:
+    text = str(reason or "").strip()
+    if not text:
+        return ""
+    mapping = {
+        "single-writer root conflict": "单写入口冲突",
+        "branch already exists": "已有未清理任务分支",
+        "branch already owned by active task": "已有未结束任务分支",
+        "worktree path already owned": "已有未结束任务工作区",
+        "worktree branch already owned": "已有未结束任务工作区分支",
+    }
+    if text in mapping:
+        return mapping[text]
+    if text.startswith("active claim by"):
+        return "已有未结束同任务认领"
+    if text.startswith("active execution lease by"):
+        return "已有未结束执行任务"
+    if text.startswith("write-path overlap with"):
+        return text.replace("write-path overlap with", "写入路径与任务冲突：").strip()
+    if text.startswith("waiting for "):
+        return text.replace("waiting for", "需要先完成").strip()
+    if text.startswith("status="):
+        return f"当前状态不可领取：{text.split('=', 1)[1]}"
+    return text
+
+
+def _candidate_page_status(candidate: dict[str, Any], task: dict[str, Any] | None) -> str:
+    task_status = str(task.get("status") or "") if task else ""
+    if task_status == "done" or str(candidate.get("status") or "") == "done":
+        return "completed"
+    if task_status == "review":
+        return "review"
+    if task_status == "doing":
+        return "in_progress"
+    if task_status == "paused":
+        return "available"
+    if candidate.get("claimable") or str(candidate.get("status") or "") in {"ready", "resumable", "stale"}:
+        return "available"
+    if list(candidate.get("blocking_reason_codes") or []) or list(candidate.get("wait_reasons") or []):
+        return "blocked"
+    if str(candidate.get("status") or "") in {"blocked", "waiting"}:
+        return "blocked"
+    return "not_started"
+
+
+def _detail_row(
+    *,
+    page: str,
+    row_id: str,
+    task_id: str | None,
+    candidate_id: str | None,
+    title: str,
+    title_zh: str | None,
+    stage: str | None,
+    module_id: str | None,
+    page_status: str,
+    raw_status: str | None,
+    source: str,
+    depends_on: list[str] | None,
+    write_paths: list[str] | None,
+    required_tests: list[str] | None,
+    updated_at: str | None,
+    branch: str | None,
+    reason: str | None,
+    blockers: list[str] | None,
+    unlocks: list[str] | None,
+    task_kind: str | None = None,
+    raw: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "page": page,
+        "row_id": row_id,
+        "task_id": task_id,
+        "candidate_id": candidate_id,
+        "title": title,
+        "title_zh": title_zh or title,
+        "display_name": f"{title_zh or title} / {title}",
+        "stage": stage,
+        "stage_zh": _stage_label_zh(stage),
+        "module_id": module_id,
+        "page_status": page_status,
+        "page_status_zh": _page_status_zh(page_status),
+        "raw_status": raw_status,
+        "raw_status_zh": _status_label_zh(raw_status),
+        "source": source,
+        "depends_on": list(depends_on or []),
+        "write_paths": list(write_paths or []),
+        "required_tests": list(required_tests or []),
+        "updated_at": updated_at,
+        "branch": branch,
+        "reason": reason or "暂无补充说明。",
+        "blockers": [item for item in (blockers or []) if item],
+        "unlocks": [item for item in (unlocks or []) if item],
+        "task_kind": task_kind,
+        "task_kind_zh": _task_kind_label(task_kind),
+        "raw": raw or {},
+    }
+
+
+def _build_intake_payload(root: Path) -> dict[str, Any]:
+    pool = _cached_pool_payload()
+    candidate_map = _candidate_map(root)
+    tasks_by_candidate = _task_rows_by_candidate(_task_rows(root))
+    rows: list[dict[str, Any]] = []
+    for candidate_id in pool.get("fresh_claimable", []) + pool.get("takeover_claimable", []):
+        candidate = candidate_map.get(str(candidate_id))
+        if candidate:
+            summary = _candidate_summary(candidate)
+            task = tasks_by_candidate.get(summary["candidate_id"])
+            rows.append(
+                _detail_row(
+                    page="intake",
+                    row_id=f"candidate:{summary['candidate_id']}",
+                    task_id=None if task is None else task.get("task_id"),
+                    candidate_id=summary["candidate_id"],
+                    title=summary["title"],
+                    title_zh=summary["title_zh"],
+                    stage=summary.get("stage"),
+                    module_id=summary.get("module_id"),
+                    page_status="available",
+                    raw_status=summary.get("status"),
+                    source="路线图候选",
+                    depends_on=list(candidate.get("depends_on") or []),
+                    write_paths=list(candidate.get("planned_write_paths") or []),
+                    required_tests=list(candidate.get("required_tests") or []),
+                    updated_at=pool.get("summary", {}).get("generated_at"),
+                    branch=candidate.get("candidate_branch"),
+                    reason=summary.get("operator_reason"),
+                    blockers=[_task_friendly_blocker(item) for item in (candidate.get("blocking_reason_text") or [])],
+                    unlocks=list(candidate.get("unlocks") or []),
+                    raw=summary,
+                )
+            )
+    if not rows:
+        for candidate in candidate_map.values():
+            if not candidate.get("claimable"):
+                continue
+            summary = _candidate_summary(candidate)
+            task = tasks_by_candidate.get(summary["candidate_id"])
+            rows.append(
+                _detail_row(
+                    page="intake",
+                    row_id=f"candidate:{summary['candidate_id']}",
+                    task_id=None if task is None else task.get("task_id"),
+                    candidate_id=summary["candidate_id"],
+                    title=summary["title"],
+                    title_zh=summary["title_zh"],
+                    stage=summary.get("stage"),
+                    module_id=summary.get("module_id"),
+                    page_status="available",
+                    raw_status=summary.get("status"),
+                    source="路线图候选",
+                    depends_on=list(candidate.get("depends_on") or []),
+                    write_paths=list(candidate.get("planned_write_paths") or []),
+                    required_tests=list(candidate.get("required_tests") or []),
+                    updated_at=pool.get("summary", {}).get("generated_at"),
+                    branch=candidate.get("candidate_branch"),
+                    reason=summary.get("operator_reason"),
+                    blockers=[_task_friendly_blocker(item) for item in (candidate.get("blocking_reason_text") or [])],
+                    unlocks=list(candidate.get("unlocks") or []),
+                    raw=summary,
+                )
+            )
+    return {
+        "page": "intake",
+        "summary": {
+            **dict(pool.get("summary") or {}),
+            "total_rows": len(rows),
+        },
+        "rows": rows,
+    }
+
+
+def _build_current_task_payload(root: Path) -> dict[str, Any]:
+    current = load_current_task(root) or {}
+    tasks = {str(task.get("task_id")): task for task in _task_rows(root) if task.get("task_id")}
+    current_task_id = str(current.get("current_task_id") or current.get("task_id") or "").strip()
+    if not current_task_id or str(current.get("status") or "") == "idle":
+        return {"page": "current", "summary": {"active": False}, "rows": []}
+    task = tasks.get(current_task_id, {})
+    handoff_path = root / "docs/governance/handoffs" / f"{current_task_id}.yaml"
+    try:
+        handoff = load_yaml(handoff_path) if handoff_path.exists() else {}
+    except Exception:  # noqa: BLE001
+        handoff = {}
+    continuation_reason = (
+        handoff.get("next_step")
+        or current.get("next_action")
+        or current.get("title")
+        or task.get("title")
+        or "当前任务继续执行中。"
+    )
+    row = _detail_row(
+        page="current",
+        row_id=f"task:{current_task_id}",
+        task_id=current_task_id,
+        candidate_id=task.get("roadmap_candidate_id"),
+        title=str(task.get("title") or current.get("title") or current_task_id),
+        title_zh=str(task.get("title") or current.get("title") or current_task_id),
+        stage=str(task.get("stage") or current.get("stage") or ""),
+        module_id=None,
+        page_status="in_progress" if str(current.get("status") or "") in {"doing", "running"} else "blocked",
+        raw_status=str(current.get("status") or task.get("status") or ""),
+        source="CURRENT_TASK",
+        depends_on=[],
+        write_paths=list(task.get("planned_write_paths") or current.get("planned_write_paths") or []),
+        required_tests=list(task.get("required_tests") or current.get("required_tests") or []),
+        updated_at=str(current.get("updated_at") or task.get("last_reported_at") or ""),
+        branch=str(task.get("branch") or current.get("branch") or ""),
+        reason=str(continuation_reason),
+        blockers=[] if not current.get("blocked_reason") else [str(current.get("blocked_reason"))],
+        unlocks=[],
+        task_kind=str(task.get("task_kind") or current.get("task_kind") or ""),
+        raw={"current_task": current, "registry_task": task, "handoff": handoff},
+    )
+    return {
+        "page": "current",
+        "summary": {
+            "active": True,
+            "current_task_id": current_task_id,
+            "required_test_count": len(row["required_tests"]),
+            "planned_write_path_count": len(row["write_paths"]),
+        },
+        "rows": [row],
+    }
+
+
+def _build_completed_tasks_payload(root: Path) -> dict[str, Any]:
+    candidate_map = _candidate_map(root)
+    rows: list[dict[str, Any]] = []
+    for task in _task_rows(root):
+        if str(task.get("status") or "") != "done":
+            continue
+        candidate = candidate_map.get(str(task.get("roadmap_candidate_id") or ""))
+        title = str(task.get("title") or task.get("task_id") or "-")
+        stage_source = task.get("stage") or (candidate.get("stage") if candidate else "")
+        stage = str(stage_source or "")
+        module_id = None if candidate is None else candidate.get("module_id")
+        rows.append(
+            _detail_row(
+                page="completed",
+                row_id=f"task:{task.get('task_id')}",
+                task_id=str(task.get("task_id") or ""),
+                candidate_id=task.get("roadmap_candidate_id"),
+                title=title,
+                title_zh=title,
+                stage=stage,
+                module_id=module_id,
+                page_status="completed",
+                raw_status=str(task.get("status") or ""),
+                source="任务登记",
+                depends_on=list(candidate.get("depends_on") or []) if candidate else [],
+                write_paths=list(task.get("planned_write_paths") or []),
+                required_tests=list(task.get("required_tests") or []),
+                updated_at=_latest_timestamp(task),
+                branch=str(task.get("branch") or ""),
+                reason="已完成，可用于后续调查与模块化回溯。",
+                blockers=[],
+                unlocks=list(candidate.get("unlocks") or []) if candidate else [],
+                task_kind=str(task.get("task_kind") or ""),
+                raw=task,
+            )
+        )
+    rows.sort(key=_timestamp_sort_value, reverse=True)
+    return {
+        "page": "completed",
+        "summary": {
+            "completed_count": len(rows),
+            "execution_count": sum(1 for row in rows if row.get("task_kind") == "execution"),
+            "coordination_count": sum(1 for row in rows if row.get("task_kind") == "coordination"),
+        },
+        "rows": rows,
+    }
+
+
+def _build_task_catalog_payload(root: Path) -> dict[str, Any]:
+    candidates = list(_candidate_index_payload(root).get("candidates", []) or [])
+    tasks_by_candidate = _task_rows_by_candidate(_task_rows(root))
+    rows: list[dict[str, Any]] = []
+    for candidate in candidates:
+        task = tasks_by_candidate.get(str(candidate.get("candidate_id") or ""))
+        page_status = _candidate_page_status(candidate, task)
+        title = str(candidate.get("title") or candidate.get("candidate_id") or "-")
+        summary = _candidate_summary(candidate)
+        rows.append(
+            _detail_row(
+                page="catalog",
+                row_id=f"candidate:{candidate.get('candidate_id')}",
+                task_id=None if task is None else task.get("task_id"),
+                candidate_id=candidate.get("candidate_id"),
+                title=title,
+                title_zh=_translate_candidate_title(title),
+                stage=str(candidate.get("stage") or ""),
+                module_id=str(candidate.get("module_id") or ""),
+                page_status=page_status,
+                raw_status=str(candidate.get("status") or ""),
+                source="路线图总表",
+                depends_on=list(candidate.get("depends_on") or []),
+                write_paths=list(candidate.get("planned_write_paths") or []),
+                required_tests=list(candidate.get("required_tests") or []),
+                updated_at=None if task is None else _latest_timestamp(task),
+                branch=None if task is None else task.get("branch"),
+                reason=summary.get("operator_reason"),
+                blockers=[_task_friendly_blocker(item) for item in (candidate.get("blocking_reason_text") or candidate.get("wait_reasons") or [])],
+                unlocks=list(candidate.get("unlocks") or []),
+                task_kind=None if task is None else str(task.get("task_kind") or ""),
+                raw={"candidate": candidate, "task": task},
+            )
+        )
+    rows.sort(key=lambda item: (item["page_status"] != "available", item["stage"] or "", item["candidate_id"] or ""))
+    return {
+        "page": "catalog",
+        "summary": {
+            "total_count": len(rows),
+            "completed_count": sum(1 for row in rows if row["page_status"] == "completed"),
+            "available_count": sum(1 for row in rows if row["page_status"] == "available"),
+            "in_progress_count": sum(1 for row in rows if row["page_status"] == "in_progress"),
+            "review_count": sum(1 for row in rows if row["page_status"] == "review"),
+            "blocked_count": sum(1 for row in rows if row["page_status"] == "blocked"),
+        },
+        "rows": rows,
+    }
+
+
+def _build_diagnostics_payload(root: Path) -> dict[str, Any]:
+    pool = _cached_pool_payload()
+    review = _review_pool_payload()
+    rows: list[dict[str, Any]] = []
+    for item in list(review.get("ledger_divergences") or []):
+        slot_id = str(item.get("slot_id") or "unknown")
+        rows.append(
+            _detail_row(
+                page="diagnostics",
+                row_id=f"divergence:{slot_id}",
+                task_id=item.get("task_id"),
+                candidate_id=item.get("candidate_id"),
+                title=f"账本分叉 / {slot_id}",
+                title_zh=f"账本分叉 / {slot_id}",
+                stage=None,
+                module_id=None,
+                page_status="blocked",
+                raw_status=str(review.get("status") or ""),
+                source="高级诊断",
+                depends_on=[],
+                write_paths=[],
+                required_tests=[],
+                updated_at=pool.get("summary", {}).get("generated_at"),
+                branch=item.get("branch"),
+                reason=str(item.get("summary_zh") or "账本状态不一致。"),
+                blockers=[],
+                unlocks=[],
+                raw=item,
+            )
+        )
+    for item in list(review.get("incomplete_tasks") or []):
+        task_id = str(item.get("task_id") or "unknown")
+        rows.append(
+            _detail_row(
+                page="diagnostics",
+                row_id=f"incomplete:{task_id}",
+                task_id=task_id,
+                candidate_id=None,
+                title=f"未完成任务 / {task_id}",
+                title_zh=f"未完成任务 / {task_id}",
+                stage=item.get("stage"),
+                module_id=None,
+                page_status="blocked",
+                raw_status=str(item.get("status") or ""),
+                source="高级诊断",
+                depends_on=[],
+                write_paths=[],
+                required_tests=[],
+                updated_at=None,
+                branch=item.get("branch"),
+                reason=f"状态：{item.get('status') or '-'}；执行者：{item.get('executor_id') or '-'}",
+                blockers=[],
+                unlocks=[],
+                raw=item,
+            )
+        )
+    return {
+        "page": "diagnostics",
+        "summary": {
+            **dict(review),
+            "candidate_summary": pool.get("summary", {}),
+            "diagnostic_row_count": len(rows),
+        },
+        "rows": rows,
+    }
+
+
+def _filter_metadata(rows: list[dict[str, Any]]) -> dict[str, list[str]]:
+    return {
+        "stages": sorted({str(row.get("stage")) for row in rows if row.get("stage")}),
+        "modules": sorted({str(row.get("module_id")) for row in rows if row.get("module_id")}),
+    }
+
+
+def _with_filters(payload: dict[str, Any]) -> dict[str, Any]:
+    payload["filters"] = _filter_metadata(list(payload.get("rows") or []))
     return payload
 
 
@@ -501,7 +1005,7 @@ def _render_index_html() -> str:
         "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
         f"<title>{PAGE_TITLE}</title>"
-        f"{_render_style_block()}</head><body>{_render_shell_html()}{_render_script_block()}</body></html>"
+        f"{_render_style_block_v2()}</head><body>{_render_shell_html_v2()}{_render_script_block_v2()}</body></html>"
     )
 
 
@@ -1734,6 +2238,499 @@ def _render_script_block() -> str:
   </script>"""
 
 
+def _render_style_block_v2() -> str:
+    return """<style>
+    :root {
+      color-scheme: light;
+      --app-width: min(1800px, calc(100vw - 24px));
+      --ink: #1c2333;
+      --ink-soft: #61708a;
+      --panel: rgba(255,255,255,0.78);
+      --line: rgba(115,133,171,0.20);
+      --shadow: 0 24px 52px rgba(35,52,86,0.14);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --nav-active: #1f5fff;
+      --good: #0d6a45;
+      --warn: #8d5b00;
+      --bad: #a12f2f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(129,165,255,0.30), transparent 32%),
+        radial-gradient(circle at 82% 12%, rgba(108,216,208,0.18), transparent 26%),
+        linear-gradient(180deg, #edf2f7 0%, #d9e5f1 100%);
+    }
+    .shell {
+      width: var(--app-width);
+      margin: 12px auto;
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+      border-radius: var(--radius-xl);
+      background: rgba(255,255,255,0.28);
+      border: 1px solid rgba(255,255,255,0.38);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+    .surface {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 12px 24px rgba(53,69,103,0.08);
+      backdrop-filter: blur(14px);
+    }
+    .hero {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(241,245,251,0.76));
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(26px, 2.4vw, 34px);
+      line-height: 1.05;
+    }
+    .hero-subtitle {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+    .hero-meta {
+      color: var(--ink-soft);
+      font-size: 12px;
+      text-align: right;
+      min-width: 210px;
+    }
+    .nav-bar,
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px;
+      align-items: center;
+    }
+    .nav-button {
+      appearance: none;
+      border: 1px solid rgba(115,133,171,0.18);
+      border-radius: 999px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font: inherit;
+      background: rgba(255,255,255,0.80);
+      color: var(--ink);
+    }
+    .nav-button.active {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--nav-active), #6d8cff);
+      border-color: transparent;
+      box-shadow: 0 12px 22px rgba(79,109,245,0.22);
+    }
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      cursor: pointer;
+      font: inherit;
+      color: #ffffff;
+      background: linear-gradient(135deg, #4f6df5, #5e8bff);
+      box-shadow: 0 12px 22px rgba(79,109,245,0.22);
+    }
+    button.secondary {
+      color: var(--ink);
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(115,133,171,0.18);
+      box-shadow: none;
+    }
+    .toolbar-title {
+      color: var(--ink-soft);
+      font-size: 12px;
+      margin-right: auto;
+    }
+    .hidden { display: none !important; }
+    .status-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+    }
+    .status-banner.visible { display: flex; }
+    .status-banner.warning {
+      border: 1px solid rgba(185,96,28,0.24);
+      background: linear-gradient(135deg, rgba(255,244,227,0.95), rgba(255,238,213,0.86));
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric-card {
+      padding: 14px 16px;
+      display: grid;
+      gap: 4px;
+    }
+    .metric-card .label {
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+    .metric {
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.08fr);
+      gap: 14px;
+      min-height: 0;
+    }
+    .panel {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      min-height: 0;
+    }
+    .detail-panel { grid-template-rows: auto minmax(0, 1fr); }
+    .panel-header {
+      padding: 14px 16px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(115,133,171,0.14);
+    }
+    .panel-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .panel-meta {
+      color: var(--ink-soft);
+      font-size: 12px;
+    }
+    .filter-bar {
+      padding: 12px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(120px, 0.6fr) minmax(150px, 0.8fr);
+      gap: 10px;
+      border-bottom: 1px solid rgba(115,133,171,0.14);
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid rgba(115,133,171,0.18);
+      border-radius: 14px;
+      padding: 11px 12px;
+      font: inherit;
+      color: var(--ink);
+      background: rgba(255,255,255,0.84);
+    }
+    .candidate-list,
+    .detail-body {
+      padding: 12px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      min-height: 0;
+    }
+    .candidate-row {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.84);
+      border: 1px solid rgba(115,133,171,0.14);
+      box-shadow: 0 10px 20px rgba(53,69,103,0.06);
+      cursor: pointer;
+    }
+    .candidate-row.active {
+      border-color: rgba(79,109,245,0.34);
+      box-shadow: 0 16px 32px rgba(79,109,245,0.14);
+      background: rgba(244,247,255,0.96);
+    }
+    .candidate-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .candidate-title {
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .candidate-sub,
+    .candidate-note,
+    .detail-note,
+    .hero-subtitle {
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+    .candidate-meta,
+    .detail-actions,
+    .detail-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pill,
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(234,239,248,0.92);
+      color: var(--ink);
+    }
+    .status-pill.status-available,
+    .status-pill.status-in_progress,
+    .status-pill.status-completed {
+      background: rgba(221,245,236,0.96);
+      color: var(--good);
+    }
+    .status-pill.status-review {
+      background: rgba(255,243,217,0.96);
+      color: var(--warn);
+    }
+    .status-pill.status-blocked,
+    .status-pill.status-not_started {
+      background: rgba(255,226,226,0.96);
+      color: var(--bad);
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .detail-card {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(115,133,171,0.14);
+    }
+    .detail-key {
+      color: var(--ink-soft);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .detail-value {
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .raw-block {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(23,32,51,0.88);
+      color: #f8fbff;
+    }
+    .raw-block summary {
+      cursor: pointer;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    pre {
+      margin: 0;
+      padding: 14px 16px 18px;
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: auto;
+    }
+    .feedback-toast {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      min-width: 240px;
+      max-width: min(440px, calc(100vw - 32px));
+      padding: 12px 14px;
+      border-radius: 16px;
+      color: #fff;
+      background: rgba(23,32,51,0.92);
+      box-shadow: 0 20px 40px rgba(23,32,51,0.22);
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+      z-index: 1200;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .feedback-toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .feedback-toast.pending { background: rgba(61,109,255,0.94); }
+    .feedback-toast.success { background: rgba(14,134,87,0.94); }
+    .feedback-toast.error { background: rgba(173,52,52,0.96); }
+    .placeholder {
+      background: rgba(255,255,255,0.48);
+      border: 1px dashed rgba(115,133,171,0.22);
+      text-align: center;
+      padding: 20px;
+      line-height: 1.6;
+      border-radius: 18px;
+    }
+    @media (max-width: 1200px) {
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .hero { align-items: flex-start; flex-direction: column; }
+      .filter-bar { grid-template-columns: 1fr; }
+      .metrics,
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    </style>"""
+
+
+def _render_shell_html_v2() -> str:
+    return f"""<main class="shell">
+    <div id="feedback_toast" class="feedback-toast" aria-live="polite"></div>
+    <section class="surface hero">
+      <div>
+        <h1>{PAGE_TITLE}</h1>
+        <p class="hero-subtitle">任务领取与任务历史中心。默认打开可领取任务，复杂治理细节收进高级诊断。</p>
+      </div>
+      <div class="hero-meta" id="refresh_meta">最后刷新：-</div>
+    </section>
+    <section class="surface nav-bar" id="nav_bar">
+      <button type="button" class="nav-button" data-page="intake" onclick="switchPage('intake', this)">可领取任务</button>
+      <button type="button" class="nav-button" data-page="current" onclick="switchPage('current', this)">当前任务</button>
+      <button type="button" class="nav-button" data-page="completed" onclick="switchPage('completed', this)">已完成任务</button>
+      <button type="button" class="nav-button" data-page="catalog" onclick="switchPage('catalog', this)">任务总页面</button>
+      <button type="button" class="nav-button" data-page="diagnostics" onclick="switchPage('diagnostics', this)">高级诊断</button>
+    </section>
+    <section class="surface toolbar">
+      <div class="toolbar-title" id="toolbar_title">当前页动作</div>
+      <button type="button" onclick="refreshCurrentPage(this)">刷新当前页面</button>
+      <button type="button" class="secondary" onclick="loadClaimDecision(this)">解释认领决策</button>
+      <button type="button" class="secondary" onclick="loadReview(this)">复核候选池</button>
+      <button type="button" class="secondary" id="foreground_refresh_toggle" onclick="toggleForegroundAutoRefresh(this)"></button>
+    </section>
+    <section id="diagnostic_actions" class="surface toolbar hidden">
+      <div class="toolbar-title">高级诊断动作</div>
+      <button type="button" class="secondary" onclick="runAction('compile-roadmap-candidates', this)">编译候选池</button>
+      <button type="button" class="secondary" onclick="runAction('refresh-roadmap-candidates', this)">刷新候选池</button>
+      <button type="button" class="secondary" onclick="runAction('close-ready-execution-tasks', this)">关闭已就绪执行任务</button>
+      <button type="button" class="secondary" onclick="runAction('continue-roadmap', this)">继续路线图</button>
+    </section>
+    <section id="divergence_banner" class="surface status-banner" aria-live="polite"></section>
+    <section class="metrics" id="metrics_cards">
+      <article class="surface metric-card">
+        <div class="label">加载中</div>
+        <div class="metric">-</div>
+      </article>
+    </section>
+    <section class="workspace">
+      <article class="surface panel">
+        <div class="panel-header">
+          <div class="panel-title" id="list_title">可领取任务</div>
+          <div class="panel-meta" id="list_meta">-</div>
+        </div>
+        <div class="filter-bar">
+          <input id="filter_query" placeholder="按任务编号、标题、候选编号搜索" oninput="applyFilters()">
+          <select id="filter_stage" onchange="applyFilters()"><option value="">全部阶段</option></select>
+          <select id="filter_module" onchange="applyFilters()"><option value="">全部模块</option></select>
+        </div>
+        <div class="candidate-list" id="page_rows"><div class="placeholder">正在加载页面数据…</div></div>
+      </article>
+      <article class="surface panel detail-panel">
+        <div class="panel-header">
+          <div class="panel-title" id="detail_title">统一详情抽屉</div>
+          <div class="panel-meta" id="detail_meta">点左侧任务查看详情</div>
+        </div>
+        <div class="detail-body" id="detail_body">
+          <div class="placeholder">默认显示当前页面第一条记录。你也可以点击左侧任一任务，或通过“解释认领决策 / 复核候选池”查看诊断详情。</div>
+        </div>
+      </article>
+    </section>
+    <section class="surface ops-log">
+      <div class="panel-header"><div class="panel-title">操作日志</div></div>
+      <pre id="action_output">尚未执行页面动作。</pre>
+    </section>
+  </main>"""
+
+
+def _render_script_block_v2() -> str:
+    action_labels = json.dumps(ACTION_LABELS_ZH, ensure_ascii=False)
+    script = """<script>
+    const ACTION_LABELS = __ACTION_LABELS__;
+    const AUTO_REFRESH_FOREGROUND_MS = __AUTO_REFRESH_FOREGROUND_MS__;
+    const AUTO_REFRESH_BACKGROUND_MS = __AUTO_REFRESH_BACKGROUND_MS__;
+    const AUTO_REFRESH_FOREGROUND_DEFAULT = true;
+    const FOREGROUND_AUTO_REFRESH_STORAGE_KEY = 'ax9.console.foregroundAutoRefresh.v3';
+    const PAGE_TITLES = { intake: '可领取任务', current: '当前任务', completed: '已完成任务', catalog: '任务总页面', diagnostics: '高级诊断' };
+    const PAGE_ENDPOINTS = { intake: '/api/intake', current: '/api/current-task', completed: '/api/completed-tasks', catalog: '/api/task-catalog', diagnostics: '/api/diagnostics' };
+    let currentPage = new URL(window.location.href).searchParams.get('page') || 'intake';
+    let currentRowId = new URL(window.location.href).searchParams.get('row_id') || '';
+    let currentTaskId = '';
+    let feedbackTimer = null;
+    let autoRefreshTimer = null;
+    let foregroundAutoRefreshEnabled = readForegroundAutoRefreshEnabled();
+    let lastRefreshAt = null;
+    window.__pagePayload = null;
+    window.__rowMap = {};
+
+    function escapeHtml(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'); }
+    async function fetchJson(path, options) { const res = await fetch(path, options); const payload = await res.json(); if (!res.ok) throw new Error(payload.error || JSON.stringify(payload)); return payload; }
+    function formatTimestamp(value) { if (!value) return '-'; const timestamp = value instanceof Date ? value : new Date(value); if (Number.isNaN(timestamp.getTime())) return String(value); return timestamp.toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+    function statusClass(status) { return `status-${(status || '').toLowerCase()}`; }
+    function readForegroundAutoRefreshEnabled() { try { const stored = window.localStorage.getItem(FOREGROUND_AUTO_REFRESH_STORAGE_KEY); return stored === null ? AUTO_REFRESH_FOREGROUND_DEFAULT : stored === 'true'; } catch (_error) { return AUTO_REFRESH_FOREGROUND_DEFAULT; } }
+    function renderAutoRefreshToggle() { const button = document.getElementById('foreground_refresh_toggle'); if (!button) return; button.textContent = foregroundAutoRefreshEnabled ? '前台自动刷新：开启' : '前台自动刷新：关闭'; button.dataset.originalLabel = button.textContent; }
+    function setForegroundAutoRefreshEnabled(nextValue) { foregroundAutoRefreshEnabled = !!nextValue; try { window.localStorage.setItem(FOREGROUND_AUTO_REFRESH_STORAGE_KEY, foregroundAutoRefreshEnabled ? 'true' : 'false'); } catch (_error) {} renderAutoRefreshToggle(); scheduleAutoRefresh(); }
+    function toggleForegroundAutoRefresh() { setForegroundAutoRefreshEnabled(!foregroundAutoRefreshEnabled); showFeedback('success', foregroundAutoRefreshEnabled ? '前台自动刷新已开启' : '前台自动刷新已暂停'); }
+    function currentRefreshIntervalMs() { if (document.hidden) return AUTO_REFRESH_BACKGROUND_MS; return foregroundAutoRefreshEnabled ? AUTO_REFRESH_FOREGROUND_MS : null; }
+    function scheduleAutoRefresh() { if (autoRefreshTimer) { window.clearTimeout(autoRefreshTimer); autoRefreshTimer = null; } const intervalMs = currentRefreshIntervalMs(); if (!intervalMs) return; autoRefreshTimer = window.setTimeout(() => { refreshCurrentPage(null, true).catch(() => {}); }, intervalMs); }
+    function showFeedback(kind, message, persist = false) { const toast = document.getElementById('feedback_toast'); if (!toast) return; toast.textContent = message; toast.className = `feedback-toast ${kind} visible`; if (feedbackTimer) { window.clearTimeout(feedbackTimer); } if (!persist) { feedbackTimer = window.setTimeout(() => { toast.className = 'feedback-toast'; }, 2200); } }
+    function setBusyState(button, busy, label = '') { if (!button) return; if (busy) { button.disabled = true; button.dataset.originalLabel = button.textContent; button.textContent = label || '处理中…'; } else { button.disabled = false; button.textContent = button.dataset.originalLabel || button.textContent; } }
+    function updateNavigation() { document.querySelectorAll('.nav-button').forEach((button) => button.classList.toggle('active', button.dataset.page === currentPage)); document.getElementById('diagnostic_actions').classList.toggle('hidden', currentPage !== 'diagnostics'); document.getElementById('toolbar_title').textContent = `${PAGE_TITLES[currentPage] || currentPage} · 当前页动作`; document.getElementById('list_title').textContent = PAGE_TITLES[currentPage] || currentPage; }
+    function setPageQuery(page, rowId = '') { const url = new URL(window.location.href); url.searchParams.set('page', page); if (rowId) { url.searchParams.set('row_id', rowId); } else { url.searchParams.delete('row_id'); } history.replaceState(null, '', url); }
+    function renderJsonBlock(payload) { return `<details class="raw-block"><summary>展开原始载荷</summary><pre>${escapeHtml(JSON.stringify(payload, null, 2))}</pre></details>`; }
+    function renderMetricCards(items) { return items.map((item) => `<article class="surface metric-card"><div class="label">${escapeHtml(item.label)}</div><div class="metric">${escapeHtml(item.value ?? '-')}</div></article>`).join(''); }
+    function renderRuntimeSignals(payload) { lastRefreshAt = new Date(); const summary = payload.summary || {}; const divergenceCount = Number(summary.ledger_divergence_count ?? 0); const refreshMeta = document.getElementById('refresh_meta'); const autoRefreshLabel = document.hidden ? '后台 180s' : (foregroundAutoRefreshEnabled ? '前台 180s' : '前台手动'); if (refreshMeta) { refreshMeta.textContent = `最后刷新：${formatTimestamp(lastRefreshAt)} · 当前页：${PAGE_TITLES[currentPage]} · 自动刷新：${autoRefreshLabel}`; } const banner = document.getElementById('divergence_banner'); if (!banner) return; if (!divergenceCount) { banner.className = 'surface status-banner'; banner.innerHTML = ''; return; } banner.className = 'surface status-banner warning visible'; banner.innerHTML = `<strong>检测到 ${divergenceCount} 条治理异常</strong><span>复杂治理状态已收进“高级诊断”页。首页只保留任务领取与历史视图。</span>`; }
+    function metricsForPage(page, payload) { const summary = payload.summary || {}; if (page === 'intake') return [{ label: '可领取任务', value: summary.total_rows ?? '-' }, { label: '新鲜可认领', value: summary.fresh_claimable_count ?? '-' }, { label: '接管可认领', value: summary.takeover_claimable_count ?? '-' }, { label: '并行缺口', value: summary.parallelism_deficit ?? '-' }]; if (page === 'current') return [{ label: '当前任务', value: summary.current_task_id || (summary.active ? '进行中' : '无') }, { label: '必跑测试', value: summary.required_test_count ?? '-' }, { label: '写入范围', value: summary.planned_write_path_count ?? '-' }, { label: '活动状态', value: summary.active ? '是' : '否' }]; if (page === 'completed') return [{ label: '已完成总数', value: summary.completed_count ?? '-' }, { label: '已完成执行任务', value: summary.execution_count ?? '-' }, { label: '已完成协调任务', value: summary.coordination_count ?? '-' }, { label: '筛选后可见', value: filteredRows(window.__pagePayload).length }]; if (page === 'catalog') return [{ label: '任务总数', value: summary.total_count ?? '-' }, { label: '已完成', value: summary.completed_count ?? '-' }, { label: '可领取', value: summary.available_count ?? '-' }, { label: '阻塞', value: summary.blocked_count ?? '-' }]; return [{ label: '诊断项目', value: summary.diagnostic_row_count ?? '-' }, { label: '账本分叉', value: summary.ledger_divergence_count ?? '-' }, { label: '未完成任务', value: (summary.incomplete_tasks || []).length ?? '-' }, { label: '待关闭执行任务', value: summary.closeout_ready_execution_count ?? '-' }]; }
+    function fillFilterOptions(payload) { const filters = payload.filters || {}; const stageSelect = document.getElementById('filter_stage'); const moduleSelect = document.getElementById('filter_module'); const currentStage = stageSelect.value; const currentModule = moduleSelect.value; stageSelect.innerHTML = '<option value="">全部阶段</option>' + (filters.stages || []).map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join(''); moduleSelect.innerHTML = '<option value="">全部模块</option>' + (filters.modules || []).map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join(''); if ((filters.stages || []).includes(currentStage)) stageSelect.value = currentStage; if ((filters.modules || []).includes(currentModule)) moduleSelect.value = currentModule; }
+    function filteredRows(payload) { const rows = payload?.rows || []; const query = document.getElementById('filter_query').value.trim().toLowerCase(); const stage = document.getElementById('filter_stage').value; const moduleId = document.getElementById('filter_module').value; return rows.filter((row) => { if (stage && row.stage !== stage) return false; if (moduleId && row.module_id !== moduleId) return false; if (!query) return true; const haystack = [row.task_id, row.candidate_id, row.title, row.title_zh, row.stage, row.module_id, row.reason].join(' ').toLowerCase(); return haystack.includes(query); }); }
+    function rowSubtitle(row) { const parts = []; if (row.task_id) parts.push(`任务：${row.task_id}`); if (row.candidate_id) parts.push(`候选：${row.candidate_id}`); if (row.branch) parts.push(`分支：${row.branch}`); return parts.join(' · ') || '无附加标识'; }
+    function renderRows(payload) { const rows = filteredRows(payload); window.__rowMap = Object.fromEntries(rows.map((row) => [row.row_id, row])); const html = rows.map((row) => `<div class="candidate-row${currentRowId === row.row_id ? ' active' : ''}" role="button" tabindex="0" onclick="openRow('${escapeHtml(row.row_id)}')" onkeydown="handleRowKey(event, '${escapeHtml(row.row_id)}')"><div class="candidate-top"><div><div class="candidate-title">${escapeHtml(row.title_zh || row.title || '-')}</div><div class="candidate-sub">${escapeHtml(rowSubtitle(row))}</div></div><span class="status-pill ${statusClass(row.page_status)}">${escapeHtml(row.page_status_zh || row.page_status || '-')}</span></div><div class="candidate-meta">${row.stage ? `<span class="pill">${escapeHtml(row.stage_zh || row.stage)}</span>` : ''}${row.module_id ? `<span class="pill">${escapeHtml(row.module_id)}</span>` : ''}${row.task_kind_zh && row.task_kind ? `<span class="pill">${escapeHtml(row.task_kind_zh)}</span>` : ''}${row.source ? `<span class="pill">${escapeHtml(row.source)}</span>` : ''}</div><div class="candidate-note">${escapeHtml(row.reason || '暂无补充说明。')}</div></div>`).join(''); document.getElementById('page_rows').innerHTML = html || '<div class="placeholder">当前筛选条件下没有记录。</div>'; document.getElementById('list_meta').textContent = `筛选后 ${rows.length} 条 / 总计 ${(payload.rows || []).length} 条`; }
+    function renderDetailCards(items) { return items.map((item) => `<div class="detail-card"><div class="detail-key">${escapeHtml(item.label)}</div><div class="detail-value">${escapeHtml(item.value || '无')}</div></div>`).join(''); }
+    function detailActionButtons(row) { const buttons = []; if (row.candidate_id) { buttons.push(`<button type="button" class="secondary" onclick="loadCandidateById('${escapeHtml(row.candidate_id)}')">候选详情</button>`); buttons.push(`<button type="button" class="secondary" onclick="loadReleaseChainById('${escapeHtml(row.candidate_id)}')">释放链</button>`); } if (currentPage === 'catalog' && row.page_status === 'completed' && row.task_id) { buttons.push(`<button type="button" class="secondary" onclick="jumpToLinkedPage('completed', '${escapeHtml(row.task_id)}')">打开完成记录</button>`); } if (currentPage === 'catalog' && row.task_id && currentTaskId && currentTaskId === row.task_id) { buttons.push(`<button type="button" class="secondary" onclick="jumpToLinkedPage('current', '${escapeHtml(row.task_id)}')">打开当前任务</button>`); } return buttons.join(''); }
+    function renderRowDetail(row) { document.getElementById('detail_title').textContent = row.title_zh || row.title || '统一详情抽屉'; document.getElementById('detail_meta').textContent = row.page_status_zh || row.page_status || '-'; const blockers = (row.blockers || []).join('；') || '无'; const unlocks = (row.unlocks || []).join('、') || '无'; const dependsOn = (row.depends_on || []).join('、') || '无'; const writePaths = (row.write_paths || []).join('\\n') || '无'; const requiredTests = (row.required_tests || []).join('\\n') || '无'; document.getElementById('detail_body').innerHTML = `<div class="detail-actions">${detailActionButtons(row)}</div><div class="detail-note">${escapeHtml(row.reason || '暂无补充说明。')}</div><div class="detail-tags">${row.stage ? `<span class="pill">${escapeHtml(row.stage_zh || row.stage)}</span>` : ''}${row.module_id ? `<span class="pill">${escapeHtml(row.module_id)}</span>` : ''}${row.source ? `<span class="pill">${escapeHtml(row.source)}</span>` : ''}</div><div class="detail-grid">${renderDetailCards([{ label: '任务编号', value: row.task_id || '无' }, { label: '候选编号', value: row.candidate_id || '无' }, { label: '阶段', value: row.stage_zh || row.stage || '无' }, { label: '模块', value: row.module_id || '无' }, { label: '状态', value: row.page_status_zh || row.page_status || '无' }, { label: '原始状态', value: row.raw_status_zh || row.raw_status || '无' }, { label: '来源', value: row.source || '无' }, { label: '最近更新时间', value: row.updated_at || '无' }, { label: '依赖', value: dependsOn }, { label: '写入范围', value: writePaths }, { label: '测试要求', value: requiredTests }, { label: '下游解锁', value: unlocks }, { label: '阻塞说明', value: blockers }, { label: '分支', value: row.branch || '无' }])}</div>${renderJsonBlock(row.raw || row)}`; }
+    function handleRowKey(event, rowId) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openRow(rowId); } }
+    function openRow(rowId) { currentRowId = rowId; setPageQuery(currentPage, currentRowId); renderRows(window.__pagePayload); const row = window.__rowMap[rowId]; if (row) renderRowDetail(row); }
+    function chooseInitialRow(payload) { if (currentRowId && window.__rowMap[currentRowId]) return currentRowId; const first = (payload.rows || [])[0]; return first ? first.row_id : ''; }
+    function renderPage(page, payload) { window.__pagePayload = payload; fillFilterOptions(payload); renderRuntimeSignals(payload); document.getElementById('metrics_cards').innerHTML = renderMetricCards(metricsForPage(page, payload)); renderRows(payload); const rowId = chooseInitialRow(payload); currentRowId = rowId; setPageQuery(currentPage, currentRowId); if (rowId && window.__rowMap[rowId]) { renderRows(payload); renderRowDetail(window.__rowMap[rowId]); } else { document.getElementById('detail_title').textContent = '统一详情抽屉'; document.getElementById('detail_meta').textContent = '暂无可显示记录'; document.getElementById('detail_body').innerHTML = '<div class="placeholder">当前页面暂无记录。你可以切换页面，或使用“解释认领决策 / 复核候选池”查看控制台诊断信息。</div>'; } }
+    function renderActionOutput(action, payload) { const label = ACTION_LABELS[action] || action; const stdout = payload.stdout ? `stdout:\\n${payload.stdout}` : 'stdout: <empty>'; const stderr = payload.stderr ? `stderr:\\n${payload.stderr}` : 'stderr: <empty>'; document.getElementById('action_output').textContent = [`动作：${label}`, `命令：${(payload.argv || []).join(' ')}`, `返回码：${payload.returncode}`, '', stdout, '', stderr].join('\\n'); }
+    async function loadPage(page, triggerButton = null, quietError = false) { setBusyState(triggerButton, true, '加载中…'); try { const payload = await fetchJson(PAGE_ENDPOINTS[page]); currentTaskId = payload.summary?.current_task_id || currentTaskId || ''; renderPage(page, payload); if (!quietError) showFeedback('success', `${PAGE_TITLES[page]}已更新`); } catch (error) { if (!quietError) showFeedback('error', `页面加载失败：${String(error)}`, true); } finally { setBusyState(triggerButton, false); scheduleAutoRefresh(); } }
+    async function refreshCurrentPage(triggerButton = null, quietError = false) { await loadPage(currentPage, triggerButton, quietError); }
+    async function switchPage(page, triggerButton = null) { currentPage = page; currentRowId = ''; updateNavigation(); await loadPage(page, triggerButton, true); }
+    function applyFilters() { if (!window.__pagePayload) return; document.getElementById('metrics_cards').innerHTML = renderMetricCards(metricsForPage(currentPage, window.__pagePayload)); renderRows(window.__pagePayload); const rowId = chooseInitialRow(window.__pagePayload); if (rowId && window.__rowMap[rowId]) { currentRowId = rowId; renderRows(window.__pagePayload); renderRowDetail(window.__rowMap[rowId]); } }
+    function jumpToLinkedPage(page, taskId) { currentPage = page; updateNavigation(); loadPage(page, null, true).then(() => { document.getElementById('filter_query').value = taskId || ''; applyFilters(); }); }
+    async function runAction(action, button) { setBusyState(button, true, '执行中…'); showFeedback('pending', `正在执行：${ACTION_LABELS[action] || action}`, true); try { const payload = await fetchJson(`/api/action/${action}`, { method: 'POST' }); renderActionOutput(action, payload); const failed = Number(payload.returncode || 0) !== 0; showFeedback(failed ? 'error' : 'success', failed ? `动作失败：${ACTION_LABELS[action] || action}` : `动作完成：${ACTION_LABELS[action] || action}`); await refreshCurrentPage(null, true); } catch (error) { renderActionOutput(action, { argv: [], returncode: 1, stdout: '', stderr: String(error) }); showFeedback('error', `动作失败：${ACTION_LABELS[action] || action}`, true); } finally { setBusyState(button, false); } }
+    async function loadCandidateById(candidateId) { try { const payload = await fetchJson(`/api/candidate?candidate_id=${encodeURIComponent(candidateId)}`); document.getElementById('detail_title').textContent = payload.title_zh || payload.title || candidateId; document.getElementById('detail_meta').textContent = '候选详情'; document.getElementById('detail_body').innerHTML = `<div class="detail-note">${escapeHtml(payload.operator_reason || '暂无补充说明。')}</div><div class="detail-grid">${renderDetailCards([{ label: '候选编号', value: payload.candidate_id || '-' }, { label: '阶段', value: payload.stage_zh || payload.stage || '-' }, { label: '模块', value: payload.module_id || '-' }, { label: '候选意图', value: payload.candidate_intent_zh || payload.candidate_intent || '-' }, { label: '当前状态', value: payload.status_zh || payload.status || '-' }, { label: '是否可领取', value: payload.claimable ? '是' : '否' }, { label: '阻塞原因', value: (payload.blocking_reason_labels || payload.blocking_reason_text || []).join('；') || '无' }, { label: '上游依赖', value: (payload.upstream_blocker_candidates || []).join('、') || '无' }])}</div>${renderJsonBlock(payload)}`; } catch (_error) { showFeedback('error', `候选详情加载失败：${candidateId}`, true); } }
+    async function loadReleaseChainById(candidateId) { try { const payload = await fetchJson(`/api/release-chain?candidate_id=${encodeURIComponent(candidateId)}`); const chain = (payload.downstream_chain || []).map((item) => `${item.title_zh || item.candidate_id} / ${item.candidate_id}`).join(' → ') || '无'; document.getElementById('detail_title').textContent = payload.title_zh || payload.title || candidateId; document.getElementById('detail_meta').textContent = '释放链'; document.getElementById('detail_body').innerHTML = `<div class="detail-grid">${renderDetailCards([{ label: '候选编号', value: payload.candidate_id || '-' }, { label: '当前状态', value: payload.status_zh || payload.status || '-' }, { label: '依赖', value: (payload.depends_on || []).join('、') || '无' }, { label: '释放链', value: chain }])}</div>${renderJsonBlock(payload)}`; } catch (_error) { showFeedback('error', `释放链解释失败：${candidateId}`, true); } }
+    async function loadClaimDecision(triggerButton = null) { setBusyState(triggerButton, true, '解释中…'); showFeedback('pending', '正在解释认领决策…', true); try { const payload = await fetchJson('/api/claim-decision'); const selected = payload.selected_candidate_id ? `${payload.selected_candidate_title_zh || payload.selected_candidate_id} / ${payload.selected_candidate_id}` : '当前没有可安全领取任务'; const safeCandidates = (payload.safe_candidates || []).map((item) => `${item.title_zh || item.candidate_id}（${item.stage_zh || item.stage || '-'}）`).join('、') || '无'; const blocked = (payload.blocked_candidates || []).map((item) => `${item.title_zh || item.candidate_id}：${(item.blockers_zh || []).join('；') || '无'}`).join('\\n') || '无'; document.getElementById('detail_title').textContent = '认领决策解释'; document.getElementById('detail_meta').textContent = '任务视角'; document.getElementById('detail_body').innerHTML = `<div class="detail-note">认领解释只保留任务依赖、写入冲突和单写入口判断，不把 worker slot 作为首页主因。</div><div class="detail-grid">${renderDetailCards([{ label: '当前建议任务', value: selected }, { label: '建议阶段', value: payload.selected_stage_zh || payload.selected_stage || '无' }, { label: '建议模块', value: payload.selected_module_id || '无' }, { label: '可安全接单集合', value: safeCandidates }, { label: '当前阻塞摘要', value: blocked }])}</div>${renderJsonBlock(payload)}`; showFeedback('success', '认领决策已更新'); } catch (_error) { showFeedback('error', '认领决策解释失败', true); } finally { setBusyState(triggerButton, false); } }
+    async function loadReview(triggerButton = null) { setBusyState(triggerButton, true, '复核中…'); showFeedback('pending', '正在复核候选池…', true); try { const payload = await fetchJson('/api/review'); const divergenceSummary = (payload.ledger_divergences || []).map((item) => `${item.slot_id || '-'} / ${item.summary_zh || '状态不一致'}`).join('；') || '无'; const incompleteTasks = (payload.incomplete_tasks || []).map((item) => `${item.task_id || '-'} (${item.status || '-'})`).join('；') || '无'; document.getElementById('detail_title').textContent = '高级诊断 / 候选池复核'; document.getElementById('detail_meta').textContent = payload.status_zh || payload.status || '-'; document.getElementById('detail_body').innerHTML = `<div class="detail-note">这里保留完整治理面：账本分叉、未完成任务、closeout 状态与遗留兼容项。</div><div class="detail-grid">${renderDetailCards([{ label: '控制面状态', value: payload.status_zh || payload.status || '-' }, { label: '正式主根数量', value: String(payload.formal_root_count ?? '-') }, { label: '预览主根数量', value: String(payload.preview_root_count ?? '-') }, { label: '遗留兼容候选', value: String(payload.legacy_candidate_count ?? '-') }, { label: '账本分叉', value: divergenceSummary }, { label: '未完成任务', value: incompleteTasks }, { label: '待关闭执行任务', value: String(payload.closeout_ready_execution_count ?? '-') }, { label: '问题摘要', value: (payload.issues || []).join('；') || '无' }])}</div>${renderJsonBlock(payload)}`; showFeedback('success', '候选池复核已更新'); } catch (_error) { showFeedback('error', '候选池复核失败', true); } finally { setBusyState(triggerButton, false); } }
+    document.addEventListener('visibilitychange', () => { renderAutoRefreshToggle(); scheduleAutoRefresh(); });
+    window.addEventListener('load', () => { updateNavigation(); renderAutoRefreshToggle(); loadPage(currentPage, null, true).catch(() => {}); });
+    </script>"""
+    return script.replace("__ACTION_LABELS__", action_labels).replace("__AUTO_REFRESH_FOREGROUND_MS__", str(AUTO_REFRESH_FOREGROUND_SECONDS * 1000)).replace("__AUTO_REFRESH_BACKGROUND_MS__", str(AUTO_REFRESH_BACKGROUND_SECONDS * 1000))
+
+
 class GovernanceConsoleHandler(BaseHTTPRequestHandler):
     def _write_json(self, payload: dict[str, Any], status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
@@ -1777,6 +2774,23 @@ class GovernanceConsoleHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/":
                 self._write_html(_render_index_html())
+                return
+            if parsed.path == "/api/intake":
+                payload = _with_filters(_build_intake_payload(root))
+                payload["summary"]["control_plane_root"] = str(root).replace("\\", "/")
+                self._write_json(payload)
+                return
+            if parsed.path == "/api/current-task":
+                self._write_json(_with_filters(_build_current_task_payload(root)))
+                return
+            if parsed.path == "/api/completed-tasks":
+                self._write_json(_with_filters(_build_completed_tasks_payload(root)))
+                return
+            if parsed.path == "/api/task-catalog":
+                self._write_json(_with_filters(_build_task_catalog_payload(root)))
+                return
+            if parsed.path == "/api/diagnostics":
+                self._write_json(_with_filters(_build_diagnostics_payload(root)))
                 return
             if parsed.path == "/api/pool":
                 payload = _cached_pool_payload()
