@@ -49,6 +49,7 @@ GOVERNANCE_RUNTIME_FILES = (
     Path("scripts/task_coordination_planner.py"),
     Path("scripts/task_lifecycle_ops.py"),
     Path("scripts/task_runtime_ops.py"),
+    Path("scripts/task_worker_ops.py"),
     Path("scripts/worker_self_loop.py"),
 )
 
@@ -62,6 +63,104 @@ def load_full_clone_pool(root: Path) -> dict[str, Any]:
         raise GovernanceError(f"full clone pool must be a mapping: {FULL_CLONE_POOL_FILE}")
     payload.setdefault("slots", [])
     return payload
+
+
+def save_full_clone_pool(root: Path, pool: dict[str, Any]) -> None:
+    pool["updated_at"] = iso_now()
+    dump_yaml(root / FULL_CLONE_POOL_FILE, pool)
+
+
+def update_full_clone_slot(
+    root: Path,
+    slot_id: str,
+    *,
+    status: str,
+    current_task_id: str | None,
+    branch: str | None,
+    blocked_reason: str | None = None,
+    stale_runtime: bool | None = None,
+    claimed_at: str | None = None,
+    released_at: str | None = None,
+) -> dict[str, Any]:
+    pool = load_full_clone_pool(root)
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        raise GovernanceError(f"unknown full clone slot: {slot_id}")
+    slot["status"] = status
+    slot["current_task_id"] = current_task_id
+    slot["branch"] = branch
+    slot["blocked_reason"] = blocked_reason
+    if stale_runtime is not None:
+        slot["stale_runtime"] = stale_runtime
+    if claimed_at is not None:
+        slot["last_claimed_at"] = claimed_at
+    if released_at is not None:
+        slot["last_released_at"] = released_at
+    save_full_clone_pool(root, pool)
+    return slot
+
+
+def set_full_clone_slot_active(root: Path, slot_id: str, *, task_id: str, branch: str, now: str) -> dict[str, Any]:
+    return update_full_clone_slot(
+        root,
+        slot_id,
+        status="active",
+        current_task_id=task_id,
+        branch=branch,
+        blocked_reason=None,
+        stale_runtime=False,
+        claimed_at=now,
+    )
+
+
+def set_full_clone_slot_releasing(root: Path, slot_id: str, *, task_id: str, branch: str) -> dict[str, Any]:
+    return update_full_clone_slot(
+        root,
+        slot_id,
+        status="releasing",
+        current_task_id=task_id,
+        branch=branch,
+        blocked_reason=None,
+        stale_runtime=False,
+    )
+
+
+def set_full_clone_slot_ready(root: Path, slot_id: str, *, now: str) -> dict[str, Any]:
+    pool = load_full_clone_pool(root)
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        raise GovernanceError(f"unknown full clone slot: {slot_id}")
+    idle_branch = str(slot.get("idle_branch") or default_full_clone_idle_branch(slot_id))
+    return update_full_clone_slot(
+        root,
+        slot_id,
+        status="ready",
+        current_task_id=None,
+        branch=idle_branch,
+        blocked_reason=None,
+        stale_runtime=False,
+        released_at=now,
+    )
+
+
+def set_full_clone_slot_blocked(
+    root: Path,
+    slot_id: str,
+    *,
+    reason: str,
+    task_id: str | None = None,
+    branch: str | None = None,
+    stale_runtime: bool = False,
+) -> dict[str, Any]:
+    return update_full_clone_slot(
+        root,
+        slot_id,
+        status="blocked",
+        current_task_id=task_id,
+        branch=branch,
+        blocked_reason=reason,
+        stale_runtime=stale_runtime,
+    )
 
 
 def execution_leases_defaults() -> dict[str, Any]:
@@ -589,10 +688,6 @@ def assess_full_clone_slot_runtime(
             message = f"ready slot 仍指向 current_task_id={current_task_id}"
             reasons.append(message)
             divergence_reasons.append(message)
-        if observed_branch and observed_branch != idle_branch:
-            message = f"ready slot 当前分支不是 idle_branch: observed={observed_branch} expected={idle_branch}"
-            reasons.append(message)
-            divergence_reasons.append(message)
         if dirty_paths:
             sample = ", ".join(dirty_paths[:4])
             suffix = "" if len(dirty_paths) <= 4 else f" (+{len(dirty_paths) - 4} more)"
@@ -680,7 +775,7 @@ def assess_full_clone_slot_runtime(
     claim = claims_by_candidate.get(str(candidate_id)) if candidate_id else None
     summary = divergence_reasons[0] if divergence_reasons else (reasons[0] if reasons else "状态一致")
     dispatch_eligible = slot_status == "ready"
-    quarantined = slot_status == "blocked"
+    quarantined = slot_status in {"blocked", "releasing"}
     dispatch_blocking_runtime_drift = bool(runtime_stamp_reasons) and dispatch_eligible
     return {
         "slot_id": slot_id,

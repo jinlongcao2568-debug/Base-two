@@ -1,27 +1,37 @@
-current_task_id: null
-title: null
-status: idle
-task_kind: null
-execution_mode: null
+current_task_id: TASK-OPS-009
+title: Harden full-clone slot release and worker state transitions
+status: doing
+task_kind: coordination
+execution_mode: shared_coordination
 parent_task_id: null
-stage: null
-branch: null
-size_class: null
-automation_mode: null
-worker_state: idle
+stage: governance-full-clone-slot-release-hardening-v1
+branch: codex/TASK-OPS-009-full-clone-slot-release-hardening
+size_class: standard
+automation_mode: assisted
+worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-10T10:28:29+08:00'
-topology: null
-allowed_dirs: []
+last_reported_at: '2026-04-10T10:51:47+08:00'
+topology: single_worker
+allowed_dirs:
+- scripts/
+- tests/
+- docs/governance/
 reserved_paths: []
-planned_write_paths: []
-planned_test_paths: []
-required_tests: []
-task_file: null
-runlog_file: null
-lane_count: null
+planned_write_paths:
+- scripts/
+- tests/governance/
+- docs/governance/
+planned_test_paths:
+- tests/governance/
+required_tests:
+- pytest tests/governance/test_worker_self_loop.py -q
+- pytest tests/governance/test_full_clone_pool.py -q
+- python scripts/check_repo.py
+task_file: docs/governance/tasks/TASK-OPS-009.md
+runlog_file: docs/governance/runlogs/TASK-OPS-009-RUNLOG.md
+lane_count: 1
 lane_index: null
 parallelism_plan_id: null
-review_bundle_status: null
-next_action: wait_for_successor_or_explicit_activation
-updated_at: '2026-04-10T10:28:29+08:00'
+review_bundle_status: not_applicable
+next_action: Implement the live task package and keep branch/control-plane state aligned.
+updated_at: '2026-04-10T10:51:47+08:00'

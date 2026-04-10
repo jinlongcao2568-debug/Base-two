@@ -43,7 +43,18 @@ from orchestration_runtime import (
     update_execution_runtime_entry,
 )
 from task_coordination_lease import claim_coordination_lease, coordination_thread_id, current_session_id
-from control_plane_root import CONTROL_PLANE_EXECUTOR_ID, resolve_control_plane_root, sync_execution_lease
+from control_plane_root import (
+    CONTROL_PLANE_EXECUTOR_ID,
+    default_full_clone_idle_branch,
+    load_full_clone_pool,
+    resolve_control_plane_root,
+    set_full_clone_slot_active,
+    set_full_clone_slot_blocked,
+    set_full_clone_slot_ready,
+    set_full_clone_slot_releasing,
+    slot_by_id,
+    sync_execution_lease,
+)
 from task_handoff import write_handoff
 from task_rendering import (
     enforce_execution_split_guards,
@@ -53,6 +64,7 @@ from task_rendering import (
 )
 
 LOCAL_WORKER_ID = "worker-local-01"
+TERMINAL_WORKER_START_STATUSES = {"done", "review", "closed"}
 
 
 def _execution_entry(worktrees: dict, task_id: str) -> dict | None:
@@ -84,6 +96,106 @@ def _sync_full_clone_mirror(root: Path, registry: dict, worktrees: dict, task: d
     if not worktree_path.exists():
         return
     mirror_governance_ledgers_to_worktree(root, worktree_path, registry, worktrees, task)
+
+
+def _ensure_full_clone_slot_startable(
+    root: Path,
+    task: dict,
+    entry: dict | None,
+    *,
+    explicit_owner: str | None,
+    now: str,
+) -> None:
+    if entry is None or entry.get("pool_kind") != "full_clone":
+        return
+    slot_id = str(explicit_owner or entry.get("worker_owner") or "").strip()
+    if not slot_id:
+        raise GovernanceError("full-clone execution entry is missing worker_owner")
+    pool = load_full_clone_pool(root)
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        raise GovernanceError(f"assigned full-clone slot missing: {slot_id}")
+    slot_status = str(slot.get("status") or "")
+    current_task_id = str(slot.get("current_task_id") or "").strip() or None
+    if slot_status == "active" and current_task_id == task["task_id"]:
+        set_full_clone_slot_active(root, slot_id, task_id=task["task_id"], branch=task["branch"], now=now)
+        return
+    if slot_status == "ready" and current_task_id is None:
+        set_full_clone_slot_active(root, slot_id, task_id=task["task_id"], branch=task["branch"], now=now)
+        return
+    raise GovernanceError(
+        f"full-clone slot {slot_id} cannot start {task['task_id']} while status={slot_status or '-'} "
+        f"current_task_id={current_task_id or '-'}"
+    )
+
+
+def release_full_clone_slot_runtime(
+    root: Path,
+    registry: dict,
+    worktrees: dict,
+    task: dict,
+    entry: dict | None,
+    *,
+    now: str,
+    mark_releasing: bool,
+) -> None:
+    if entry is None or entry.get("pool_kind") != "full_clone":
+        return
+    slot_id = str(entry.get("worker_owner") or "").strip()
+    if not slot_id:
+        raise GovernanceError("full-clone execution entry is missing worker_owner")
+    pool = load_full_clone_pool(root)
+    slot = slot_by_id(pool, slot_id)
+    if slot is None:
+        raise GovernanceError(f"assigned full-clone slot missing: {slot_id}")
+    branch = str(task.get("branch") or slot.get("branch") or "").strip() or task["branch"]
+    if mark_releasing:
+        set_full_clone_slot_releasing(root, slot_id, task_id=task["task_id"], branch=branch)
+    clone_path = Path(str(slot.get("path") or entry.get("path") or "")).resolve()
+    entry["cleanup_state"] = "pending"
+    entry["last_cleanup_error"] = None
+    try:
+        if not clone_path.exists():
+            raise GovernanceError(f"full-clone slot path missing: {clone_path}")
+        cleanup_transient_child_artifacts(clone_path, task)
+        context_path = clone_path / ".codex/local/EXECUTION_CONTEXT.yaml"
+        if context_path.exists():
+            context_path.unlink()
+        dirty_lines = git(clone_path, "status", "--porcelain", "--untracked-files=all").stdout.splitlines()
+        tracked_dirty = [line for line in dirty_lines if line and not line.startswith("?? ")]
+        if tracked_dirty:
+            sample = ", ".join(tracked_dirty[:4])
+            raise GovernanceError(f"full-clone slot has tracked changes; release refused: {sample}")
+        if dirty_lines:
+            git(clone_path, "clean", "-fd", check=False)
+        idle_branch = str(slot.get("idle_branch") or default_full_clone_idle_branch(slot_id))
+        control_head = (git(root, "rev-parse", "HEAD").stdout or "").strip()
+        if not control_head:
+            raise GovernanceError("unable to resolve control-plane HEAD during full-clone release")
+        reset = git(clone_path, "checkout", "-B", idle_branch, control_head, check=False)
+        if reset.returncode != 0:
+            raise GovernanceError(
+                reset.stderr.strip()
+                or reset.stdout.strip()
+                or f"unable to reset full-clone slot {slot_id} to idle branch {idle_branch}"
+            )
+        git(clone_path, "clean", "-fd", check=False)
+        set_full_clone_slot_ready(root, slot_id, now=now)
+        entry["cleanup_state"] = "not_needed"
+        entry["last_cleanup_error"] = None
+    except GovernanceError as error:
+        set_full_clone_slot_blocked(
+            root,
+            slot_id,
+            reason=str(error),
+            task_id=task["task_id"],
+            branch=branch,
+        )
+        entry["cleanup_state"] = "blocked"
+        entry["last_cleanup_error"] = str(error)
+        worktrees["updated_at"] = now
+        registry["updated_at"] = now
+        raise
 
 
 def _requires_governed_child_workflow(root: Path, task: dict) -> bool:
@@ -261,6 +373,8 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     registry = load_task_registry(root)
     worktrees = load_worktree_registry(root)
     task = find_task(registry["tasks"], args.task_id)
+    if str(task.get("status") or "") in TERMINAL_WORKER_START_STATUSES:
+        raise GovernanceError(f"cannot start terminal task {task['task_id']} from status `{task['status']}`")
     claim_coordination_lease(root, task, reason="worker-start")
     try:
         enforce_execution_split_guards(registry, task)
@@ -283,6 +397,13 @@ def cmd_worker_start(args: argparse.Namespace) -> int:
     if task["activated_at"] is None:
         task["activated_at"] = now
     entry = _execution_entry(worktrees, task["task_id"])
+    _ensure_full_clone_slot_startable(
+        root,
+        task,
+        entry,
+        explicit_owner=args.worker_owner,
+        now=now,
+    )
     executor_id, executor_type = _task_executor_identity(task, entry, explicit_owner=args.worker_owner)
     if entry is not None:
         entry["status"] = "active"
@@ -552,6 +673,46 @@ def cmd_worker_finish(args: argparse.Namespace) -> int:
         safe_write=True,
     )
     print(f"[OK] worker finished {task['task_id']}")
+    return 0
+
+
+def cmd_release_slot(args: argparse.Namespace) -> int:
+    root = resolve_control_plane_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task = find_task(registry["tasks"], args.task_id)
+    entry = _execution_entry(worktrees, task["task_id"])
+    if entry is None or entry.get("pool_kind") != "full_clone":
+        raise GovernanceError(f"{task['task_id']} is not bound to a full-clone worker slot")
+    if str(task.get("status") or "") != "done":
+        raise GovernanceError(f"release-slot requires task `{task['task_id']}` to be done; got `{task.get('status')}`")
+    from task_coordination_lease import ensure_closeout_write_lease
+
+    ensure_closeout_write_lease(root, task, reason="release-slot", allow_takeover=True)
+    now = iso_now()
+    slot_id = str(entry.get("worker_owner") or "").strip()
+    if slot_id:
+        pool = load_full_clone_pool(root)
+        slot = slot_by_id(pool, slot_id)
+        if slot is not None and str(slot.get("status") or "") == "ready" and not slot.get("current_task_id"):
+            entry["status"] = "closed"
+            entry["cleanup_state"] = "not_needed"
+            entry["last_cleanup_error"] = None
+            worktrees["updated_at"] = now
+            registry["updated_at"] = now
+            dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+            dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+            sync_task_artifacts(root, registry, [task["task_id"]])
+            print(f"[OK] released full-clone slot for {task['task_id']}")
+            return 0
+    entry["status"] = "closed"
+    release_full_clone_slot_runtime(root, registry, worktrees, task, entry, now=now, mark_releasing=True)
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    sync_task_artifacts(root, registry, [task["task_id"]])
+    print(f"[OK] released full-clone slot for {task['task_id']}")
     return 0
 
 

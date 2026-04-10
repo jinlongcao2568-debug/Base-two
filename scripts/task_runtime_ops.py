@@ -65,6 +65,7 @@ from worker_self_loop import cmd_once as cmd_worker_self_loop_once, cmd_loop as 
 from review_candidate_pool import cmd_review
 from task_worker_ops import (
     cmd_auto_close_children,
+    cmd_release_slot,
     cmd_worker_design_confirm,
     cmd_worker_blocked,
     cmd_worker_finish,
@@ -124,6 +125,7 @@ GOVERNANCE_WRITE_COMMANDS = {
     "worker-report",
     "worker-blocked",
     "worker-finish",
+    "release-slot",
     "worker-design-confirm",
     "worker-plan",
     "worker-test-first",
@@ -627,6 +629,10 @@ def _add_worker_state_commands(subparsers) -> None:
     worker_finish_parser.add_argument("--candidate-test-path", action="append", default=[])
     worker_finish_parser.add_argument("--resume-note", action="append", default=[])
     worker_finish_parser.set_defaults(func=cmd_worker_finish)
+
+    release_slot_parser = subparsers.add_parser("release-slot")
+    release_slot_parser.add_argument("task_id")
+    release_slot_parser.set_defaults(func=cmd_release_slot)
 
 
 def _add_worker_gate_commands(subparsers) -> None:

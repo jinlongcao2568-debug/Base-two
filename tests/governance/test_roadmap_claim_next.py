@@ -518,7 +518,8 @@ def test_claim_next_blocks_ready_full_clone_slot_with_live_runtime_drift(tmp_pat
 
     assert result.returncode == 1
     assert "ledger divergence detected" in result.stdout
-    assert pool["slots"][0]["status"] == "ready"
+    assert pool["slots"][0]["status"] == "blocked"
+    assert pool["slots"][0]["blocked_reason"]
 
 
 def test_claim_next_allows_healthy_ready_slot_when_another_slot_is_quarantined(tmp_path: Path) -> None:

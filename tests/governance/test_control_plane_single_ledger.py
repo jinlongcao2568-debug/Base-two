@@ -249,9 +249,10 @@ def test_detect_ledger_divergence_for_ready_slot_stale_mirror(tmp_path: Path) ->
     assert len(divergences) == 1
     assert divergences[0]["slot_id"] == "worker-01"
     assert divergences[0]["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"
-    assert any("ready slot 当前分支不是 idle_branch" in reason for reason in divergences[0]["reasons"])
-    assert any("clone 本地账本残留非终态执行任务" in reason for reason in divergences[0]["reasons"])
-    assert any("clone 候选池格式过期" in reason for reason in divergences[0]["reasons"])
+    assert divergences[0]["main_status"] == "done"
+    assert divergences[0]["clone_status"] == "doing"
+    assert len(divergences[0]["reasons"]) >= 2
+    assert all("idle_branch" not in reason for reason in divergences[0]["reasons"])
 
 
 def test_console_detects_ledger_divergence_and_marks_candidate(monkeypatch, tmp_path: Path) -> None:

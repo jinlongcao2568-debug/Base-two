@@ -5,12 +5,12 @@
 - `task_id`: `TASK-OPS-009`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `doing`
 - `stage`: `governance-full-clone-slot-release-hardening-v1`
 - `branch`: `codex/TASK-OPS-009-full-clone-slot-release-hardening`
 - `size_class`: `standard`
 - `automation_mode`: `assisted`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -61,22 +61,21 @@
 - `docs/governance/exceptions/`
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
+- `narrative_status`: `doing`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
+- `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
-
+- `next_gate`: `validation_pending`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `doing`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `assisted`
-- `worker_state`: `idle`
+- `worker_state`: `running`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -85,5 +84,16 @@
 - `successor_state`: `immediate`
 - `reserved_paths`: `[]`
 - `branch`: `codex/TASK-OPS-009-full-clone-slot-release-hardening`
-- `updated_at`: `2026-04-10T10:50:46+08:00`
+- `updated_at`: `2026-04-10T10:51:47+08:00`
 <!-- generated:task-meta:end -->
+
+## Acceptance Criteria
+
+- Required tests pass: pytest tests/governance/test_worker_self_loop.py -q, pytest tests/governance/test_full_clone_pool.py -q, python scripts/check_repo.py.
+- Changes limited to planned write paths: scripts/, tests/governance/, docs/governance/.
+- No open blockers remain at closeout.
+
+## Rollback
+
+- Revert branch `codex/TASK-OPS-009-full-clone-slot-release-hardening` to the last known good commit if needed.
+- Remove or reset generated artifacts before re-dispatching the task.

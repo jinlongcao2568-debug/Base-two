@@ -28,13 +28,16 @@ from governance_lib import (
 from control_plane_root import (
     FULL_CLONE_POOL_FILE,
     assess_full_clone_slot_runtime,
+    audit_full_clone_pool,
     default_full_clone_idle_branch,
-    detect_ledger_divergences,
     load_execution_leases,
     load_full_clone_pool,
     published_governance_runtime_dirty_paths,
     sync_runtime_rollout_state,
     resolve_control_plane_root,
+    set_full_clone_slot_active,
+    set_full_clone_slot_blocked,
+    set_full_clone_slot_ready,
     slot_by_id,
 )
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
@@ -616,20 +619,24 @@ def _assign_full_clone_slot(root: Path, candidate: dict[str, Any], args: argpars
         raise GovernanceError(f"full clone slot is not ready: {slot_id}")
     assessment = assess_full_clone_slot_runtime(root, slot)
     if assessment["divergent"]:
-        slot["status"] = "blocked"
-        slot["blocked_reason"] = assessment["summary_zh"]
-        slot["stale_runtime"] = assessment["runtime_drift"]
-        _write_full_clone_pool(root, pool)
+        set_full_clone_slot_blocked(
+            root,
+            slot_id,
+            reason=assessment["summary_zh"],
+            task_id=str(slot.get("current_task_id") or "").strip() or None,
+            branch=str(slot.get("branch") or "").strip() or None,
+            stale_runtime=assessment["runtime_drift"],
+        )
         raise GovernanceError(
             f"ledger divergence detected for full clone slot {slot_id}: {'; '.join(assessment['reasons'])}"
         )
-    slot["status"] = "active"
-    slot["current_task_id"] = candidate["task_id_hint"]
-    slot["branch"] = candidate["candidate_branch"]
-    slot["blocked_reason"] = None
-    slot["stale_runtime"] = False
-    slot["last_claimed_at"] = _iso(now)
-    _write_full_clone_pool(root, pool)
+    slot = set_full_clone_slot_active(
+        root,
+        slot_id,
+        task_id=candidate["task_id_hint"],
+        branch=candidate["candidate_branch"],
+        now=_iso(now),
+    )
     candidate["pool_slot_id"] = slot_id
     candidate["candidate_worktree"] = slot["path"]
     candidate["dispatch_target"] = "full_clone"
@@ -639,29 +646,16 @@ def _assign_full_clone_slot(root: Path, candidate: dict[str, Any], args: argpars
 def _sync_full_clone_slot_ready(root: Path, slot_id: str | None, *, now: datetime) -> None:
     if not slot_id:
         return
-    pool = load_full_clone_pool(root)
-    slot = slot_by_id(pool, slot_id)
-    if slot is None:
+    try:
+        set_full_clone_slot_ready(root, slot_id, now=_iso(now))
+    except GovernanceError:
         return
-    slot["status"] = "ready"
-    slot["current_task_id"] = None
-    slot["branch"] = slot.get("idle_branch") or default_full_clone_idle_branch(slot_id)
-    slot["last_released_at"] = _iso(now)
-    _write_full_clone_pool(root, pool)
 
 
 def _sync_full_clone_slot_active(root: Path, slot_id: str | None, *, task_id: str, branch: str, now: datetime) -> None:
     if not slot_id:
         return
-    pool = load_full_clone_pool(root)
-    slot = slot_by_id(pool, slot_id)
-    if slot is None:
-        raise GovernanceError(f"assigned full clone slot missing: {slot_id}")
-    slot["status"] = "active"
-    slot["current_task_id"] = task_id
-    slot["branch"] = branch
-    slot["last_claimed_at"] = _iso(now)
-    _write_full_clone_pool(root, pool)
+    set_full_clone_slot_active(root, slot_id, task_id=task_id, branch=branch, now=_iso(now))
 
 
 def _upsert_full_clone_execution_entry(root: Path, task: dict[str, Any], slot_id: str, clone_path: str) -> None:
@@ -931,8 +925,23 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
             "governance runtime unpublished; publish or revert runtime files before claim-next "
             f"({sample}{suffix})"
         )
-    divergences = detect_ledger_divergences(root)
+    audit = audit_full_clone_pool(root)
+    divergences = [slot for slot in audit.get("slots", []) if slot.get("divergent")]
     if divergences:
+        for slot in divergences:
+            if str(slot.get("slot_status") or "") != "ready":
+                continue
+            slot_id = str(slot.get("slot_id") or "").strip()
+            if not slot_id:
+                continue
+            set_full_clone_slot_blocked(
+                root,
+                slot_id,
+                reason=str(slot.get("summary_zh") or "ledger divergence detected"),
+                task_id=str(slot.get("task_id") or "").strip() or None,
+                branch=str(slot.get("observed_branch") or slot.get("idle_branch") or "").strip() or None,
+                stale_runtime=bool(slot.get("runtime_drift")),
+            )
         summary = "; ".join(
             f"{item.get('slot_id')}/{item.get('task_id') or item.get('candidate_id') or 'unknown'}"
             for item in divergences

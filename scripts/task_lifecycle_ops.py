@@ -44,13 +44,11 @@ from control_plane_root import (
     CONTROL_PLANE_EXECUTOR_ID,
     audit_full_clone_pool,
     close_execution_leases,
-    default_full_clone_idle_branch,
-    load_full_clone_pool,
     load_runtime_rollout_state,
     note_runtime_rollout_audit,
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
-    slot_by_id,
+    set_full_clone_slot_releasing,
     sync_execution_lease,
     sync_runtime_rollout_state,
     write_runtime_rollout_state,
@@ -66,6 +64,7 @@ from task_coordination_lease import (
     release_coordination_lease,
 )
 from task_handoff import ensure_handoff_file, write_handoff
+from task_worker_ops import release_full_clone_slot_runtime
 from task_rendering import (
     find_task,
     load_roadmap_state,
@@ -456,36 +455,38 @@ def cmd_close(args: argparse.Namespace) -> int:
     missing = missing_required_tests(root, task)
     if missing:
         raise GovernanceError(f"required tests missing from runlog: {', '.join(missing)}")
+    close_now = iso_now()
     task["status"] = "done"
     task["worker_state"] = "completed"
     task["blocked_reason"] = None
-    task["last_reported_at"] = iso_now()
-    task["closed_at"] = iso_now()
+    task["last_reported_at"] = close_now
+    task["closed_at"] = close_now
     close_execution_leases(
         root,
         task_id=task["task_id"],
         owner_session_id=current_session_id(root),
     )
-    registry["updated_at"] = iso_now()
+    registry["updated_at"] = close_now
     entry = worktree_map(worktrees).get(task["task_id"])
+    needs_full_clone_release = False
     if entry is not None:
         entry["status"] = "closed"
         if entry["work_mode"] == "execution":
             if entry.get("pool_kind") == "full_clone":
-                entry["cleanup_state"] = "not_needed"
-                pool = load_full_clone_pool(root)
-                slot = slot_by_id(pool, str(entry.get("worker_owner") or ""))
-                if slot is not None:
-                    slot["status"] = "ready"
-                    slot["current_task_id"] = None
-                    slot["branch"] = slot.get("idle_branch") or default_full_clone_idle_branch(slot["slot_id"])
-                    slot["last_released_at"] = iso_now()
-                    from governance_lib import dump_yaml as _dump_yaml
-
-                    _dump_yaml(root / "docs/governance/FULL_CLONE_POOL.yaml", pool)
+                entry["cleanup_state"] = "pending"
+                entry["last_cleanup_error"] = None
+                worker_owner = str(entry.get("worker_owner") or "").strip()
+                if worker_owner:
+                    set_full_clone_slot_releasing(
+                        root,
+                        worker_owner,
+                        task_id=task["task_id"],
+                        branch=task["branch"],
+                    )
+                needs_full_clone_release = True
             else:
                 entry["cleanup_state"] = "pending"
-    worktrees["updated_at"] = iso_now()
+    worktrees["updated_at"] = close_now
     touched_task_ids = [task["task_id"]]
     if is_live_top_level_current:
         roadmap_frontmatter, roadmap_body = load_roadmap_state(root)
@@ -498,6 +499,28 @@ def cmd_close(args: argparse.Namespace) -> int:
                 root / CURRENT_TASK_FILE,
                 build_current_task_payload(task, "Waiting for explicit successor activation."),
             )
+    if needs_full_clone_release and entry is not None:
+        try:
+            release_full_clone_slot_runtime(
+                root,
+                registry,
+                worktrees,
+                task,
+                entry,
+                now=iso_now(),
+                mark_releasing=False,
+            )
+        except GovernanceError:
+            registry["updated_at"] = iso_now()
+            worktrees["updated_at"] = iso_now()
+            dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+            dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+            sync_task_artifacts(root, registry, touched_task_ids)
+            raise
+        registry["updated_at"] = iso_now()
+        worktrees["updated_at"] = iso_now()
+        dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+        dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
     _sync_full_clone_mirror(root, registry, worktrees, task)
     write_handoff(
         root,

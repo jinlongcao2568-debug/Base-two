@@ -76,6 +76,31 @@ def _task_summary(task: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _can_self_heal_done_release(slot: dict[str, Any], assessment: dict[str, Any], task: dict[str, Any] | None) -> bool:
+    if task is None or str(task.get("status") or "") != "done":
+        return False
+    task_id = str(task.get("task_id") or "")
+    if not task_id:
+        return False
+    if str(slot.get("current_task_id") or "") != task_id:
+        return False
+    if str(assessment.get("task_id") or "") != task_id:
+        return False
+    if str(assessment.get("main_status") or "") != "done":
+        return False
+    if str(assessment.get("clone_status") or "") != "done":
+        return False
+    if assessment.get("runtime_drift"):
+        return False
+    if assessment.get("effective_dirty_paths"):
+        return False
+    if assessment.get("clone_only_task_ids"):
+        return False
+    if assessment.get("candidate_cache_issues"):
+        return False
+    return True
+
+
 def preview_worker_action(local_root: Path, *, explicit_task_id: str | None = None) -> dict[str, Any]:
     control_root = resolve_control_plane_root(local_root)
     pool = load_full_clone_pool(control_root)
@@ -92,21 +117,38 @@ def preview_worker_action(local_root: Path, *, explicit_task_id: str | None = No
             "blockers": [str(pool.get("status") or "blocked")],
         }
 
+    registry = load_task_registry(control_root)
+    current_branch = _current_branch(local_root)
+    task = _task_by_branch(registry, current_branch)
+    if task is None and slot.get("current_task_id"):
+        task = _task_by_id(registry, str(slot["current_task_id"]))
+    if task is None and explicit_task_id:
+        task = _task_by_id(registry, explicit_task_id)
+    assessment = assess_full_clone_slot_runtime(control_root, slot)
+    releasable_done = _can_self_heal_done_release(slot, assessment, task)
     divergences = detect_ledger_divergences(control_root)
     if divergences:
         slot_divergences = [item for item in divergences if item.get("slot_id") == slot["slot_id"]]
-        active_divergences = slot_divergences or divergences
-        return {
-            "status": "blocked",
-            "mode": "ledger-divergence",
-            "slot_id": slot["slot_id"],
-            "control_root": str(control_root).replace("\\", "/"),
-            "explanation": "worker self-loop is blocked until control-plane divergence is repaired",
-            "blockers": [item.get("summary_zh") or "ledger divergence detected" for item in active_divergences],
-        }
+        if slot_divergences and not releasable_done:
+            return {
+                "status": "blocked",
+                "mode": "ledger-divergence",
+                "slot_id": slot["slot_id"],
+                "control_root": str(control_root).replace("\\", "/"),
+                "explanation": "worker self-loop is blocked until control-plane divergence is repaired",
+                "blockers": [item.get("summary_zh") or "ledger divergence detected" for item in slot_divergences],
+            }
+        if not slot_divergences:
+            return {
+                "status": "blocked",
+                "mode": "ledger-divergence",
+                "slot_id": slot["slot_id"],
+                "control_root": str(control_root).replace("\\", "/"),
+                "explanation": "worker self-loop is blocked until control-plane divergence is repaired",
+                "blockers": [item.get("summary_zh") or "ledger divergence detected" for item in divergences],
+            }
 
-    assessment = assess_full_clone_slot_runtime(control_root, slot)
-    if assessment["divergent"]:
+    if assessment["divergent"] and not releasable_done:
         return {
             "status": "blocked",
             "mode": "stale-runtime",
@@ -116,13 +158,6 @@ def preview_worker_action(local_root: Path, *, explicit_task_id: str | None = No
             "blockers": list(assessment["reasons"]),
         }
 
-    registry = load_task_registry(control_root)
-    current_branch = _current_branch(local_root)
-    task = _task_by_branch(registry, current_branch)
-    if task is None and slot.get("current_task_id"):
-        task = _task_by_id(registry, str(slot["current_task_id"]))
-    if task is None and explicit_task_id:
-        task = _task_by_id(registry, explicit_task_id)
     if task is None:
         return {
             "status": "ready",
@@ -183,10 +218,10 @@ def preview_worker_action(local_root: Path, *, explicit_task_id: str | None = No
     if task["status"] == "done":
         return {
             "status": "ready",
-            "mode": "claim-next",
+            "mode": "release-current",
             "slot_id": slot["slot_id"],
             "control_root": str(control_root).replace("\\", "/"),
-            "explanation": f"task `{task['task_id']}` is already done; switch to idle branch and claim next",
+            "explanation": f"task `{task['task_id']}` is done; release the full-clone slot before claiming next",
             "task": _task_summary(task),
         }
     return {
@@ -239,6 +274,20 @@ def run_worker_once(local_root: Path, *, explicit_task_id: str | None = None) ->
         return decision
     if mode == "await-coordinator-closeout":
         return decision
+    if mode == "release-current":
+        task = decision["task"]
+        release = _run_task_ops(control_root, "release-slot", task["task_id"])
+        if release.returncode != 0:
+            return {
+                "status": "blocked",
+                "mode": "release-blocked",
+                "slot_id": slot["slot_id"],
+                "control_root": str(control_root).replace("\\", "/"),
+                "explanation": "slot could not be released back to ready",
+                "task": task,
+                "blockers": [release.stdout.strip() or release.stderr.strip() or "release-slot failed"],
+            }
+        return preview_worker_action(local_root)
     if mode == "claim-next":
         idle_branch = _idle_branch(slot)
         if _current_branch(local_root) != idle_branch:
