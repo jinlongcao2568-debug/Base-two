@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-10T09:51:24+08:00'
-revision: 33
+updated_at: '2026-04-10T10:01:31+08:00'
+revision: 34
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -127,11 +127,11 @@ leases:
   candidate_id: stage2-source-family-lanes
   executor_id: worker-03
   executor_type: execution_worker
-  status: review_pending
-  owner_session_id: 019d721e-7f28-7b83-b053-e052cc9a788b
+  status: closed
+  owner_session_id: 019d74ea-c727-74c3-be18-f83f54a1be54
   started_at: '2026-04-10T08:41:46+08:00'
-  heartbeat_at: '2026-04-10T08:42:43+08:00'
-  closed_at: null
+  heartbeat_at: '2026-04-10T10:01:31+08:00'
+  closed_at: '2026-04-10T10:01:31+08:00'
 - lease_id: lease-task-gov-086-control-plane-main
   task_id: TASK-GOV-086
   task_kind: coordination

@@ -3,10 +3,10 @@
 ## Task Status
 
 - `task_id`: `TASK-RM-STAGE2-SOURCE-FAMILY-LANES`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `stage2`
 - `branch`: `codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
@@ -24,20 +24,20 @@
 - `pytest tests/stage2 -q`
 ## Narrative Assertions
 
-- `narrative_status`: `review`
-- `closeout_state`: `candidate_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `ready_for_review`
-- `remaining_scope`: `closeout_only`
-- `next_gate`: `closeout_decision`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-RM-STAGE2-SOURCE-FAMILY-LANES`
-- `status`: `review`
+- `status`: `done`
 - `stage`: `stage2`
 - `branch`: `codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes`
-- `worker_state`: `review_pending`
+- `worker_state`: `completed`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
