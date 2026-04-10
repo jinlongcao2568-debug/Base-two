@@ -225,3 +225,25 @@ def test_governance_runtime_stamp_uses_published_head_not_dirty_worktree(tmp_pat
     assert "scripts/review_candidate_pool.py" in dirty_paths
     assert updated["governance_scripts_hash"] == baseline["governance_scripts_hash"]
     assert updated["control_plane_head"] == baseline["control_plane_head"]
+
+
+def test_audit_full_clone_pool_refreshes_control_stamp_file(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    write_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml", _pool(repo))
+    write_yaml(
+        repo / ".codex/local/governance_runtime/stamp.yaml",
+        {
+            "governance_runtime_version": "control_plane_runtime_v1",
+            "candidate_index_format_version": "roadmap_candidate_index_v2",
+            "governance_scripts_hash": "stale-hash",
+            "control_plane_head": "stale-head",
+        },
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "audit-full-clone-pool", "--slot-id", "worker-01")
+    refreshed_stamp = read_yaml(repo / ".codex/local/governance_runtime/stamp.yaml")
+    expected = build_governance_runtime_stamp(repo)
+
+    assert result.returncode == 0
+    assert refreshed_stamp["governance_scripts_hash"] == expected["governance_scripts_hash"]
+    assert refreshed_stamp["control_plane_head"] == expected["control_plane_head"]

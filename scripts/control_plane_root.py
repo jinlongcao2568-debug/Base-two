@@ -818,7 +818,7 @@ def audit_full_clone_pool(root: Path) -> dict[str, Any]:
     claims = _load_registry(root / CLAIMS_FILE)
     tasks_by_id = _tasks_by_id(registry)
     claims_by_candidate = _claims_by_candidate(claims)
-    control_stamp = build_governance_runtime_stamp(root)
+    control_stamp = write_governance_runtime_stamp(root)
     dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
     control_candidate_ids = _control_candidate_ids(root)
     slots = [
