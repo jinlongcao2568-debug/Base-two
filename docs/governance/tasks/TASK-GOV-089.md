@@ -123,6 +123,7 @@
 - Follow-up cleanup removed two stale `dispatch_briefs` files plus their residual rows in `TASK_REGISTRY.yaml`, `WORKTREE_REGISTRY.yaml`, `WORKTREE_POOL.yaml`, and `EXECUTION_LEASES.yaml`.
 - Console read models and UI were reworked so the main path no longer centers `worker-01..09` slot semantics; slot or lease details remain only in `高级诊断`.
 - The task catalog now prefers the cached roadmap candidate snapshot, so the total-page view behaves like a static board with light ledger overlay instead of full live recomputation.
+- Main-path lease dependency was removed; `EXECUTION_LEASES.yaml` is now an empty shell and no longer participates in console or claim decisions.
 
 ## Acceptance Criteria
 

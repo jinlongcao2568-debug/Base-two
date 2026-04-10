@@ -560,8 +560,6 @@ def _task_friendly_blocker(reason: Any) -> str:
         return mapping[text]
     if text.startswith("active claim by"):
         return "已有未结束同任务认领"
-    if text.startswith("active execution lease by"):
-        return "已有未结束执行任务"
     if text.startswith("write-path overlap with"):
         return text.replace("write-path overlap with", "写入路径与任务冲突：").strip()
     if text.startswith("waiting for "):

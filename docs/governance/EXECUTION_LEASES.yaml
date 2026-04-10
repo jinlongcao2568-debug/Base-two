@@ -1,17 +1,4 @@
 version: '1.0'
-updated_at: '2026-04-10T16:21:50+08:00'
-revision: 46
-leases:
-- lease_id: lease-task-gov-089-control-plane-main
-  task_id: TASK-GOV-089
-  task_kind: coordination
-  stage: governance-surface-removal-v1
-  branch: codex/TASK-OPS-009-full-clone-slot-release-hardening
-  candidate_id: null
-  executor_id: control-plane-main
-  executor_type: control_plane
-  status: running
-  owner_session_id: 019d7605-58b9-7b33-bbd3-a1db791934cc
-  started_at: '2026-04-10T14:28:41+08:00'
-  heartbeat_at: '2026-04-10T14:28:41+08:00'
-  closed_at: null
+updated_at: '2026-04-10T16:38:02+08:00'
+revision: 0
+leases: []

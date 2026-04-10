@@ -8,7 +8,6 @@ from typing import Any
 
 from control_plane_root import (
     build_governance_runtime_stamp,
-    load_execution_leases,
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
     sync_runtime_rollout_state,
@@ -52,16 +51,10 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     current_task = load_current_task(control_root)
     registry = load_task_registry(control_root)
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
-    execution_leases = load_execution_leases(control_root)
     tasks = registry.get("tasks", [])
     candidates = (
         load_yaml(control_root / ".codex/local/roadmap_candidates/index.yaml") or {}
     ).get("candidates", [])
-    live_execution_leases = [
-        dict(lease)
-        for lease in execution_leases.get("leases", [])
-        if str(lease.get("status") or "") != "closed"
-    ]
     focus_current_task = None
     if str(current_task.get("status") or "") != "idle":
         focus_current_task = {
@@ -72,40 +65,20 @@ def review_pool(control_root: Path) -> dict[str, Any]:
             "branch": current_task.get("branch"),
             "worker_state": current_task.get("worker_state"),
         }
-    live_leases_by_task_id = {
-        str(lease.get("task_id")): lease for lease in live_execution_leases if lease.get("task_id")
-    }
     incomplete_task_rows: list[dict[str, Any]] = []
-    seen_task_ids: set[str] = set()
     for task in tasks:
         if task.get("task_kind") != "execution":
             continue
-        lease = live_leases_by_task_id.get(str(task.get("task_id") or ""))
-        if task.get("status") not in {"doing", "paused", "review", "blocked"} and lease is None:
+        if task.get("status") not in {"doing", "paused", "review", "blocked"}:
             continue
-        seen_task_ids.add(str(task["task_id"]))
         incomplete_task_rows.append(
             {
                 "task_id": task["task_id"],
                 "status": task["status"],
                 "branch": task["branch"],
                 "stage": task["stage"],
-                "executor_id": None if lease is None else lease.get("executor_id"),
-                "lease_status": None if lease is None else lease.get("status"),
-            }
-        )
-    for lease in live_execution_leases:
-        task_id = str(lease.get("task_id") or "")
-        if not task_id or task_id in seen_task_ids:
-            continue
-        incomplete_task_rows.append(
-            {
-                "task_id": task_id,
-                "status": "lease_only",
-                "branch": lease.get("branch"),
-                "stage": lease.get("stage"),
-                "executor_id": lease.get("executor_id"),
-                "lease_status": lease.get("status"),
+                "executor_id": None,
+                "lease_status": None,
             }
         )
     now = datetime.now().astimezone()
@@ -174,9 +147,9 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "top_blocker_codes": blocker_counts,
         "hard_gate_backlog": hard_gate_backlog,
         "incomplete_tasks": incomplete_task_rows,
-        "live_execution_lease_count": len(live_execution_leases),
-        "live_execution_leases": live_execution_leases,
-        "running_execution_leases": live_execution_leases,
+        "live_execution_lease_count": 0,
+        "live_execution_leases": [],
+        "running_execution_leases": [],
         "stale_claims": stale_claims,
         "ready_executors": [],
         "quarantined_executors": [],

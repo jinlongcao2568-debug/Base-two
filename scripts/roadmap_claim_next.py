@@ -29,7 +29,6 @@ from control_plane_root import (
     assess_full_clone_slot_runtime,
     audit_full_clone_pool,
     default_full_clone_idle_branch,
-    load_execution_leases,
     load_full_clone_pool,
     published_governance_runtime_dirty_paths,
     sync_runtime_rollout_state,
@@ -234,24 +233,8 @@ def _active_registry_tasks(root: Path) -> list[dict[str, Any]]:
     ]
 
 
-def _live_execution_leases(root: Path) -> list[dict[str, Any]]:
-    payload = load_execution_leases(root)
-    return [dict(lease) for lease in payload.get("leases", []) if str(lease.get("status") or "") != "closed"]
-
-
 def _active_execution_tasks(root: Path) -> list[dict[str, Any]]:
-    registry = load_task_registry(root)
-    tasks_by_id = {str(task.get("task_id") or ""): task for task in registry.get("tasks", [])}
-    active: dict[str, dict[str, Any]] = {}
-    for task in _active_registry_tasks(root):
-        active[str(task["task_id"])] = task
-    for lease in _live_execution_leases(root):
-        task_id = str(lease.get("task_id") or "")
-        task = tasks_by_id.get(task_id)
-        if task is None or task.get("task_kind") != "execution":
-            continue
-        active[task_id] = task
-    return list(active.values())
+    return list(_active_registry_tasks(root))
 
 
 def _claim_is_fresh(claim: dict[str, Any], now: datetime) -> bool:
@@ -316,11 +299,6 @@ def _candidate_blockers(
         blockers.append(f"status={candidate.get('status')}")
 
     claim = claims_by_candidate.get(candidate["candidate_id"])
-    live_candidate_leases = [
-        lease
-        for lease in _live_execution_leases(root)
-        if lease.get("candidate_id") == candidate["candidate_id"]
-    ]
     stale_takeover_task_id = None
     if claim:
         if _claim_is_stale(root, claim, now):
@@ -328,9 +306,6 @@ def _candidate_blockers(
             blockers.extend(_takeover_blockers(root, candidate, claim, now))
         elif _claim_is_fresh(claim, now):
             blockers.append(f"active claim by {claim.get('window_id')}")
-    if live_candidate_leases and not stale_takeover_task_id:
-        executor_id = live_candidate_leases[0].get("executor_id") or "unknown"
-        blockers.append(f"active execution lease by {executor_id}")
 
     candidate_paths = list(candidate.get("planned_write_paths") or [])
     for task in active_tasks:
