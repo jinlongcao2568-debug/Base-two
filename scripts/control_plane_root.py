@@ -684,6 +684,7 @@ def assess_full_clone_slot_runtime(
         candidate_cache_issues = _candidate_cache_issues(control_candidate_ids, slot_path)
 
     if slot_status == "ready":
+        branch_drift_from_idle = observed_branch is not None and observed_branch != idle_branch
         if current_task_id:
             message = f"ready slot 仍指向 current_task_id={current_task_id}"
             reasons.append(message)
@@ -694,7 +695,7 @@ def assess_full_clone_slot_runtime(
             message = f"ready slot 存在非 transient tracked dirty files: {sample}{suffix}"
             reasons.append(message)
             divergence_reasons.append(message)
-        if non_terminal_tasks:
+        if non_terminal_tasks and (current_task_id is not None or branch_drift_from_idle):
             sample = ", ".join(f"{task.get('task_id')}:{task.get('status')}" for task in non_terminal_tasks[:3])
             suffix = "" if len(non_terminal_tasks) <= 3 else f" (+{len(non_terminal_tasks) - 3} more)"
             message = f"clone 本地账本残留非终态执行任务: {sample}{suffix}"

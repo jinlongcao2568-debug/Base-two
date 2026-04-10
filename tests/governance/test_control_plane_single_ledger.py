@@ -255,6 +255,75 @@ def test_detect_ledger_divergence_for_ready_slot_stale_mirror(tmp_path: Path) ->
     assert all("idle_branch" not in reason for reason in divergences[0]["reasons"])
 
 
+def test_ready_idle_slot_ignores_mirrored_paused_task_registry_rows(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE3-CORE-CONTRACT",
+            "title": "stage3 contract",
+            "status": "paused",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage3",
+            "branch": "codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "idle",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-08T00:00:00+08:00",
+            "topology": "single_task",
+            "allowed_dirs": ["src/stage3_parsing/"],
+            "reserved_paths": [],
+            "planned_write_paths": ["src/stage3_parsing/"],
+            "planned_test_paths": ["tests/stage3/"],
+            "required_tests": ["pytest tests/stage3 -q"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE3-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE3-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "roadmap_candidate_id": "stage3-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    write_yaml(
+        clone_path / "docs/governance/TASK_REGISTRY.yaml",
+        {
+            "version": "1.0",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "tasks": [
+                {
+                    "task_id": "TASK-RM-STAGE3-CORE-CONTRACT",
+                    "status": "paused",
+                    "task_kind": "execution",
+                    "worker_state": "idle",
+                    "roadmap_candidate_id": "stage3-core-contract",
+                }
+            ],
+        },
+    )
+    subprocess.run(["git", "add", "docs/governance/TASK_REGISTRY.yaml"], cwd=clone_path, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "commit", "-m", "mirror paused task registry row"],
+        cwd=clone_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    divergences = detect_ledger_divergences(repo)
+
+    assert divergences == []
+
+
 def test_console_detects_ledger_divergence_and_marks_candidate(monkeypatch, tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
