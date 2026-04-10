@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-10T10:04:17+08:00'
+updated_at: '2026-04-10T10:13:09+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4939,7 +4939,7 @@ tasks:
   closed_at: '2026-04-10T08:31:34+08:00'
 - task_id: TASK-RM-STAGE2-INTEGRATION-GATE
   title: Stage2 ingestion integration gate
-  status: paused
+  status: done
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: null
@@ -4947,9 +4947,9 @@ tasks:
   branch: codex/TASK-RM-STAGE2-INTEGRATION-GATE-stage2-integration-gate
   size_class: standard
   automation_mode: manual
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-10T08:29:06+08:00'
+  last_reported_at: '2026-04-10T10:13:09+08:00'
   topology: single_task
   allowed_dirs:
   - src/stage2_ingestion/
@@ -4973,11 +4973,11 @@ tasks:
   lane_count: 1
   lane_index: null
   parallelism_plan_id: null
-  review_bundle_status: not_applicable
+  review_bundle_status: pending
   successor_state: null
   created_at: '2026-04-10T08:29:06+08:00'
   activated_at: '2026-04-10T08:29:06+08:00'
-  closed_at: null
+  closed_at: '2026-04-10T10:13:09+08:00'
   roadmap_candidate_id: stage2-integration-gate
   integration_gate: stage2-integration-gate
 - task_id: TASK-GOV-086

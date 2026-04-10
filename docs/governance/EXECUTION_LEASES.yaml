@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-10T10:01:31+08:00'
-revision: 34
+updated_at: '2026-04-10T10:13:09+08:00'
+revision: 37
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -158,3 +158,16 @@ leases:
   started_at: '2026-04-10T09:43:50+08:00'
   heartbeat_at: '2026-04-10T09:51:24+08:00'
   closed_at: '2026-04-10T09:51:24+08:00'
+- lease_id: lease-task-rm-stage2-integration-gate-worker-03
+  task_id: TASK-RM-STAGE2-INTEGRATION-GATE
+  task_kind: execution
+  stage: stage2
+  branch: codex/TASK-RM-STAGE2-INTEGRATION-GATE-stage2-integration-gate
+  candidate_id: stage2-integration-gate
+  executor_id: worker-03
+  executor_type: execution_worker
+  status: closed
+  owner_session_id: 019d74ea-c727-74c3-be18-f83f54a1be54
+  started_at: '2026-04-10T10:11:09+08:00'
+  heartbeat_at: '2026-04-10T10:13:09+08:00'
+  closed_at: '2026-04-10T10:13:09+08:00'
