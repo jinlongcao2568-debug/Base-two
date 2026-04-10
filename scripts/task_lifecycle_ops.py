@@ -99,6 +99,15 @@ def _close_roadmap_claim_if_present(root, task: dict[str, Any]) -> None:
         dump_yaml(claims_path, claims)
 
 
+def _claim_payload(root: Path) -> dict[str, Any]:
+    claims_path = root / CLAIMS_FILE
+    if not claims_path.exists():
+        return {"version": "0.1", "claims": []}
+    payload = load_yaml(claims_path) or {}
+    payload.setdefault("claims", [])
+    return payload
+
+
 def _sync_full_clone_mirror(root, registry: dict, worktrees: dict, task: dict[str, Any]) -> None:
     entry = worktree_map(worktrees).get(task["task_id"])
     if entry is None or entry.get("pool_kind") != "full_clone":
@@ -551,6 +560,71 @@ def cmd_close(args: argparse.Namespace) -> int:
     if task.get("task_kind") == "coordination":
         _maybe_trigger_runtime_rollout(root, trigger="close")
     print(f"[OK] closed {task['task_id']}")
+    return 0
+
+
+def cmd_requeue_roadmap_task(args: argparse.Namespace) -> int:
+    root = resolve_control_plane_root()
+    registry = load_task_registry(root)
+    worktrees = load_worktree_registry(root)
+    task = find_task(registry["tasks"], args.task_id)
+    candidate_id = str(task.get("roadmap_candidate_id") or "").strip()
+    if not candidate_id:
+        raise GovernanceError(f"{task['task_id']} is not a roadmap-backed execution task")
+    if str(task.get("status") or "") not in {"done", "closed"}:
+        raise GovernanceError(
+            f"requeue-roadmap-task requires terminal task status; got `{task.get('status')}` for `{task['task_id']}`"
+        )
+
+    now = iso_now()
+    task["status"] = "paused"
+    task["worker_state"] = "idle"
+    task["blocked_reason"] = None
+    task["closed_at"] = None
+    task["last_reported_at"] = now
+    task["review_bundle_status"] = "not_applicable"
+
+    entry = worktree_map(worktrees).get(task["task_id"])
+    if entry is not None:
+        entry["status"] = "closed"
+        entry["cleanup_state"] = "not_needed"
+        entry["last_cleanup_error"] = None
+
+    close_execution_leases(root, task_id=task["task_id"], owner_session_id=current_session_id(root))
+    claims = _claim_payload(root)
+    for claim in claims.get("claims", []):
+        if claim.get("candidate_id") != candidate_id:
+            continue
+        claim["status"] = "closed"
+        claim["closed_at"] = now
+        claim["expires_at"] = now
+        claim["window_id"] = "requeued"
+
+    update_current_task_if_active(root, task, "Roadmap task requeued; return to candidate pool before resuming execution.")
+    append_runlog_bullets(
+        root,
+        task,
+        "Execution Log",
+        [f"`{now}`: roadmap task requeued to candidate pool; previous terminal result discarded"],
+    )
+    write_handoff(
+        root,
+        task,
+        summary_status=task["status"],
+        remaining_items=["Re-claim this roadmap task from the candidate pool before more code changes."],
+        next_step="Use claim-next to reassign this roadmap task to a ready worker.",
+        next_tests=list(task.get("required_tests") or []),
+        current_risks=[f"previous terminal outcome discarded for `{candidate_id}` candidate"],
+        resume_notes=["Task was requeued from a terminal state back to the roadmap candidate pool."],
+        append_resume_notes=True,
+    )
+    registry["updated_at"] = now
+    worktrees["updated_at"] = now
+    dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+    dump_yaml(root / "docs/governance/WORKTREE_REGISTRY.yaml", worktrees)
+    dump_yaml(root / CLAIMS_FILE, claims)
+    sync_task_artifacts(root, registry, [task["task_id"]])
+    print(f"[OK] requeued roadmap task {task['task_id']} -> candidate `{candidate_id}`")
     return 0
 
 

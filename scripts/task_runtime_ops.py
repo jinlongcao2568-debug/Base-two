@@ -39,6 +39,7 @@ from task_lifecycle_ops import (
     cmd_new,
     cmd_pause,
     cmd_queue_and_activate,
+    cmd_requeue_roadmap_task,
     cmd_reconcile_ledgers,
     cmd_split_check,
     cmd_sync,
@@ -104,6 +105,7 @@ GOVERNANCE_WRITE_COMMANDS = {
     "activate",
     "pause",
     "close",
+    "requeue-roadmap-task",
     "sync",
     "reconcile-ledgers",
     "derive-ledgers",
@@ -446,6 +448,10 @@ def add_task_lifecycle_commands(subparsers) -> None:
     close_parser = subparsers.add_parser("close")
     close_parser.add_argument("task_id", nargs="?")
     close_parser.set_defaults(func=cmd_close)
+
+    requeue_parser = subparsers.add_parser("requeue-roadmap-task")
+    requeue_parser.add_argument("task_id")
+    requeue_parser.set_defaults(func=cmd_requeue_roadmap_task)
 
     can_start_parser = subparsers.add_parser("can-start")
     can_start_parser.add_argument("task_id", nargs="?")

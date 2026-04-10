@@ -201,6 +201,65 @@ def test_worker_start_rejects_terminal_execution_task(tmp_path: Path) -> None:
     assert "cannot start terminal task TASK-EXEC-TERMINAL from status `done`" in started.stdout
 
 
+def test_requeue_roadmap_task_reopens_terminal_execution_task(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    created = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "new",
+        "TASK-RM-REQUEUE-001",
+        "--title",
+        "requeue candidate task",
+        "--stage",
+        "stage2",
+        "--task-kind",
+        "execution",
+        "--execution-mode",
+        "isolated_worktree",
+        "--planned-write-paths",
+        "src/stage2_ingestion/",
+        "--planned-test-paths",
+        "tests/stage2/",
+    )
+    assert created.returncode == 0, created.stdout + created.stderr
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-RM-REQUEUE-001")
+    task["status"] = "done"
+    task["worker_state"] = "completed"
+    task["closed_at"] = "2026-04-10T10:01:30+08:00"
+    task["roadmap_candidate_id"] = "stage2-source-family-lanes"
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    write_yaml(
+        repo / ".codex/local/roadmap_candidates/claims.yaml",
+        {
+            "version": "0.1",
+            "claims": [
+                {
+                    "candidate_id": "stage2-source-family-lanes",
+                    "status": "closed",
+                    "formal_task_id": "TASK-RM-REQUEUE-001",
+                    "closed_at": "2026-04-10T10:01:30+08:00",
+                    "expires_at": "2026-04-10T10:01:30+08:00",
+                }
+            ],
+        },
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "requeue-roadmap-task", "TASK-RM-REQUEUE-001")
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    claims = read_yaml(repo / ".codex/local/roadmap_candidates/claims.yaml")
+    task = next(item for item in registry["tasks"] if item["task_id"] == "TASK-RM-REQUEUE-001")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert task["status"] == "paused"
+    assert task["worker_state"] == "idle"
+    assert task["closed_at"] is None
+    assert claims["claims"][0]["status"] == "closed"
+    assert claims["claims"][0]["window_id"] == "requeued"
+
+
 def test_new_task_templates_include_narrative_assertions(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     result = run_python(

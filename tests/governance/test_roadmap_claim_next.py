@@ -558,3 +558,88 @@ def test_claim_next_allows_healthy_ready_slot_when_another_slot_is_quarantined(t
     assert pool["slots"][0]["status"] == "blocked"
     assert pool["slots"][1]["status"] == "active"
     assert pool["slots"][1]["current_task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"
+
+
+def test_claim_next_promote_reuses_resumable_formal_task_without_duplicate_registry_row(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    clone_path = tmp_path / "clone-worker-01"
+    _write_full_clone_pool(repo, clone_path)
+    _clone_repo(repo, clone_path)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    registry["tasks"].append(
+        {
+            "task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+            "title": "stage1 contract",
+            "status": "paused",
+            "task_kind": "execution",
+            "execution_mode": "isolated_worktree",
+            "parent_task_id": None,
+            "stage": "stage1",
+            "branch": "codex/TASK-RM-STAGE1-CORE-CONTRACT-stage1-core-contract",
+            "size_class": "standard",
+            "automation_mode": "manual",
+            "worker_state": "idle",
+            "blocked_reason": None,
+            "last_reported_at": "2026-04-08T00:00:00+08:00",
+            "topology": "single_task",
+            "allowed_dirs": ["src/stage1_orchestration/"],
+            "reserved_paths": [],
+            "planned_write_paths": ["src/stage1_orchestration/"],
+            "planned_test_paths": ["tests/stage1/"],
+            "required_tests": ["pytest tests/stage1 -q"],
+            "task_file": "docs/governance/tasks/TASK-RM-STAGE1-CORE-CONTRACT.md",
+            "runlog_file": "docs/governance/runlogs/TASK-RM-STAGE1-CORE-CONTRACT-RUNLOG.md",
+            "lane_count": 1,
+            "lane_index": None,
+            "parallelism_plan_id": None,
+            "review_bundle_status": "not_applicable",
+            "successor_state": None,
+            "created_at": "2026-04-08T00:00:00+08:00",
+            "activated_at": "2026-04-08T00:00:00+08:00",
+            "closed_at": None,
+            "roadmap_candidate_id": "stage1-core-contract",
+        }
+    )
+    write_yaml(repo / "docs/governance/TASK_REGISTRY.yaml", registry)
+    write_yaml(
+        repo / ".codex/local/roadmap_candidates/claims.yaml",
+        {
+            "version": "0.1",
+            "claims": [
+                {
+                    "candidate_id": "stage1-core-contract",
+                    "status": "closed",
+                    "formal_task_id": "TASK-RM-STAGE1-CORE-CONTRACT",
+                    "closed_at": "2026-04-08T00:00:00+08:00",
+                    "expires_at": "2026-04-08T00:00:00+08:00",
+                }
+            ],
+        },
+    )
+
+    result = run_python(
+        TASK_OPS_SCRIPT,
+        repo,
+        "claim-next",
+        "--promote-task",
+        "--dispatch-target",
+        "full_clone",
+        "--full-clone-slot-id",
+        "worker-01",
+        "--window-id",
+        "worker-01",
+    )
+    registry = read_yaml(repo / "docs/governance/TASK_REGISTRY.yaml")
+    claims = read_yaml(repo / ".codex/local/roadmap_candidates/claims.yaml")
+    pool = read_yaml(repo / "docs/governance/FULL_CLONE_POOL.yaml")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "claim-next taken-over candidate_id=stage1-core-contract" in result.stdout
+    assert len([task for task in registry["tasks"] if task["task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"]) == 1
+    assert claims["claims"][0]["status"] == "taken_over"
+    assert claims["claims"][0]["window_id"] == "worker-01"
+    assert pool["slots"][0]["status"] == "active"
+    assert pool["slots"][0]["current_task_id"] == "TASK-RM-STAGE1-CORE-CONTRACT"

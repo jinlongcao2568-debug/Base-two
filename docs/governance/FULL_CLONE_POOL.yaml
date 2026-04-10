@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-10T11:55:37+08:00'
+updated_at: '2026-04-10T12:23:26+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 root_path: D:/Base One/Base-two/AX9.clones
@@ -34,16 +34,16 @@ slots:
   last_released_at: null
 - slot_id: worker-03
   path: D:/Base One/Base-two/AX9.clones/worker-03
-  branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
-  status: blocked
+  branch: codex/worker-03-idle
+  status: ready
   current_task_id: null
   idle_branch: codex/worker-03-idle
-  blocked_reason: 'preserve-before-rebuild: local commit 075b6e4 on codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes'
-  stale_runtime: true
-  last_provisioned_at: '2026-04-10T08:26:14+08:00'
+  blocked_reason: null
+  stale_runtime: false
+  last_provisioned_at: '2026-04-10T12:23:26+08:00'
   last_claimed_at: null
   last_released_at: null
-  preserve_before_rebuild: true
+  preserve_before_rebuild: false
 - slot_id: worker-04
   path: D:/Base One/Base-two/AX9.clones/worker-04
   branch: codex/worker-04-idle

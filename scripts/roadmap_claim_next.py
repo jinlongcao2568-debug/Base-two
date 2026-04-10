@@ -603,6 +603,97 @@ def _update_claim_after_takeover(
         return
 
 
+def _upsert_resumed_claim(
+    claims: dict[str, Any],
+    candidate: dict[str, Any],
+    *,
+    task: dict[str, Any],
+    args: argparse.Namespace,
+    destination: Path,
+    now: datetime,
+) -> None:
+    lease_minutes = int(args.lease_minutes)
+    payload = {
+        "candidate_id": candidate["candidate_id"],
+        "task_id_hint": candidate["task_id_hint"],
+        "window_id": args.window_id,
+        "status": "taken_over",
+        "claimed_at": _iso(now),
+        "expires_at": _iso(now + timedelta(minutes=lease_minutes)),
+        "candidate_branch": task["branch"],
+        "candidate_worktree": str(destination).replace("\\", "/"),
+        "pool_slot_id": candidate.get("pool_slot_id"),
+        "dispatch_target": candidate.get("dispatch_target", getattr(args, "dispatch_target", "worktree_pool")),
+        "planned_write_paths": list(task.get("planned_write_paths") or candidate.get("planned_write_paths") or []),
+        "promoted_at": task.get("activated_at") or _iso(now),
+        "formal_task_id": task["task_id"],
+    }
+    existing = [claim for claim in claims.get("claims", []) if claim.get("candidate_id") != candidate["candidate_id"]]
+    claims["claims"] = [*existing, payload]
+
+
+def _formal_task_for_candidate(root: Path, candidate: dict[str, Any]) -> dict[str, Any] | None:
+    registry = load_task_registry(root)
+    task_id_hint = str(candidate.get("task_id_hint") or "")
+    candidate_id = str(candidate.get("candidate_id") or "")
+    for task in registry.get("tasks", []):
+        if str(task.get("roadmap_candidate_id") or "") == candidate_id:
+            return task
+        if task_id_hint and str(task.get("task_id") or "") == task_id_hint:
+            return task
+    return None
+
+
+def _resume_existing_formal_task(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> tuple[dict[str, Any], Path]:
+    task = _formal_task_for_candidate(root, candidate)
+    if task is None:
+        raise GovernanceError(f"resumable roadmap task missing for candidate {candidate['candidate_id']}")
+    if str(task.get("status") or "") != "paused":
+        raise GovernanceError(
+            f"resumable takeover requires paused formal task; got `{task.get('status')}` for `{task['task_id']}`"
+        )
+    if getattr(args, "dispatch_target", "worktree_pool") == "full_clone":
+        slot = _assign_full_clone_slot(root, candidate, args, now)
+        destination = Path(str(slot["path"])).resolve()
+        _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
+        _upsert_full_clone_execution_entry(root, task, slot["slot_id"], str(destination).replace("\\", "/"))
+        candidate["pool_slot_id"] = slot["slot_id"]
+        candidate["dispatch_target"] = "full_clone"
+        return task, destination
+
+    existing_entry = next(
+        (entry for entry in load_worktree_registry(root).get("entries", []) if entry.get("task_id") == task["task_id"]),
+        None,
+    )
+    pool_slot = _assign_pool_slot(root, candidate, args, now) if not args.worktree_root else None
+    if pool_slot is not None:
+        candidate["pool_slot_id"] = pool_slot["slot_id"]
+        candidate["pool_slot_path"] = pool_slot["path"]
+    destination = (
+        Path(str(existing_entry.get("path"))).resolve()
+        if existing_entry is not None and existing_entry.get("path")
+        else _candidate_worktree_path(root, candidate, args.worktree_root)
+    )
+    try:
+        if candidate.get("pool_slot_id"):
+            pool = _load_worktree_pool(root)
+            slot = _pool_slot_by_id(pool).get(candidate["pool_slot_id"])
+            if slot is None:
+                raise GovernanceError(f"assigned worktree pool slot missing: {candidate['pool_slot_id']}")
+            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
+            destination = reuse_pool_slot_worktree(root, task, slot, args.worker_owner)
+            _write_worktree_pool(root, pool)
+        else:
+            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
+            if not destination.exists():
+                cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
+    except Exception:
+        _release_pool_slot(root, candidate.get("pool_slot_id"), now=now)
+        raise
+    _sync_pool_slot_active(root, candidate.get("pool_slot_id"), destination=destination, task_id=task["task_id"], branch=task["branch"], now=now)
+    return task, destination
+
+
 def _assign_full_clone_slot(root: Path, candidate: dict[str, Any], args: argparse.Namespace, now: datetime) -> dict[str, Any]:
     pool = load_full_clone_pool(root)
     if not pool.get("slots"):
@@ -876,6 +967,7 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
             return None, blocked
         selected = safe[0]
         stale_claim = _stale_claim_for_candidate(root, selected, claims, now)
+        resumable_task = _formal_task_for_candidate(root, selected) if selected.get("status") == "resumable" else None
         if args.write_claim:
             if stale_claim is None:
                 _record_claim(claims, selected, args=args, now=now)
@@ -893,6 +985,15 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
                 _ensure_task_package_complete(root, task, selected)
                 _write_execution_brief(root, candidate=selected, task=task, destination=destination, args=args, now=now)
                 mirror_governance_ledgers_to_worktree(root, destination, registry, load_worktree_registry(root), task)
+            elif resumable_task is not None:
+                task, destination = _resume_existing_formal_task(root, selected, args, now)
+                claims = _load_claims(root)
+                _upsert_resumed_claim(claims, selected, task=task, args=args, destination=destination, now=now)
+                _write_claims(root, claims)
+                _ensure_task_package_complete(root, task, selected)
+                _write_execution_brief(root, candidate=selected, task=task, destination=destination, args=args, now=now)
+                mirror_governance_ledgers_to_worktree(root, destination, load_task_registry(root), load_worktree_registry(root), task)
+                selected["takeover_mode"] = "resume_existing_task"
             else:
                 destination = _promote_candidate_to_worktree(root, selected, args, now)
                 claims = _load_claims(root)

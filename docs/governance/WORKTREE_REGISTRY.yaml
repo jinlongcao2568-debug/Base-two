@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-10T10:51:47+08:00'
+updated_at: '2026-04-10T12:22:56+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1183,7 +1183,7 @@ entries:
   branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
   path: D:/Base One/Base-two/AX9.clones/worker-03
   status: closed
-  cleanup_state: pending
+  cleanup_state: not_needed
   cleanup_attempts: 1
   last_cleanup_error: null
   worker_owner: worker-03

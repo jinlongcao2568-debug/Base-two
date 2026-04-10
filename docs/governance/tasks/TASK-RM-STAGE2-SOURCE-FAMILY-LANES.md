@@ -5,17 +5,17 @@
 - `task_id`: `TASK-RM-STAGE2-SOURCE-FAMILY-LANES`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
-- `status`: `done`
+- `status`: `paused`
 - `stage`: `stage2`
 - `branch`: `codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `completed`
+- `worker_state`: `idle`
 - `topology`: `single_task`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
-- `review_bundle_status`: `pending`
+- `review_bundle_status`: `not_applicable`
 ## Primary Goals
 
 - to-be-filled
@@ -49,27 +49,27 @@
 - `docs/governance/INTERFACE_CATALOG.yaml`
 ## Narrative Assertions
 
-- `narrative_status`: `done`
-- `closeout_state`: `closed`
+- `narrative_status`: `paused`
+- `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
-- `completed_scope`: `closed`
-- `remaining_scope`: `none`
-- `next_gate`: `closed`
+- `completed_scope`: `active_progress`
+- `remaining_scope`: `active_work_remaining`
+- `next_gate`: `resume_required`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `done`
+- `status`: `paused`
 - `task_kind`: `execution`
 - `execution_mode`: `isolated_worktree`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `completed`
+- `worker_state`: `idle`
 - `topology`: `single_task`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
-- `review_bundle_status`: `pending`
+- `review_bundle_status`: `not_applicable`
 - `reserved_paths`: `docs/governance/, tests/integration/, docs/governance/INTERFACE_CATALOG.yaml`
 - `branch`: `codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes`
-- `updated_at`: `2026-04-10T10:01:40+08:00`
+- `updated_at`: `2026-04-10T12:22:56+08:00`
 <!-- generated:task-meta:end -->
