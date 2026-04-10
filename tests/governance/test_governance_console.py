@@ -27,8 +27,10 @@ def test_render_index_html_contains_core_controls() -> None:
     assert "visibilitychange" in html
     assert "AUTO_REFRESH_FOREGROUND_MS" in html
     assert "foreground_refresh_toggle" in html
-    assert "AUTO_REFRESH_FOREGROUND_DEFAULT = false" in html
-    assert "Foreground Auto Refresh: OFF" in html
+    assert html.count('id="foreground_refresh_toggle"') == 1
+    assert "AUTO_REFRESH_FOREGROUND_DEFAULT = true" in html
+    assert "ax9.console.foregroundAutoRefresh.v2" in html
+    assert "Foreground Auto Refresh: ON" in html
     assert "refreshVisiblePool" in html
     assert "buildPoolRenderSignature" in html
     assert "180s foreground" in html
@@ -120,6 +122,43 @@ def test_launcher_restarts_stale_console_before_opening(monkeypatch) -> None:
 
     assert result == 0
     assert events == ["kill:8765", "launch", "open:http://127.0.0.1:8765/"]
+
+
+def test_launcher_port_owner_pid_uses_hidden_subprocess_on_windows(monkeypatch) -> None:
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            stdout = "  TCP    127.0.0.1:8765    0.0.0.0:0    LISTENING    4321\n"
+
+        return Result()
+
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+
+    assert launcher.port_owner_pid(8765) == 4321
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
+
+
+def test_launcher_terminate_console_service_uses_hidden_subprocess_on_windows(monkeypatch) -> None:
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            stdout = ""
+
+        return Result()
+
+    monkeypatch.setattr(launcher, "port_owner_pid", lambda port: 4321)
+    monkeypatch.setattr(launcher.subprocess, "run", fake_run)
+
+    assert launcher.terminate_console_service(8765) is True
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
 
 
 def test_launcher_script_delegates_to_python_launcher() -> None:

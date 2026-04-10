@@ -3,14 +3,108 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 from .helpers import git_commit_all, init_governance_repo, read_yaml, run_python, set_idle_control_plane, write_yaml
-from .test_roadmap_claim_promotion import _stage_candidate
-from .test_roadmap_candidate_index import _write_backlog
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "worker_self_loop.py"
 TASK_OPS_SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "task_ops.py"
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+import worker_self_loop as worker_self_loop_module  # noqa: E402
+
+
+def _candidate(
+    candidate_id: str,
+    *,
+    status: str,
+    priority: int,
+    depends_on: list[str] | None = None,
+    candidate_kind: str = "lane_slice",
+    claimable: bool = True,
+    stage: str = "stage2",
+    allow_create_paths: bool = True,
+    pilot_only: bool = False,
+    coverage_regions: list[str] | None = None,
+) -> dict:
+    scope_path = f"src/governance_test/{candidate_id}/"
+    payload = {
+        "candidate_id": candidate_id,
+        "title": candidate_id,
+        "stage": stage,
+        "module_id": "stage1_orchestration",
+        "candidate_kind": candidate_kind,
+        "claimable": claimable,
+        "parent_candidate_id": None,
+        "lane_type": "integration_gate" if "integration" in candidate_id else ("core_contract" if "core" in candidate_id else "stage_internal_parallel"),
+        "status": status,
+        "priority": priority,
+        "depends_on": list(depends_on or []),
+        "unlocks": [],
+        "allowed_dirs": [scope_path],
+        "forbidden_write_paths": ["src/stage6_facts/"],
+        "protected_paths": [],
+        "planned_write_paths": [scope_path],
+        "planned_test_paths": ["tests/governance/"],
+        "required_tests": ["python scripts/check_repo.py"],
+        "allow_create_paths": allow_create_paths,
+        "pilot_only": pilot_only,
+        "branch_template": "codex/{task_id}",
+        "worktree_template": "../AX9.worktrees/{task_id}",
+        "integration_gate": None,
+        "expected_children": [],
+        "completion_policy": "none",
+        "claim_policy": {
+            "one_window_one_candidate": True,
+            "conflict_policy": "choose_next_safe_candidate",
+            "scheduler_lock_required": True,
+        },
+        "takeover_policy": {
+            "stale_after_minutes_source": "docs/governance/HANDOFF_POLICY.yaml",
+            "clean_worktree_takeover": "allow",
+            "scoped_dirty_checkpoint": "allow_before_takeover",
+            "out_of_scope_dirty_policy": "block_for_human_decision",
+        },
+    }
+    payload["coverage_regions"] = coverage_regions if coverage_regions is not None else ["CN"]
+    return payload
+
+
+def _write_backlog(repo: Path, candidates: list[dict]) -> None:
+    write_yaml(
+        repo / "docs/governance/ROADMAP_BACKLOG.yaml",
+        {
+            "version": "0.2",
+            "updated_at": "2026-04-08T00:00:00+08:00",
+            "authority_source": "docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md",
+            "defaults": {"legacy_reserved_paths_map_to": "forbidden_write_paths"},
+            "compiler_policy": {"mode": "inline_candidates"},
+            "scheduler_policy": {
+                "entrypoint": "claim-next",
+                "claim_capacity_source": "docs/governance/TASK_POLICY.yaml#roadmap_scheduler.max_active_claims_v1",
+                "single_writer_roots": [],
+            },
+            "stages": [{"stage": "stage1", "module_id": "stage1_orchestration"}],
+            "candidates": candidates,
+        },
+    )
+
+
+def _stage_candidate(candidate_id: str, *, priority: int, paths: list[str]) -> dict:
+    candidate = _candidate(candidate_id, status="planned", priority=priority)
+    candidate["allowed_dirs"] = paths
+    candidate["planned_write_paths"] = paths
+    candidate["planned_test_paths"] = ["tests/stage1/"]
+    candidate["required_tests"] = ["pytest tests/stage1 -q"]
+    candidate["forbidden_write_paths"] = ["src/stage6_facts/"]
+    candidate["protected_paths"] = []
+    candidate["branch_template"] = f"codex/{{task_id}}-{candidate_id}"
+    candidate["worktree_template"] = "../AX9.worktrees/{task_id}"
+    return candidate
 
 
 def _write_full_clone_pool(repo: Path, clone_path: Path) -> None:
@@ -240,3 +334,25 @@ def test_worker_self_loop_blocks_when_full_clone_pool_is_frozen(tmp_path: Path) 
     assert code == 1
     assert payload["status"] == "blocked"
     assert payload["mode"] == "pool-frozen"
+
+
+def test_worker_self_loop_task_ops_use_hidden_subprocess_on_windows(monkeypatch, tmp_path: Path) -> None:
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(worker_self_loop_module.subprocess, "run", fake_run)
+
+    result = worker_self_loop_module._run_task_ops(tmp_path, "can-close", "TASK-BASE-001")
+
+    assert result.returncode == 0
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW

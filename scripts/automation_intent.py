@@ -17,6 +17,7 @@ from governance_lib import (
     configure_utf8_stdio,
     find_repo_root,
     git_status_paths,
+    hidden_subprocess_kwargs,
     load_capability_map,
     load_current_task,
     load_task_policy,
@@ -517,6 +518,7 @@ def execute(root: Path, utterance: str) -> int:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        **hidden_subprocess_kwargs(),
     )
     if result.stdout.strip():
         print(result.stdout.strip())

@@ -1,37 +1,49 @@
-current_task_id: TASK-OPS-009
-title: Harden full-clone slot release and worker state transitions
+current_task_id: TASK-GOV-088
+title: Slim governance entry docs and route product-first
 status: doing
 task_kind: coordination
 execution_mode: shared_coordination
 parent_task_id: null
-stage: governance-full-clone-slot-release-hardening-v1
+stage: governance-doc-entry-slimming-v1
 branch: codex/TASK-OPS-009-full-clone-slot-release-hardening
 size_class: standard
 automation_mode: assisted
 worker_state: running
 blocked_reason: null
-last_reported_at: '2026-04-10T10:51:47+08:00'
+last_reported_at: '2026-04-10T14:15:52+08:00'
 topology: single_worker
 allowed_dirs:
+- README.md
+- docs/
+reserved_paths:
+- src/
 - scripts/
 - tests/
-- docs/governance/
-reserved_paths: []
+- db/migrations/
+- docs/contracts/
+- docs/product/
 planned_write_paths:
-- scripts/
-- tests/governance/
-- docs/governance/
+- README.md
+- docs/INDEX.md
+- docs/governance/README.md
+- docs/governance/tasks/TASK-GOV-088.md
+- docs/governance/runlogs/TASK-GOV-088-RUNLOG.md
+- docs/governance/handoffs/TASK-GOV-088.yaml
+- docs/governance/TASK_REGISTRY.yaml
+- docs/governance/CURRENT_TASK.yaml
+- docs/governance/WORKTREE_REGISTRY.yaml
 planned_test_paths:
-- tests/governance/
+- README.md
+- docs/INDEX.md
+- docs/governance/README.md
 required_tests:
-- pytest tests/governance/test_worker_self_loop.py -q
-- pytest tests/governance/test_full_clone_pool.py -q
+- python scripts/check_authority_alignment.py
 - python scripts/check_repo.py
-task_file: docs/governance/tasks/TASK-OPS-009.md
-runlog_file: docs/governance/runlogs/TASK-OPS-009-RUNLOG.md
+task_file: docs/governance/tasks/TASK-GOV-088.md
+runlog_file: docs/governance/runlogs/TASK-GOV-088-RUNLOG.md
 lane_count: 1
 lane_index: null
 parallelism_plan_id: null
 review_bundle_status: not_applicable
 next_action: Implement the live task package and keep branch/control-plane state aligned.
-updated_at: '2026-04-10T10:51:47+08:00'
+updated_at: '2026-04-10T14:15:52+08:00'

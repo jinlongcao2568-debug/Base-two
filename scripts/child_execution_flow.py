@@ -21,6 +21,7 @@ from governance_lib import (
     load_yaml,
     read_text,
     safe_rmtree,
+    hidden_subprocess_kwargs,
     sync_task_artifacts,
     write_text,
 )
@@ -350,6 +351,7 @@ def run_shell_command(command: str, cwd: Path) -> tuple[bool, str]:
         shell=False,
         encoding="utf-8",
         errors="replace",
+        **hidden_subprocess_kwargs(),
     )
     stdout = (result.stdout or "").strip()
     stderr = (result.stderr or "").strip()

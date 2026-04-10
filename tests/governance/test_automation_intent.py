@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -18,6 +19,12 @@ from .helpers import (
     write_yaml,
 )
 from .test_roadmap_candidate_index import _candidate, _write_backlog
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+import automation_intent as automation_intent_module  # noqa: E402
 
 
 def _preflight(repo: Path, utterance: str) -> tuple[int, dict]:
@@ -183,3 +190,46 @@ def test_preflight_continue_roadmap_blocks_idle_without_successor(tmp_path: Path
     assert code == 0
     assert payload["status"] == "blocked"
     assert payload["intent_id"] == "continue-roadmap"
+
+
+def test_execute_uses_hidden_subprocess_on_windows(monkeypatch, tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(automation_intent_module, "resolve_control_plane_root", lambda root: root)
+    monkeypatch.setattr(
+        automation_intent_module,
+        "_load_catalog",
+        lambda root: {
+            "supported_intents": [
+                {
+                    "intent_id": "review-candidate-pool",
+                    "command_argv": ["python", "scripts/review_candidate_pool.py"],
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        automation_intent_module,
+        "preflight",
+        lambda root, utterance: {
+            "status": "ready",
+            "intent_id": "review-candidate-pool",
+            "matched_phrase": utterance,
+        },
+    )
+    monkeypatch.setattr(automation_intent_module.subprocess, "run", fake_run)
+
+    assert automation_intent_module.execute(repo, "审查窗口：检查候选池") == 0
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW

@@ -1,6 +1,6 @@
 ---
-current_phase: governance-full-clone-slot-release-hardening-v1
-current_task_id: TASK-OPS-009
+current_phase: governance-doc-entry-slimming-v1
+current_task_id: TASK-GOV-088
 next_recommended_task_id: null
 advance_mode: explicit_or_generated
 auto_create_missing_task: true
@@ -36,7 +36,7 @@ automation_foundation: targeted_governance_test_triggers_live
 
 ## Current Task
 
-- `TASK-OPS-009`: `Harden full-clone slot release and worker state transitions` is the live coordination task for `governance-full-clone-slot-release-hardening-v1`.
+- `TASK-GOV-088`: `Slim governance entry docs and route product-first` is the live coordination task for `governance-doc-entry-slimming-v1`.
 ## Recently Closed
 
 - `TASK-GOV-066`: enforced compiled-only candidate source and added path/pilot gates for roadmap evaluation.

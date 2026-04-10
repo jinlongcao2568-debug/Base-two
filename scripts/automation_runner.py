@@ -19,6 +19,7 @@ from governance_lib import (
     dump_yaml,
     GovernanceError,
     find_repo_root,
+    hidden_subprocess_kwargs,
     iso_now,
     load_current_task,
     load_task_policy,
@@ -60,6 +61,7 @@ def run_step(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        **hidden_subprocess_kwargs(),
     )
 
 
@@ -503,6 +505,7 @@ def _run_lane_launcher(
                 capture_output=True,
                 encoding="utf-8",
                 errors="replace",
+                **hidden_subprocess_kwargs(),
             )
     except OSError as error:
         _update_execution_runtime(

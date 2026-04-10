@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-10T10:51:47+08:00'
-revision: 41
+updated_at: '2026-04-10T14:15:52+08:00'
+revision: 42
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -196,4 +196,17 @@ leases:
   owner_session_id: 019d7529-3320-7191-ba33-956d7229634b
   started_at: '2026-04-10T10:51:47+08:00'
   heartbeat_at: '2026-04-10T10:51:47+08:00'
+  closed_at: null
+- lease_id: lease-task-gov-088-control-plane-main
+  task_id: TASK-GOV-088
+  task_kind: coordination
+  stage: governance-doc-entry-slimming-v1
+  branch: codex/TASK-OPS-009-full-clone-slot-release-hardening
+  candidate_id: null
+  executor_id: control-plane-main
+  executor_type: control_plane
+  status: running
+  owner_session_id: 019d7605-58b9-7b33-bbd3-a1db791934cc
+  started_at: '2026-04-10T14:15:52+08:00'
+  heartbeat_at: '2026-04-10T14:15:52+08:00'
   closed_at: null

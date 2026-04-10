@@ -998,7 +998,6 @@ def _render_shell_html() -> str:
       <button type="button" class="secondary" id="foreground_refresh_toggle" onclick="toggleForegroundAutoRefresh(this)"></button>
       <button type="button" class="secondary" onclick="loadClaimDecision(this)">解释认领决策</button>
       <button type="button" class="secondary" onclick="loadReview(this)">复核候选池</button>
-      <button type="button" class="secondary" id="foreground_refresh_toggle" onclick="toggleForegroundAutoRefresh(this)"></button>
     </section>
 
     <section id="divergence_banner" class="surface status-banner" aria-live="polite"></section>
@@ -1089,8 +1088,8 @@ def _render_script_block() -> str:
     const ACTION_LABELS = {action_labels};
     const AUTO_REFRESH_FOREGROUND_MS = {AUTO_REFRESH_FOREGROUND_SECONDS * 1000};
     const AUTO_REFRESH_BACKGROUND_MS = {AUTO_REFRESH_BACKGROUND_SECONDS * 1000};
-    const AUTO_REFRESH_FOREGROUND_DEFAULT = false;
-    const FOREGROUND_AUTO_REFRESH_STORAGE_KEY = 'ax9.console.foregroundAutoRefresh';
+    const AUTO_REFRESH_FOREGROUND_DEFAULT = true;
+    const FOREGROUND_AUTO_REFRESH_STORAGE_KEY = 'ax9.console.foregroundAutoRefresh.v2';
     let currentCandidateId = new URL(window.location.href).searchParams.get('candidate_id') || '';
     let currentDetailMode = 'candidate';
     let feedbackTimer = null;

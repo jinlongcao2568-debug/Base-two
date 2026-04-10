@@ -16,6 +16,7 @@ from control_plane_root import (
     resolve_control_plane_root,
 )
 from governance_lib import GovernanceError, configure_utf8_stdio, find_repo_root, git, load_task_registry
+from governance_lib import hidden_subprocess_kwargs
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -28,6 +29,7 @@ def _run_task_ops(control_root: Path, *args: str) -> subprocess.CompletedProcess
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        **hidden_subprocess_kwargs(),
     )
 
 

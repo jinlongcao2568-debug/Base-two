@@ -91,6 +91,7 @@ from governance_runtime import (
     find_repo_root,
     git,
     git_status_paths,
+    hidden_subprocess_kwargs,
     iso_now,
     load_current_task,
     load_capability_map,
@@ -110,6 +111,7 @@ from governance_runtime import (
     worktree_map,
     write_roadmap,
     write_text,
+    windows_hidden_creationflags,
 )
 
 

@@ -58,16 +58,35 @@ def console_requires_restart(url: str) -> bool:
     )
 
 
+def _windows_hidden_creationflags() -> int:
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        return subprocess.CREATE_NO_WINDOW
+    return 0
+
+
+def _run_hidden_command(argv: list[str], *, cwd: Path | None = None, text: bool = True) -> subprocess.CompletedProcess:
+    kwargs = {
+        "cwd": cwd,
+        "check": False,
+        "capture_output": True,
+    }
+    creationflags = _windows_hidden_creationflags()
+    if creationflags:
+        kwargs["creationflags"] = creationflags
+    if text:
+        kwargs.update(
+            {
+                "text": True,
+                "encoding": "utf-8",
+                "errors": "replace",
+            }
+        )
+    return subprocess.run(argv, **kwargs)
+
+
 def port_owner_pid(port: int) -> int | None:
     try:
-        result = subprocess.run(
-            ["netstat", "-ano", "-p", "tcp"],
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
+        result = _run_hidden_command(["netstat", "-ano", "-p", "tcp"])
     except OSError:
         return None
     target = f":{port}"
@@ -94,14 +113,7 @@ def terminate_console_service(port: int) -> bool:
         return False
     try:
         if os.name == "nt":
-            subprocess.run(
-                ["taskkill", "/PID", str(pid), "/F"],
-                check=False,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-            )
+            _run_hidden_command(["taskkill", "/PID", str(pid), "/F"])
         else:
             os.kill(pid, 15)
     except OSError:
@@ -110,9 +122,7 @@ def terminate_console_service(port: int) -> bool:
 
 
 def launch_background_service() -> None:
-    creationflags = 0
-    if hasattr(subprocess, "CREATE_NO_WINDOW"):
-        creationflags |= subprocess.CREATE_NO_WINDOW
+    creationflags = _windows_hidden_creationflags()
     subprocess.Popen(
         [sys.executable, str(CONSOLE_SCRIPT), "--no-browser"],
         cwd=SCRIPT_ROOT.parent,

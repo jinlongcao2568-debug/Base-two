@@ -11,7 +11,7 @@ import sys
 import time
 import traceback
 
-from governance_lib import EXECUTION_CONTEXT_FILE, GovernanceError, find_repo_root, load_yaml, write_text
+from governance_lib import EXECUTION_CONTEXT_FILE, GovernanceError, find_repo_root, hidden_subprocess_kwargs, load_yaml, write_text
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -74,6 +74,7 @@ def _task_ops(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        **hidden_subprocess_kwargs(),
     )
 
 
@@ -142,6 +143,7 @@ def _load_context(repo_root: Path, worktree_path: Path, task_id: str) -> tuple[d
                 capture_output=True,
                 encoding="utf-8",
                 errors="replace",
+                **hidden_subprocess_kwargs(),
             )
         if rendered.returncode != 0 or not prompt_path.exists():
             detail = rendered.stdout.strip() or rendered.stderr.strip()

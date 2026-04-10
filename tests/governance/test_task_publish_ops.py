@@ -18,6 +18,12 @@ from .helpers import (
     write_yaml,
 )
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+import task_publish_ops as task_publish_ops_module  # noqa: E402
+
 
 def _mark_review_ready(repo: Path) -> None:
     result = run_python(
@@ -320,3 +326,25 @@ def test_publish_intents_map_to_four_actions(tmp_path: Path) -> None:
     assert push_payload["intent_id"] == "push-task-branch"
     assert pr_payload["intent_id"] == "create-task-pr"
     assert publish_payload["intent_id"] == "publish-task-results"
+
+
+def test_run_command_uses_hidden_subprocess_on_windows(monkeypatch, tmp_path: Path) -> None:
+    captured = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(task_publish_ops_module.subprocess, "run", fake_run)
+
+    result = task_publish_ops_module._run_command(tmp_path, ["git", "status"], check=False)
+
+    assert result.returncode == 0
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW

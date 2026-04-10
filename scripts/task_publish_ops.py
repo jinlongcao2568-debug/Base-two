@@ -26,6 +26,7 @@ from governance_lib import (
     load_yaml,
     missing_required_tests,
     path_within_declared,
+    hidden_subprocess_kwargs,
     task_map,
 )
 from control_plane_root import (
@@ -89,6 +90,7 @@ def _run_command(root: Path, argv: list[str], check: bool = True) -> subprocess.
         capture_output=True,
         encoding="utf-8",
         errors="replace",
+        **hidden_subprocess_kwargs(),
     )
     if check and result.returncode != 0:
         stderr = result.stderr.strip() or result.stdout.strip() or "command failed"
