@@ -1,5 +1,5 @@
 version: '1.0'
-updated_at: '2026-04-10T08:29:21+08:00'
+updated_at: '2026-04-10T10:04:17+08:00'
 authority_source: docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md
 status: active
 slot_status_values:
@@ -37,10 +37,10 @@ slots:
 - slot_id: worker-04
   worker_owner: worker-04
   path: D:/Base One/Base-two/AX9.worktrees/worker-04
-  status: idle
-  current_task_id: null
-  branch: codex/worker-04-idle
-  last_claimed_at: null
+  status: active
+  current_task_id: TASK-RM-STAGE3-CORE-CONTRACT
+  branch: codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract
+  last_claimed_at: '2026-04-10T10:04:04+08:00'
   last_released_at: null
   idle_branch: codex/worker-04-idle
 - slot_id: worker-05

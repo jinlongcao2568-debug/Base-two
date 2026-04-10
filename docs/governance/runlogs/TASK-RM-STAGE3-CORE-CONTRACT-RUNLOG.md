@@ -1,0 +1,43 @@
+# TASK-RM-STAGE3-CORE-CONTRACT RUNLOG
+
+## Task Status
+
+- `task_id`: `TASK-RM-STAGE3-CORE-CONTRACT`
+- `status`: `doing`
+- `stage`: `stage3`
+- `branch`: `codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract`
+- `worker_state`: `idle`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
+## Execution Log
+
+- `2026-04-10T10:04:15+08:00`: task package created
+
+## Test Log
+
+- to-be-filled
+
+## Narrative Assertions
+
+- `narrative_status`: `doing`
+- `closeout_state`: `not_ready`
+- `blocking_state`: `clear`
+- `completed_scope`: `active_progress`
+- `remaining_scope`: `active_work_remaining`
+- `next_gate`: `validation_pending`
+
+<!-- generated:runlog-meta:start -->
+## Generated Task Snapshot
+
+- `task_id`: `TASK-RM-STAGE3-CORE-CONTRACT`
+- `status`: `doing`
+- `stage`: `stage3`
+- `branch`: `codex/TASK-RM-STAGE3-CORE-CONTRACT-stage3-core-contract`
+- `worker_state`: `idle`
+- `lane_count`: `1`
+- `lane_index`: `null`
+- `parallelism_plan_id`: `null`
+- `review_bundle_status`: `not_applicable`
+<!-- generated:runlog-meta:end -->
