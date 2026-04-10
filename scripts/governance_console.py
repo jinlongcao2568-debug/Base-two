@@ -178,6 +178,19 @@ def _run_task_ops(*args: str) -> dict[str, Any]:
     }
 
 
+def _run_task_ops_json(*args: str) -> dict[str, Any]:
+    payload = _run_task_ops(*args)
+    stdout = str(payload.get("stdout") or "").strip()
+    if int(payload.get("returncode") or 0) not in {0, 1}:
+        raise GovernanceError(stdout or str(payload.get("stderr") or "") or f"task_ops {args[0]} failed")
+    if not stdout:
+        raise GovernanceError(f"task_ops {args[0]} returned empty stdout")
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError as error:
+        raise GovernanceError(f"task_ops {args[0]} returned non-JSON output") from error
+
+
 def _status_label_zh(value: str | None) -> str:
     if not value:
         return "-"
@@ -434,27 +447,21 @@ def _decorate_release_chain_payload(root: Path, payload: dict[str, Any]) -> dict
 
 
 def _review_pool_payload() -> dict[str, Any]:
-    root = _repo_root()
-    payload = review_pool(root)
-    divergences = _ledger_divergences(root)
-    payload["ledger_divergence_count"] = len(divergences)
-    payload["ledger_divergences"] = divergences
-    if divergences:
-        issues = list(payload.get("issues") or [])
-        issues.append(f"检测到 {len(divergences)} 条主控制面与工作树账本分叉。")
-        payload["issues"] = issues
-        if payload.get("status") == "healthy":
-            payload["status"] = "degraded"
+    payload = _run_task_ops_json("review-candidate-pool")
     payload["status_zh"] = _status_label_zh(payload.get("status"))
     return payload
 
 
 def _cached_pool_payload() -> dict[str, Any]:
     root = _repo_root()
+    try:
+        review_payload = _review_pool_payload()
+    except GovernanceError:
+        review_payload = {"candidate_summary": {}, "ledger_divergences": []}
     summary = load_yaml(root / SUMMARY_FILE) if (root / SUMMARY_FILE).exists() else {}
     index = _load_candidate_index(root)
     candidates = index.get("candidates", [])
-    divergences = _ledger_divergences(root)
+    divergences = list(review_payload.get("ledger_divergences") or [])
     divergence_map = {
         str(item.get("candidate_id")): item
         for item in divergences
@@ -464,6 +471,9 @@ def _cached_pool_payload() -> dict[str, Any]:
         _apply_divergence_to_candidate(_candidate_summary(candidate), divergence_map)
         for candidate in candidates[:12]
     ]
+    candidate_summary = dict(review_payload.get("candidate_summary") or {})
+    for key, value in candidate_summary.items():
+        summary[key] = value
     summary["generated_at"] = summary.get("generated_at") or index.get("generated_at")
     summary["ledger_divergence_count"] = len(divergences)
     return {
@@ -1731,6 +1741,9 @@ class GovernanceConsoleHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(body)
 
@@ -1739,12 +1752,18 @@ class GovernanceConsoleHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
         self.wfile.write(encoded)
 
     def _write_empty(self, status: int = HTTPStatus.NO_CONTENT) -> None:
         self.send_response(status)
         self.send_header("Content-Length", "0")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
         self.end_headers()
 
     def log_message(self, format: str, *args) -> None:  # noqa: A003

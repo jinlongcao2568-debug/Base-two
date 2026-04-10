@@ -107,6 +107,21 @@ def test_start_console_respects_no_browser_on_new_server(monkeypatch) -> None:
     assert opened == []
 
 
+def test_launcher_restarts_stale_console_before_opening(monkeypatch) -> None:
+    events: list[str] = []
+    monkeypatch.setattr(launcher, "is_console_reachable", lambda url: True if not events else False)
+    monkeypatch.setattr(launcher, "console_requires_restart", lambda url: True)
+    monkeypatch.setattr(launcher, "terminate_console_service", lambda port: events.append(f"kill:{port}") or True)
+    monkeypatch.setattr(launcher, "launch_background_service", lambda: events.append("launch"))
+    monkeypatch.setattr(launcher, "wait_for_console", lambda url: True)
+    monkeypatch.setattr(launcher, "open_console_window", lambda url: events.append(f"open:{url}"))
+
+    result = launcher.main()
+
+    assert result == 0
+    assert events == ["kill:8765", "launch", "open:http://127.0.0.1:8765/"]
+
+
 def test_launcher_script_delegates_to_python_launcher() -> None:
     launcher = (ROOT / "scripts" / "governance_console_launcher.vbs").read_text(encoding="utf-8")
     assert "governance_console_launcher.py" in launcher
