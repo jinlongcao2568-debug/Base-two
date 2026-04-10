@@ -358,13 +358,27 @@ def _hash_runtime_files(root: Path) -> str:
     return digest.hexdigest()
 
 
+def _run_hidden_git_command(root: Path, *args: str, text: bool = False) -> subprocess.CompletedProcess[Any]:
+    kwargs: dict[str, Any] = {
+        "cwd": root,
+        "check": False,
+        "capture_output": True,
+    }
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    if text:
+        kwargs.update(
+            {
+                "text": True,
+                "encoding": "utf-8",
+                "errors": "replace",
+            }
+        )
+    return subprocess.run(["git", *args], **kwargs)
+
+
 def _published_runtime_file_bytes(root: Path, relative: Path) -> bytes | None:
-    result = subprocess.run(
-        ["git", "show", f"HEAD:{relative.as_posix()}"],
-        cwd=root,
-        check=False,
-        capture_output=True,
-    )
+    result = _run_hidden_git_command(root, "show", f"HEAD:{relative.as_posix()}")
     if result.returncode != 0:
         return None
     return result.stdout.replace(b"\r\n", b"\n")
@@ -885,13 +899,7 @@ def default_full_clone_idle_branch(slot_id: str) -> str:
 
 def _origin_control_plane_root(local_root: Path) -> Path | None:
     try:
-        result = subprocess.run(
-            ["git", "config", "--get", "remote.origin.url"],
-            cwd=local_root,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        result = _run_hidden_git_command(local_root, "config", "--get", "remote.origin.url", text=True)
     except OSError:
         return None
     raw = (result.stdout or "").strip()

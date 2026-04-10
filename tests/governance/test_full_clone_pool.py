@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 
 from .helpers import TASK_OPS_SCRIPT, git_commit_all, init_governance_repo, read_yaml, run_python, write_yaml
@@ -10,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
+import control_plane_root as control_root  # noqa: E402
 from control_plane_root import build_governance_runtime_stamp, published_governance_runtime_dirty_paths  # noqa: E402
 
 
@@ -225,6 +227,48 @@ def test_governance_runtime_stamp_uses_published_head_not_dirty_worktree(tmp_pat
     assert "scripts/review_candidate_pool.py" in dirty_paths
     assert updated["governance_scripts_hash"] == baseline["governance_scripts_hash"]
     assert updated["control_plane_head"] == baseline["control_plane_head"]
+
+
+def test_published_runtime_file_bytes_uses_hidden_git_subprocess_on_windows(monkeypatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            returncode = 0
+            stdout = b"runtime-bytes"
+            stderr = b""
+
+        return Result()
+
+    monkeypatch.setattr(control_root.subprocess, "run", fake_run)
+
+    payload = control_root._published_runtime_file_bytes(tmp_path, Path("scripts/control_plane_root.py"))
+
+    assert payload == b"runtime-bytes"
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
+
+
+def test_origin_control_plane_root_uses_hidden_git_subprocess_on_windows(monkeypatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run(*args, **kwargs):
+        captured["creationflags"] = kwargs.get("creationflags")
+
+        class Result:
+            returncode = 1
+            stdout = ""
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(control_root.subprocess, "run", fake_run)
+
+    assert control_root._origin_control_plane_root(tmp_path) is None
+    if hasattr(subprocess, "CREATE_NO_WINDOW"):
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
 
 
 def test_audit_full_clone_pool_refreshes_control_stamp_file(tmp_path: Path) -> None:

@@ -1089,7 +1089,7 @@ def _render_script_block() -> str:
     const ACTION_LABELS = {action_labels};
     const AUTO_REFRESH_FOREGROUND_MS = {AUTO_REFRESH_FOREGROUND_SECONDS * 1000};
     const AUTO_REFRESH_BACKGROUND_MS = {AUTO_REFRESH_BACKGROUND_SECONDS * 1000};
-    const AUTO_REFRESH_FOREGROUND_DEFAULT = true;
+    const AUTO_REFRESH_FOREGROUND_DEFAULT = false;
     const FOREGROUND_AUTO_REFRESH_STORAGE_KEY = 'ax9.console.foregroundAutoRefresh';
     let currentCandidateId = new URL(window.location.href).searchParams.get('candidate_id') || '';
     let currentDetailMode = 'candidate';
