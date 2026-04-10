@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-10T08:31:34+08:00'
+updated_at: '2026-04-10T08:42:43+08:00'
 entries:
 - task_id: TASK-AUTO-001
   work_mode: coordination
@@ -1181,18 +1181,18 @@ entries:
   work_mode: execution
   parent_task_id: null
   branch: codex/TASK-RM-STAGE2-SOURCE-FAMILY-LANES-stage2-source-family-lanes
-  path: D:/Base One/Base-two/AX9.worktrees/worker-02
-  status: closed
+  path: D:/Base One/Base-two/AX9.clones/worker-03
+  status: active
   cleanup_state: done
   cleanup_attempts: 1
   last_cleanup_error: null
-  worker_owner: worker-02
-  lane_session_id: null
+  worker_owner: worker-03
+  lane_session_id: 019d721e-7f28-7b83-b053-e052cc9a788b
   executor_status: completed
   started_at: '2026-04-09T21:39:04+08:00'
-  last_heartbeat_at: '2026-04-09T21:39:04+08:00'
-  last_result: Recovered stale promoted Stage2 source-family lanes task without implementation
-    changes; recorded Stage2 regression evidence and prepared formal closeout.
+  last_heartbeat_at: '2026-04-10T08:42:43+08:00'
+  last_result: Added source-family lane metadata and raw payload validation for stage2
+    ingestion artifacts.
   workflow_state:
     phase: preparing
     prepared_at: null
