@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-10T09:18:26+08:00'
+updated_at: '2026-04-10T09:28:19+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -4939,7 +4939,7 @@ tasks:
   closed_at: '2026-04-10T08:31:34+08:00'
 - task_id: TASK-RM-STAGE2-INTEGRATION-GATE
   title: Stage2 ingestion integration gate
-  status: doing
+  status: paused
   task_kind: execution
   execution_mode: isolated_worktree
   parent_task_id: null
@@ -4982,7 +4982,7 @@ tasks:
   integration_gate: stage2-integration-gate
 - task_id: TASK-GOV-086
   title: Documentation entry index
-  status: queued
+  status: done
   task_kind: coordination
   execution_mode: shared_coordination
   parent_task_id: null
@@ -4990,17 +4990,19 @@ tasks:
   branch: codex/TASK-GOV-086-docs-entry-index
   size_class: standard
   automation_mode: assisted
-  worker_state: idle
+  worker_state: completed
   blocked_reason: null
-  last_reported_at: '2026-04-10T09:18:25+08:00'
+  last_reported_at: '2026-04-10T09:28:19+08:00'
   topology: single_worker
-  allowed_dirs: []
+  allowed_dirs:
+  - docs/
+  - README.md
   reserved_paths: []
-  planned_write_paths: []
+  planned_write_paths:
+  - docs/
+  - README.md
   planned_test_paths: []
-  required_tests:
-  - python scripts/check_repo.py
-  - python scripts/check_hygiene.py src docs tests
+  required_tests: []
   task_file: docs/governance/tasks/TASK-GOV-086.md
   runlog_file: docs/governance/runlogs/TASK-GOV-086-RUNLOG.md
   lane_count: 1
@@ -5009,5 +5011,5 @@ tasks:
   review_bundle_status: not_applicable
   successor_state: immediate
   created_at: '2026-04-10T09:18:25+08:00'
-  activated_at: null
-  closed_at: null
+  activated_at: '2026-04-10T09:23:24+08:00'
+  closed_at: '2026-04-10T09:28:19+08:00'

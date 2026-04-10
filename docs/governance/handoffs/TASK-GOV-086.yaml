@@ -1,10 +1,11 @@
 task_id: TASK-GOV-086
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Complete the remaining scoped implementation for this task.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+summary_status: done
+last_handoff_at: '2026-04-10T09:28:19+08:00'
+completed_items:
+- docs/INDEX.md
+- README.md
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - python scripts/check_repo.py
 - python scripts/check_hygiene.py src docs tests
@@ -13,3 +14,8 @@ candidate_write_paths: []
 candidate_test_paths: []
 resume_notes:
 - Formal handoff has not been recorded yet.
+- Task activated in the main coordination worktree.
+- 'Worker finish summary: Added docs/INDEX.md entry index, clarified README execution
+  occupancy semantics, and aligned onboarding pointers with single-ledger authority.'
+- Worker progress was reported.
+- Task closed.

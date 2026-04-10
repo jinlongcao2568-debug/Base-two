@@ -3,7 +3,7 @@
 ## Task Status
 
 - `task_id`: `TASK-RM-STAGE2-INTEGRATION-GATE`
-- `status`: `doing`
+- `status`: `paused`
 - `stage`: `stage2`
 - `branch`: `codex/TASK-RM-STAGE2-INTEGRATION-GATE-stage2-integration-gate`
 - `worker_state`: `idle`
@@ -21,18 +21,17 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `doing`
+- `narrative_status`: `paused`
 - `closeout_state`: `not_ready`
 - `blocking_state`: `clear`
 - `completed_scope`: `active_progress`
 - `remaining_scope`: `active_work_remaining`
-- `next_gate`: `validation_pending`
-
+- `next_gate`: `resume_required`
 <!-- generated:runlog-meta:start -->
 ## Generated Task Snapshot
 
 - `task_id`: `TASK-RM-STAGE2-INTEGRATION-GATE`
-- `status`: `doing`
+- `status`: `paused`
 - `stage`: `stage2`
 - `branch`: `codex/TASK-RM-STAGE2-INTEGRATION-GATE-stage2-integration-gate`
 - `worker_state`: `idle`
