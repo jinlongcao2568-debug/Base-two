@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, urlparse
 import webbrowser
 
 from governance_lib import GovernanceError, configure_utf8_stdio, load_current_task, load_task_registry
-from control_plane_root import detect_ledger_divergences, resolve_control_plane_root
+from control_plane_root import resolve_control_plane_root
 from governance_runtime import load_yaml
 from roadmap_candidate_index import build_roadmap_candidate_index
 from roadmap_explain import (
@@ -33,8 +33,6 @@ PAGE_TITLE = "AX9 治理操作员控制台"
 INDEX_FILE = Path(".codex/local/roadmap_candidates/index.yaml")
 SUMMARY_FILE = Path(".codex/local/roadmap_candidates/summary.yaml")
 TASK_REGISTRY_FILE = Path("docs/governance/TASK_REGISTRY.yaml")
-FULL_CLONE_POOL_FILE = Path("docs/governance/FULL_CLONE_POOL.yaml")
-CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
 AUTO_REFRESH_FOREGROUND_SECONDS = 180
 AUTO_REFRESH_BACKGROUND_SECONDS = 180
 
@@ -353,7 +351,7 @@ def _tasks_by_id(payload: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
 
 
 def _ledger_divergences(root: Path) -> list[dict[str, Any]]:
-    return detect_ledger_divergences(root)
+    return []
 
 
 def _apply_divergence_to_candidate(summary: dict[str, Any], divergence_map: dict[str, dict[str, Any]]) -> dict[str, Any]:

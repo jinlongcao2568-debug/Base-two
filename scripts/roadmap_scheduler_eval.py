@@ -14,7 +14,6 @@ from governance_lib import (
     iso_now,
     load_task_policy,
     load_task_registry,
-    load_worktree_registry,
     load_yaml,
 )
 from child_execution_flow import transient_child_paths
@@ -442,49 +441,6 @@ def _claim_by_candidate(claims: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {str(claim["candidate_id"]): claim for claim in claims.get("claims", [])}
 
 
-def _worktree_entry_for_claim(root: Path, claim: dict[str, Any] | None) -> dict[str, Any] | None:
-    if claim is None:
-        return None
-    entries = load_worktree_registry(root).get("entries", [])
-    formal_task_id = claim.get("formal_task_id")
-    if formal_task_id:
-        for entry in entries:
-            if entry.get("task_id") == formal_task_id:
-                return entry
-    claim_path = claim.get("candidate_worktree")
-    if claim_path:
-        for entry in entries:
-            if entry.get("path") == claim_path:
-                return entry
-    return None
-
-
-def _worktree_dirty_paths(path: Path) -> list[str]:
-    if not path.exists():
-        return []
-    status = git(path, "status", "--porcelain", "--untracked-files=all", check=False).stdout.splitlines()
-    dirty_paths: list[str] = []
-    for line in status:
-        if len(line) < 4:
-            continue
-        dirty_paths.append(line[3:].replace("\\", "/"))
-    return dirty_paths
-
-
-def _remote_diverged(path: Path) -> bool:
-    upstream = git(path, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}", check=False)
-    if upstream.returncode != 0:
-        return False
-    counts = git(path, "rev-list", "--left-right", "--count", "HEAD...@{u}", check=False)
-    if counts.returncode != 0:
-        return True
-    parts = counts.stdout.strip().split()
-    if len(parts) != 2:
-        return True
-    ahead, behind = (int(part) for part in parts)
-    return behind > 0
-
-
 def _claim_is_fresh(claim: dict[str, Any], now: datetime) -> bool:
     expires_at = _parse_iso(str(claim.get("expires_at") or ""))
     if expires_at is None:
@@ -498,10 +454,6 @@ def _claim_is_stale(root: Path, claim: dict[str, Any], now: datetime) -> bool:
     expires_at = _parse_iso(str(claim.get("expires_at") or ""))
     if expires_at is not None and expires_at <= now:
         return True
-    worktree_entry = _worktree_entry_for_claim(root, claim)
-    heartbeat = _parse_iso(str((worktree_entry or {}).get("last_heartbeat_at") or ""))
-    if heartbeat is not None and heartbeat + timedelta(minutes=_stale_after_minutes(root)) <= now:
-        return True
     return False
 
 
@@ -514,32 +466,6 @@ def _takeover_blockers(
     blockers: list[str] = []
     if primary_task is None and claim.get("formal_task_id"):
         blockers.append(f"formal task missing for stale claim: {claim.get('formal_task_id')}")
-        return blockers
-    worktree_path = claim.get("candidate_worktree")
-    if not worktree_path:
-        return blockers
-    destination = Path(str(worktree_path)).resolve()
-    if not destination.exists():
-        return blockers
-    dirty_paths = _worktree_dirty_paths(destination)
-    if dirty_paths:
-        transient = set()
-        if primary_task is not None:
-            transient |= transient_child_paths(primary_task)
-        transient.add(actual_path(str(EXECUTION_CONTEXT_FILE)))
-        effective_dirty = [dirty_path for dirty_path in dirty_paths if dirty_path not in transient]
-        declared = list(primary_task.get("planned_write_paths") or []) if primary_task else list(candidate.get("planned_write_paths") or [])
-        out_of_scope = [
-            dirty_path
-            for dirty_path in effective_dirty
-            if not any(_paths_overlap(dirty_path, declared_path) for declared_path in declared)
-        ]
-        if out_of_scope:
-            blockers.append(f"stale worktree has out-of-scope dirty paths: {', '.join(out_of_scope)}")
-        elif effective_dirty:
-            blockers.append("stale worktree is dirty and requires manual checkpoint")
-    if _remote_diverged(destination):
-        blockers.append("remote branch has unknown commits")
     return blockers
 
 
@@ -779,14 +705,6 @@ class CandidateEvaluator:
         if branch and branch_exists(self.root, branch) and takeover_mode == "none" and primary_task is None:
             blockers.append("branch already exists")
             _append_reason(reason_codes, "branch_conflict")
-
-        worktree_entries = load_worktree_registry(self.root).get("entries", [])
-        if worktree and any(
-            entry.get("path") == worktree and not (same_formal_task_id and entry.get("task_id") == same_formal_task_id)
-            for entry in worktree_entries
-        ):
-            blockers.append("worktree path already owned")
-            _append_reason(reason_codes, "worktree_conflict")
 
         declared_status = str(candidate.get("status"))
         claimable_declared = bool(candidate.get("claimable", True))

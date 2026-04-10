@@ -6,8 +6,7 @@ from pathlib import Path
 import time
 from typing import Any
 
-from control_plane_root import FULL_CLONE_POOL_FILE, load_full_clone_pool, resolve_control_plane_root
-from governance_lib import configure_utf8_stdio, dump_yaml, load_yaml
+from governance_lib import configure_utf8_stdio, dump_yaml, load_yaml, load_task_policy
 from control_plane_root import resolve_control_plane_root
 from roadmap_candidate_compiler import write_compiled_roadmap_candidates
 from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candidate_index
@@ -15,9 +14,6 @@ from roadmap_claim_next import CLAIMS_FILE
 
 
 SUMMARY_FILE = Path(".codex/local/roadmap_candidates/summary.yaml")
-WORKTREE_POOL_FILE = Path("docs/governance/WORKTREE_POOL.yaml")
-
-
 def _load_optional(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -34,17 +30,16 @@ def refresh_once(root: Path) -> dict[str, Any]:
     index = build_roadmap_candidate_index(root)
     dump_yaml(root / ROADMAP_CANDIDATES_FILE, index)
     claims = _load_optional(root / CLAIMS_FILE)
-    worktree_pool = _load_optional(root / WORKTREE_POOL_FILE)
-    full_clone_pool = load_full_clone_pool(root)
     top_candidate = index["candidates"][0] if index.get("candidates") else None
-    idle_worktree_slots = sum(1 for slot in worktree_pool.get("slots", []) if slot.get("status") == "idle")
-    idle_full_clone_slots = sum(1 for slot in full_clone_pool.get("slots", []) if slot.get("status") == "ready")
-    idle_slot_count = max(idle_worktree_slots, idle_full_clone_slots)
+    scheduler = (load_task_policy(root) or {}).get("roadmap_scheduler") or {}
+    roadmap_claim_capacity = max(1, int(scheduler.get("max_active_claims_v1") or index.get("roadmap_claim_capacity") or 1))
+    active_claim_count = int(index.get("active_claim_count") or 0)
+    idle_slot_count = max(0, roadmap_claim_capacity - active_claim_count)
     fresh_claimable_count = len(index.get("fresh_claimable_candidate_ids", []))
     takeover_claimable_count = len(index.get("takeover_candidate_ids", []))
     claimable_count = len(index.get("claimable_candidate_ids", []))
     useful_parallel_supply = fresh_claimable_count + takeover_claimable_count
-    parallelism_deficit = max(0, min(idle_slot_count, int(index.get("roadmap_claim_capacity") or 1)) - useful_parallel_supply)
+    parallelism_deficit = max(0, idle_slot_count - useful_parallel_supply)
     summary = {
         "generated_at": index["generated_at"],
         "format_version": index.get("format_version"),
@@ -56,15 +51,14 @@ def refresh_once(root: Path) -> dict[str, Any]:
         "claimable_count": claimable_count,
         "fresh_claimable_count": fresh_claimable_count,
         "takeover_claimable_count": takeover_claimable_count,
-        "roadmap_claim_capacity": index.get("roadmap_claim_capacity"),
-        "active_claim_count": index.get("active_claim_count"),
+        "roadmap_claim_capacity": roadmap_claim_capacity,
+        "active_claim_count": active_claim_count,
         "idle_slot_count": idle_slot_count,
         "parallelism_deficit": parallelism_deficit,
         "top_candidate_id": None if top_candidate is None else top_candidate["candidate_id"],
         "top_candidate_status": None if top_candidate is None else top_candidate["status"],
         "claim_status_counts": _count_status(list(claims.get("claims", []))),
-        "worktree_pool_status_counts": _count_status(list(worktree_pool.get("slots", []))),
-        "full_clone_pool_status_counts": _count_status(list(full_clone_pool.get("slots", []))),
+        "capacity_source": "main_ledger",
     }
     dump_yaml(root / SUMMARY_FILE, summary)
     return summary

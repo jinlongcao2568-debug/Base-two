@@ -70,7 +70,7 @@ def explain_claim_decision(root) -> dict[str, Any]:
         promote_task=False,
         worktree_root=None,
         worker_owner=None,
-        dispatch_target="worktree_pool",
+        dispatch_target="main_ledger",
         full_clone_slot_id=None,
         window_id="explain-claim-decision",
         lease_minutes=30,

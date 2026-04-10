@@ -7,10 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from control_plane_root import (
-    audit_full_clone_pool,
-    detect_ledger_divergences,
+    build_governance_runtime_stamp,
     load_execution_leases,
-    load_full_clone_pool,
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
     sync_runtime_rollout_state,
@@ -49,14 +47,12 @@ def _stale_claims(claim_rows: list[dict[str, Any]], now: datetime) -> list[dict[
 
 def review_pool(control_root: Path) -> dict[str, Any]:
     summary = refresh_once(control_root)
-    pool_audit = audit_full_clone_pool(control_root)
     dirty_runtime_paths = published_governance_runtime_dirty_paths(control_root)
     rollout_state = sync_runtime_rollout_state(control_root, reason="review-candidate-pool")
     current_task = load_current_task(control_root)
     registry = load_task_registry(control_root)
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
     execution_leases = load_execution_leases(control_root)
-    full_clone_pool = load_full_clone_pool(control_root)
     tasks = registry.get("tasks", [])
     candidates = (
         load_yaml(control_root / ".codex/local/roadmap_candidates/index.yaml") or {}
@@ -114,12 +110,6 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         )
     now = datetime.now().astimezone()
     stale_claims = _stale_claims(list(claims.get("claims", [])), now)
-    slot_issues = []
-    for slot in full_clone_pool.get("slots", []):
-        if slot.get("status") == "active" and not slot.get("current_task_id"):
-            slot_issues.append(f"{slot['slot_id']} active without current_task_id")
-        if slot.get("status") == "ready" and slot.get("current_task_id"):
-            slot_issues.append(f"{slot['slot_id']} ready but still points at {slot['current_task_id']}")
     root_candidates = [candidate for candidate in candidates if candidate.get("candidate_intent") in {"module_root", "module_preview_root"}]
     formal_roots = [candidate for candidate in root_candidates if candidate.get("root_kind") == "formal_root"]
     preview_roots = [candidate for candidate in root_candidates if candidate.get("root_kind") == "preview_root"]
@@ -152,69 +142,17 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         for candidate in candidates
         if candidate.get("root_kind") == "hard_gate" and candidate.get("status") in {"waiting", "blocked", "stale"}
     ]
-    ledger_divergences = detect_ledger_divergences(control_root)
-    quarantined_slots = [
-        {
-            "slot_id": slot["slot_id"],
-            "slot_status": slot["slot_status"],
-            "runtime_drift": slot["runtime_drift"],
-            "summary_zh": slot["summary_zh"],
-        }
-        for slot in pool_audit.get("slots", [])
-        if slot.get("quarantined")
-    ]
-    ready_executors: list[dict[str, Any]] = []
-    if focus_current_task is None:
-        ready_executors.append(
-            {
-                "executor_id": "control-plane-main",
-                "executor_type": "control_plane",
-                "status": "ready",
-            }
-        )
-    ready_executors.extend(
-        {
-            "executor_id": slot["slot_id"],
-            "executor_type": "full_clone",
-            "status": "ready",
-            "branch": slot.get("observed_branch") or slot.get("idle_branch"),
-        }
-        for slot in pool_audit.get("slots", [])
-        if slot.get("dispatch_eligible")
-    )
-    quarantined_executors = [
-        {
-            "executor_id": slot["slot_id"],
-            "executor_type": "full_clone",
-            "status": "quarantined",
-            "summary_zh": slot["summary_zh"],
-            "runtime_drift": slot["runtime_drift"],
-        }
-        for slot in pool_audit.get("slots", [])
-        if slot.get("quarantined")
-    ]
-    issues = [*slot_issues]
-    if ledger_divergences:
-        issues.append("ledger divergence detected")
-    if str(pool_audit.get("pool_status") or "active") != "active":
-        issues.append("full clone pool is frozen")
+    ledger_divergences: list[dict[str, Any]] = []
+    issues: list[str] = []
     if dirty_runtime_paths:
         issues.append("governance runtime unpublished")
     if rollout_state.get("rollout_pending"):
         issues.append("runtime rollout pending")
-    if int(pool_audit.get("stale_runtime_count") or 0) > 0:
-        issues.append("stale runtime detected")
     if legacy_candidates:
         issues.append(f"legacy candidate compatibility still present: {len(legacy_candidates)}")
-    if ledger_divergences:
-        status = "blocked"
-    elif str(pool_audit.get("pool_status") or "active") != "active":
-        status = "blocked"
-    elif dirty_runtime_paths:
+    if dirty_runtime_paths:
         status = "blocked"
     elif rollout_state.get("rollout_pending"):
-        status = "blocked"
-    elif slot_issues:
         status = "blocked"
     elif stale_claims or int(summary.get("parallelism_deficit") or 0) > 0:
         status = "degraded"
@@ -239,27 +177,28 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "live_execution_lease_count": len(live_execution_leases),
         "live_execution_leases": live_execution_leases,
         "running_execution_leases": live_execution_leases,
-        "ready_executors": ready_executors,
-        "quarantined_executors": quarantined_executors,
         "stale_claims": stale_claims,
-        "slot_issues": slot_issues,
+        "ready_executors": [],
+        "quarantined_executors": [],
+        "slot_issues": [],
         "closeout_ready_execution_tasks": closeout_ready,
         "closeout_blocked_execution_tasks": closeout_blocked,
         "ledger_divergences": ledger_divergences,
-        "ledger_divergence_count": len(ledger_divergences),
+        "ledger_divergence_count": 0,
         "dirty_governance_runtime_paths": dirty_runtime_paths,
         "runtime_rollout_pending": bool(rollout_state.get("rollout_pending")),
         "runtime_rollout_state": rollout_state,
-        "runtime_rollout_instructions": (
-            "Run: python scripts/task_ops.py refresh-full-clone-pool then python scripts/task_ops.py audit-full-clone-pool"
-            if rollout_state.get("rollout_pending")
-            else None
-        ),
-        "stale_runtime_count": int(pool_audit.get("stale_runtime_count") or 0),
-        "quarantined_runtime_count": int(pool_audit.get("quarantined_runtime_count") or 0),
-        "quarantined_slot_count": int(pool_audit.get("quarantined_slot_count") or 0),
-        "quarantined_slots": quarantined_slots,
-        "full_clone_pool_audit": pool_audit,
+        "runtime_rollout_instructions": None,
+        "stale_runtime_count": 0,
+        "quarantined_runtime_count": 0,
+        "quarantined_slot_count": 0,
+        "quarantined_slots": [],
+        "full_clone_pool_audit": {
+            "status": "ready",
+            "pool_status": "disabled",
+            "governance_runtime_stamp": build_governance_runtime_stamp(control_root),
+            "slots": [],
+        },
         "issues": issues,
     }
 
