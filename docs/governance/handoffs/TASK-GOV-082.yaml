@@ -1,0 +1,25 @@
+task_id: TASK-GOV-082
+summary_status: queued
+last_handoff_at: null
+completed_items: []
+remaining_items:
+- Track runtime rollout pending state after governance runtime changes.
+- Automate refresh and audit before unblocking dispatch.
+- Provide explicit remediation instructions when dispatch is blocked.
+next_step: Activate the task and begin scoped implementation inside the allowed directories.
+next_tests:
+- pytest tests/governance/test_review_candidate_pool.py -q
+- pytest tests/governance/test_full_clone_pool.py -q
+- pytest tests/governance/test_roadmap_claim_next.py -q
+current_risks: []
+candidate_write_paths:
+- scripts/control_plane_root.py
+- scripts/full_clone_pool.py
+- scripts/task_runtime_ops.py
+- scripts/review_candidate_pool.py
+- docs/governance/CONTROL_PLANE_FULL_CLONE_RUNTIME_HARDENING_EXECUTION_PLAN_V2.md
+candidate_test_paths:
+- tests/governance/
+resume_notes:
+- Formal handoff has not been recorded yet.
+- Task queued in the main control plane.
