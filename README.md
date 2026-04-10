@@ -5,14 +5,17 @@ This repository is the formal implementation baseline for the AX9S China enginee
 Conflict rule:
 - Domain truth is owned by `docs/baseline/AX9S_建设工程域权威文档_中国落地售卖增强版_V1.4_2026-04-02.md`.
 - Execution discipline is owned by `docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md`.
-- The live execution entry is `docs/governance/CURRENT_TASK.yaml`.
+- The live focus entry is `docs/governance/CURRENT_TASK.yaml`; execution occupancy truth lives in `docs/governance/EXECUTION_LEASES.yaml`.
 - If any downstream file drifts, fix the downstream file. Do not weaken the authority source.
+
+Documentation entry index: `docs/INDEX.md`
 
 ## Live Sources Of Truth
 
 - Authority index: `docs/product/AUTHORITY_SPEC.md`
 - Operator manual: `docs/governance/OPERATOR_MANUAL.md`
 - Live task entry: `docs/governance/CURRENT_TASK.yaml`
+- Execution occupancy: `docs/governance/EXECUTION_LEASES.yaml`
 - Task and worktree ledgers: `docs/governance/TASK_REGISTRY.yaml`, `docs/governance/WORKTREE_REGISTRY.yaml`
 - Structure and module boundaries: `docs/governance/DIRECTORY_MAP.md`, `docs/governance/MODULE_MAP.yaml`
 - Test gates: `docs/governance/TEST_MATRIX.yaml`
