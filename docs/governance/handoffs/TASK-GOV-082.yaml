@@ -1,12 +1,10 @@
 task_id: TASK-GOV-082
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Track runtime rollout pending state after governance runtime changes.
-- Automate refresh and audit before unblocking dispatch.
-- Provide explicit remediation instructions when dispatch is blocked.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+summary_status: done
+last_handoff_at: '2026-04-10T08:31:34+08:00'
+completed_items:
+- Runtime rollout closed loop + dispatch gating
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
 - pytest tests/governance/test_review_candidate_pool.py -q
 - pytest tests/governance/test_full_clone_pool.py -q
@@ -23,3 +21,5 @@ candidate_test_paths:
 resume_notes:
 - Formal handoff has not been recorded yet.
 - Task queued in the main control plane.
+- 'Worker finish summary: Runtime rollout closed loop + dispatch gating'
+- Task closed.

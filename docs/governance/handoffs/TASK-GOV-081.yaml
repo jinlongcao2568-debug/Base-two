@@ -1,13 +1,12 @@
 task_id: TASK-GOV-081
-summary_status: queued
-last_handoff_at: null
-completed_items: []
-remaining_items:
-- Implement task package completeness gating for activate and promote.
-- Add a read-only audit command for historical incomplete task packages.
-next_step: Activate the task and begin scoped implementation inside the allowed directories.
+summary_status: done
+last_handoff_at: '2026-04-10T08:31:11+08:00'
+completed_items:
+- Task package completeness gate + audit
+remaining_items: []
+next_step: No further implementation is required; this task is closed.
 next_tests:
-- pytest tests/governance/test_task_lifecycle_ops.py -q
+- pytest tests/governance/test_task_ops.py -q
 - pytest tests/governance/test_task_package_completeness.py -q
 current_risks: []
 candidate_write_paths:
@@ -21,3 +20,5 @@ candidate_test_paths:
 resume_notes:
 - Formal handoff has not been recorded yet.
 - Task queued in the main control plane.
+- 'Worker finish summary: Task package completeness gate + audit'
+- Task closed.

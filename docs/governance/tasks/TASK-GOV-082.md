@@ -5,19 +5,18 @@
 - `task_id`: `TASK-GOV-082`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
-- `status`: `queued`
+- `status`: `done`
 - `stage`: `governance-runtime-rollout-loop-v1`
 - `branch`: `codex/TASK-GOV-082-runtime-rollout-loop`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
 - `parallelism_plan_id`: `null`
 - `review_bundle_status`: `not_applicable`
 - `successor_state`: `backlog`
-
 ## Primary Goals
 
 - Mark `rollout_pending` after governance runtime changes.
@@ -117,21 +116,21 @@
 
 ## Narrative Assertions
 
-- `narrative_status`: `queued`
-- `closeout_state`: `not_ready`
+- `narrative_status`: `done`
+- `closeout_state`: `closed`
 - `blocking_state`: `clear`
-- `completed_scope`: `not_started`
-- `remaining_scope`: `active_work_remaining`
-- `next_gate`: `activation_pending`
+- `completed_scope`: `closed`
+- `remaining_scope`: `none`
+- `next_gate`: `closed`
 <!-- generated:task-meta:start -->
 ## Generated Metadata
 
-- `status`: `queued`
+- `status`: `done`
 - `task_kind`: `coordination`
 - `execution_mode`: `shared_coordination`
 - `size_class`: `standard`
 - `automation_mode`: `manual`
-- `worker_state`: `idle`
+- `worker_state`: `completed`
 - `topology`: `single_worker`
 - `lane_count`: `1`
 - `lane_index`: `null`
@@ -140,5 +139,5 @@
 - `successor_state`: `backlog`
 - `reserved_paths`: `src/, tests/stage2/, docs/contracts/, db/migrations/, tests/integration/`
 - `branch`: `codex/TASK-GOV-082-runtime-rollout-loop`
-- `updated_at`: `2026-04-09T22:49:43+08:00`
+- `updated_at`: `2026-04-10T08:31:34+08:00`
 <!-- generated:task-meta:end -->

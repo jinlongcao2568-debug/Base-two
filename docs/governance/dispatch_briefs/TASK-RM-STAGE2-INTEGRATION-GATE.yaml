@@ -1,0 +1,37 @@
+version: execution_brief_v1
+generated_at: '2026-04-10T08:29:06+08:00'
+candidate_id: stage2-integration-gate
+formal_task_id: TASK-RM-STAGE2-INTEGRATION-GATE
+stage: stage2
+branch: codex/TASK-RM-STAGE2-INTEGRATION-GATE-stage2-integration-gate
+why_now:
+  status: ready
+  claimable: true
+  fresh_claimable: true
+  takeover_claimable: false
+  priority: 290
+  rank: 1
+  selection_score: 149710
+  blocking_reasons: []
+  blockers: []
+depends_on:
+- stage2-core-contract
+- stage2-source-family-lanes
+blocked_by: []
+allowed_dirs:
+- src/stage2_ingestion/
+- tests/stage2/
+reserved_paths:
+- docs/governance/
+- tests/integration/
+- docs/governance/INTERFACE_CATALOG.yaml
+required_tests:
+- pytest tests/stage2 -q
+executor_target:
+  dispatch_target: worktree_pool
+  pool_slot_id: worker-03
+  worktree_path: D:/Base One/Base-two/AX9.worktrees/worker-03
+  window_id: continue-roadmap
+what_this_unlocks_next:
+- stage3-core-contract
+closeout_path: python scripts/task_ops.py close --task-id TASK-RM-STAGE2-INTEGRATION-GATE
