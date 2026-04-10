@@ -7,7 +7,6 @@ from pathlib import Path
 import uuid
 
 import control_plane_root as control_plane_root_module
-import full_clone_pool as full_clone_pool_module
 import governance_lib as governance_lib_module
 import roadmap_claim_next as roadmap_claim_next_module
 import task_lifecycle_ops as task_lifecycle_ops_module
@@ -15,7 +14,7 @@ import task_rendering as task_rendering_module
 import task_worker_ops as task_worker_ops_module
 import task_worktree_ops as task_worktree_ops_module
 from governance_lib import EXECUTION_WORKER_OWNERS, GovernanceError, configure_utf8_stdio
-from control_plane_root import CLAIMS_FILE, EXECUTION_LEASES_FILE, FULL_CLONE_POOL_FILE, resolve_control_plane_root
+from control_plane_root import CLAIMS_FILE, EXECUTION_LEASES_FILE, resolve_control_plane_root
 from task_publish_ops import (
     PUBLISH_ACTIONS,
     cmd_checkpoint_task_results,
@@ -55,12 +54,6 @@ from roadmap_explain import (
 )
 from roadmap_claim_next import cmd_claim_next
 from roadmap_execution_closeout import main as roadmap_closeout_main, close_ready_execution_tasks
-from full_clone_pool import (
-    cmd_audit_full_clone_pool,
-    cmd_provision_full_clone_pool,
-    cmd_rebuild_full_clone_pool,
-    cmd_refresh_full_clone_pool,
-)
 from roadmap_candidate_maintainer import cmd_refresh
 from worker_self_loop import cmd_once as cmd_worker_self_loop_once, cmd_loop as cmd_worker_self_loop_loop
 from review_candidate_pool import cmd_review
@@ -81,7 +74,6 @@ from task_worker_ops import (
 from task_worktree_ops import (
     cmd_cleanup_orphans,
     cmd_prepare_child_execution,
-    cmd_prewarm_worktree_pool,
     cmd_worktree_create,
     cmd_worktree_release,
 )
@@ -115,10 +107,6 @@ GOVERNANCE_WRITE_COMMANDS = {
     "release",
     "takeover",
     "close-ready-execution-tasks",
-    "provision-full-clone-pool",
-    "refresh-full-clone-pool",
-    "rebuild-full-clone-pool",
-    "prewarm-worktree-pool",
     "prepare-child-execution",
     "worktree-create",
     "worktree-release",
@@ -142,12 +130,10 @@ REVISION_TRACKED_FILES = (
     Path("docs/governance/WORKTREE_REGISTRY.yaml"),
     EXECUTION_LEASES_FILE,
     CLAIMS_FILE,
-    FULL_CLONE_POOL_FILE,
 )
 ATOMIC_DUMP_MODULES = (
     governance_lib_module,
     control_plane_root_module,
-    full_clone_pool_module,
     roadmap_claim_next_module,
     task_lifecycle_ops_module,
     task_rendering_module,
@@ -351,8 +337,7 @@ def add_coordination_commands(subparsers) -> None:
     claim_next_parser.add_argument("--promote-task", action="store_true")
     claim_next_parser.add_argument("--worktree-root")
     claim_next_parser.add_argument("--worker-owner", choices=list(EXECUTION_WORKER_OWNERS))
-    claim_next_parser.add_argument("--dispatch-target", choices=["worktree_pool", "full_clone"], default="worktree_pool")
-    claim_next_parser.add_argument("--full-clone-slot-id")
+    claim_next_parser.add_argument("--dispatch-target", choices=["main_ledger"], default="main_ledger")
     claim_next_parser.add_argument("--window-id", default="window-local")
     claim_next_parser.add_argument("--lease-minutes", type=int, default=30)
     claim_next_parser.add_argument("--now")

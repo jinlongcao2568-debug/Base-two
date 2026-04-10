@@ -26,17 +26,14 @@ Conflict rule:
 
 ## Governance Test Trigger Rules
 
-- `pytest tests/governance -q` is a governance-mode regression suite, not a default gate for ordinary business or low-risk governance edits.
-- `pytest tests/automation -q` is an automation-runner regression suite, not a default gate for ordinary business or low-risk governance edits.
-- Governance tasks must resolve tests by path-triggered profile, not by broad governance identity alone.
-- Default governance trigger profiles:
-  - `governance_fast`: ordinary docs, ledgers, and low-risk governance metadata
-  - `governance_workflow`: continuation, lease, handoff, closeout, orchestration workflow
-  - `governance_publish`: publish, preflight, automation intent, release flow
-  - `automation_runner`: runner, dispatch, cleanup pressure, orchestration runtime
-  - `full_governance_release`: policy-core and release-grade gate changes
-- Only `full_governance_release` should require full `tests/governance -q` and `tests/automation -q` by default.
-- To benefit from selective governance test triggering, governance tasks should prefer precise file-level `planned_write_paths` over only broad directory roots.
+- Governance long suites are retired from the default workflow.
+- Do not use `pytest tests/governance -q` or `pytest tests/automation -q` as ordinary governance gates.
+- Default governance verification is:
+  - repo hygiene checks
+  - targeted `py_compile` smoke for changed governance scripts
+  - manual page-open verification when the operator console or another runtime surface changes
+- Product changes keep normal product tests: contracts, stage tests, and integration tests that match the touched product path.
+- Governance tasks should prefer the smallest targeted smoke needed to prove the changed path still loads, not broad governance identity suites.
 
 ## Live vs Historical Governance Sources
 

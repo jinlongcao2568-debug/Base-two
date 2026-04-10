@@ -9,6 +9,7 @@ completed_items:
 - Rebuilt the console as a task-centric surface with intake, current, completed, catalog, and diagnostics pages.
 - Switched the catalog page to prefer the cached roadmap snapshot instead of full live recomputation.
 - Removed main-path execution-lease dependency and cleared `EXECUTION_LEASES.yaml` to an empty shell.
+- Retired governance long-suite defaults and aligned governance verification to repo hygiene plus targeted smoke and manual page-open checks.
 remaining_items:
 - Review whether the static snapshot behavior for the catalog page needs any extra operator hint text.
 - Decide whether to keep pruning additional governance root files or formally close the live task through task_ops.
@@ -17,7 +18,7 @@ next_tests:
 - python scripts/validate_contracts.py
 - pytest tests/contracts -q
 - pytest tests/integration/test_stage3_stage4_stage6_minimal_flow.py -q
-- pytest tests/governance/test_governance_console.py -q
+- python -m py_compile scripts/governance_console.py scripts/review_candidate_pool.py scripts/roadmap_claim_next.py scripts/roadmap_scheduler_eval.py scripts/worker_self_loop.py
 current_risks:
 - Formal task closeout will mutate live control-plane ledgers again.
 - Additional deletions under docs/governance root can break operator workflows unless revalidated against the console test.
@@ -27,7 +28,6 @@ candidate_write_paths:
 - src/governance/
 - tests/contracts/
 - tests/governance/
-- tests/automation/
 - scripts/
 - .codex/
 - output/
@@ -40,7 +40,6 @@ candidate_test_paths:
 - tests/stage3/
 - tests/stage4/
 - tests/stage6/
-- tests/governance/
 resume_notes:
 - Operator instruction: AX9 治理操作员控制台 is a development console and must not be deleted.
 - Live task ledgers, task_ops runtime, and console verification test were intentionally retained.

@@ -202,7 +202,7 @@ def _write_execution_brief(
         "reserved_paths": list(task.get("reserved_paths") or []),
         "required_tests": list(task.get("required_tests") or []),
         "executor_target": {
-            "dispatch_target": getattr(args, "dispatch_target", "worktree_pool"),
+            "dispatch_target": getattr(args, "dispatch_target", "main_ledger"),
             "pool_slot_id": candidate.get("pool_slot_id"),
             "worktree_path": str(destination).replace("\\", "/"),
             "window_id": getattr(args, "window_id", None),
@@ -384,7 +384,7 @@ def _record_claim(claims: dict[str, Any], candidate: dict[str, Any], *, args: ar
         "candidate_branch": candidate.get("candidate_branch"),
         "candidate_worktree": candidate.get("candidate_worktree"),
         "pool_slot_id": candidate.get("pool_slot_id"),
-        "dispatch_target": getattr(args, "dispatch_target", "worktree_pool"),
+        "dispatch_target": getattr(args, "dispatch_target", "main_ledger"),
         "planned_write_paths": list(candidate.get("planned_write_paths") or []),
     }
     existing = [claim for claim in claims.get("claims", []) if claim.get("candidate_id") != candidate["candidate_id"]]
@@ -433,7 +433,10 @@ def _build_execution_task(candidate: dict[str, Any], *, now: str) -> dict[str, A
 
 def _candidate_worktree_path(root: Path, candidate: dict[str, Any], worktree_root: str | None) -> Path:
     if worktree_root:
-        return (Path(worktree_root) / candidate["task_id_hint"]).resolve()
+        target = Path(worktree_root).resolve()
+        if target.exists():
+            return target
+        return (target / candidate["task_id_hint"]).resolve()
     if candidate.get("pool_slot_path"):
         raw_path = Path(str(candidate["pool_slot_path"]))
         if raw_path.is_absolute():
@@ -461,7 +464,7 @@ def _update_claim_after_promotion(
         claim["candidate_worktree"] = str(destination).replace("\\", "/")
         if candidate.get("pool_slot_id"):
             claim["pool_slot_id"] = candidate["pool_slot_id"]
-        claim["dispatch_target"] = candidate.get("dispatch_target", claim.get("dispatch_target", "worktree_pool"))
+        claim["dispatch_target"] = candidate.get("dispatch_target", claim.get("dispatch_target", "main_ledger"))
         return
 
 
@@ -484,7 +487,7 @@ def _update_claim_after_takeover(
         claim["candidate_worktree"] = str(destination).replace("\\", "/")
         if candidate.get("pool_slot_id"):
             claim["pool_slot_id"] = candidate["pool_slot_id"]
-        claim["dispatch_target"] = candidate.get("dispatch_target", claim.get("dispatch_target", "worktree_pool"))
+        claim["dispatch_target"] = candidate.get("dispatch_target", claim.get("dispatch_target", "main_ledger"))
         return
 
 
@@ -508,7 +511,7 @@ def _upsert_resumed_claim(
         "candidate_branch": task["branch"],
         "candidate_worktree": str(destination).replace("\\", "/"),
         "pool_slot_id": candidate.get("pool_slot_id"),
-        "dispatch_target": candidate.get("dispatch_target", getattr(args, "dispatch_target", "worktree_pool")),
+        "dispatch_target": candidate.get("dispatch_target", getattr(args, "dispatch_target", "main_ledger")),
         "planned_write_paths": list(task.get("planned_write_paths") or candidate.get("planned_write_paths") or []),
         "promoted_at": task.get("activated_at") or _iso(now),
         "formal_task_id": task["task_id"],
@@ -537,45 +540,10 @@ def _resume_existing_formal_task(root: Path, candidate: dict[str, Any], args: ar
         raise GovernanceError(
             f"resumable takeover requires paused formal task; got `{task.get('status')}` for `{task['task_id']}`"
         )
-    if getattr(args, "dispatch_target", "worktree_pool") == "full_clone":
-        slot = _assign_full_clone_slot(root, candidate, args, now)
-        destination = Path(str(slot["path"])).resolve()
-        _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
-        _upsert_full_clone_execution_entry(root, task, slot["slot_id"], str(destination).replace("\\", "/"))
-        candidate["pool_slot_id"] = slot["slot_id"]
-        candidate["dispatch_target"] = "full_clone"
-        return task, destination
-
-    existing_entry = next(
-        (entry for entry in load_worktree_registry(root).get("entries", []) if entry.get("task_id") == task["task_id"]),
-        None,
-    )
-    pool_slot = _assign_pool_slot(root, candidate, args, now) if not args.worktree_root else None
-    if pool_slot is not None:
-        candidate["pool_slot_id"] = pool_slot["slot_id"]
-        candidate["pool_slot_path"] = pool_slot["path"]
-    destination = (
-        Path(str(existing_entry.get("path"))).resolve()
-        if existing_entry is not None and existing_entry.get("path")
-        else _candidate_worktree_path(root, candidate, args.worktree_root)
-    )
-    try:
-        if candidate.get("pool_slot_id"):
-            pool = _load_worktree_pool(root)
-            slot = _pool_slot_by_id(pool).get(candidate["pool_slot_id"])
-            if slot is None:
-                raise GovernanceError(f"assigned worktree pool slot missing: {candidate['pool_slot_id']}")
-            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
-            destination = reuse_pool_slot_worktree(root, task, slot, args.worker_owner)
-            _write_worktree_pool(root, pool)
-        else:
-            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
-            if not destination.exists():
-                cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
-    except Exception:
-        _release_pool_slot(root, candidate.get("pool_slot_id"), now=now)
-        raise
-    _sync_pool_slot_active(root, candidate.get("pool_slot_id"), destination=destination, task_id=task["task_id"], branch=task["branch"], now=now)
+    destination = _candidate_worktree_path(root, candidate, args.worktree_root)
+    _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
+    if not destination.exists():
+        cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
     return task, destination
 
 
@@ -732,29 +700,8 @@ def _takeover_stale_claim(root: Path, candidate: dict[str, Any], claim: dict[str
     if not formal_task_id:
         raise GovernanceError("stale claim takeover requires a formal task id")
     destination = Path(str(claim.get("candidate_worktree") or "")).resolve()
-    if claim.get("dispatch_target") == "full_clone":
-        _sync_full_clone_slot_active(
-            root,
-            claim.get("pool_slot_id"),
-            task_id=formal_task_id,
-            branch=claim.get("candidate_branch") or candidate["candidate_branch"],
-            now=now,
-        )
-        registry = load_task_registry(root)
-        worktrees = load_worktree_registry(root)
-        task = next(task for task in registry.get("tasks", []) if task.get("task_id") == formal_task_id)
-        mirror_governance_ledgers_to_worktree(root, destination, registry, worktrees, task)
-        return destination
     if not destination.exists():
         cmd_worktree_create(argparse.Namespace(task_id=formal_task_id, path=str(destination), worker_owner=args.worker_owner))
-    _sync_pool_slot_active(
-        root,
-        claim.get("pool_slot_id"),
-        destination=destination,
-        task_id=formal_task_id,
-        branch=claim.get("candidate_branch") or candidate["candidate_branch"],
-        now=now,
-    )
     return destination
 
 
@@ -779,35 +726,10 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
         _cleanup_task_artifacts(root, task)
         raise
 
-    if getattr(args, "dispatch_target", "worktree_pool") == "full_clone":
-        slot = _assign_full_clone_slot(root, candidate, args, now)
-        destination = Path(str(slot["path"])).resolve()
-        _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
-        _upsert_full_clone_execution_entry(root, task, slot["slot_id"], str(destination).replace("\\", "/"))
-        _sync_full_clone_slot_active(root, slot["slot_id"], task_id=task["task_id"], branch=task["branch"], now=now)
-        return destination
-
-    pool_slot = _assign_pool_slot(root, candidate, args, now)
-    if pool_slot is not None:
-        candidate["pool_slot_id"] = pool_slot["slot_id"]
-        candidate["pool_slot_path"] = pool_slot["path"]
     destination = _candidate_worktree_path(root, candidate, args.worktree_root)
-    try:
-        if candidate.get("pool_slot_id"):
-            pool = _load_worktree_pool(root)
-            slot = _pool_slot_by_id(pool).get(candidate["pool_slot_id"])
-            if slot is None:
-                raise GovernanceError(f"assigned worktree pool slot missing: {candidate['pool_slot_id']}")
-            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
-            destination = reuse_pool_slot_worktree(root, task, slot, args.worker_owner)
-            _write_worktree_pool(root, pool)
-        else:
-            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
-            cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
-    except Exception:
-        _release_pool_slot(root, candidate.get("pool_slot_id"), now=now)
-        raise
-    _sync_pool_slot_active(root, candidate.get("pool_slot_id"), destination=destination, task_id=task["task_id"], branch=task["branch"], now=now)
+    _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
+    if not destination.exists():
+        cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
     return destination
 
 
@@ -898,9 +820,8 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
         required_hash = rollout_state.get("required_runtime_hash") or "unknown"
         pending_since = rollout_state.get("pending_since") or "unknown"
         raise GovernanceError(
-            "runtime rollout pending; refresh and audit full-clone pool before dispatch "
-            f"(required_hash={required_hash} pending_since={pending_since}). "
-            "Run: python scripts/task_ops.py refresh-full-clone-pool then python scripts/task_ops.py audit-full-clone-pool"
+            "runtime rollout pending; publish or refresh the control-plane runtime before claim-next "
+            f"(required_hash={required_hash} pending_since={pending_since})."
         )
     dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
     if dirty_runtime_paths:
@@ -910,28 +831,6 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
             "governance runtime unpublished; publish or revert runtime files before claim-next "
             f"({sample}{suffix})"
         )
-    audit = audit_full_clone_pool(root)
-    divergences = [slot for slot in audit.get("slots", []) if slot.get("divergent")]
-    if divergences:
-        for slot in divergences:
-            if str(slot.get("slot_status") or "") != "ready":
-                continue
-            slot_id = str(slot.get("slot_id") or "").strip()
-            if not slot_id:
-                continue
-            set_full_clone_slot_blocked(
-                root,
-                slot_id,
-                reason=str(slot.get("summary_zh") or "ledger divergence detected"),
-                task_id=str(slot.get("task_id") or "").strip() or None,
-                branch=str(slot.get("observed_branch") or slot.get("idle_branch") or "").strip() or None,
-                stale_runtime=bool(slot.get("runtime_drift")),
-            )
-        summary = "; ".join(
-            f"{item.get('slot_id')}/{item.get('task_id') or item.get('candidate_id') or 'unknown'}"
-            for item in divergences
-        )
-        raise GovernanceError(f"ledger divergence detected; repair control plane before claim-next ({summary})")
     selected, blocked = claim_next(root, args)
     if selected is None:
         first_blocker = blocked[0] if blocked else {"candidate_id": "none", "blockers": ["no candidates"]}
@@ -977,8 +876,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--promote-task", action="store_true")
     parser.add_argument("--worktree-root")
     parser.add_argument("--worker-owner")
-    parser.add_argument("--dispatch-target", choices=["worktree_pool", "full_clone"], default="worktree_pool")
-    parser.add_argument("--full-clone-slot-id")
+    parser.add_argument("--dispatch-target", choices=["main_ledger"], default="main_ledger")
     parser.add_argument("--window-id", default="window-local")
     parser.add_argument("--lease-minutes", type=int, default=30)
     parser.add_argument("--now")

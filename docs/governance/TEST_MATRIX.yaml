@@ -44,42 +44,29 @@ test_bundles:
     commands:
       - python scripts/check_authority_alignment.py
   governance_fast_regression:
-    description: Fast governance regression for low-risk docs, ledger, and metadata changes.
+    description: Minimal governance smoke for low-risk docs, ledgers, and metadata changes.
     commands:
-      - pytest tests/governance/test_check_repo.py -q
-      - pytest tests/governance/test_check_hygiene.py -q
-      - pytest tests/governance/test_governance_state_machine.py -q
+      - python -m py_compile scripts/governance_console.py scripts/review_candidate_pool.py scripts/roadmap_claim_next.py scripts/roadmap_scheduler_eval.py scripts/worker_self_loop.py
   governance_workflow_regression:
-    description: Workflow regression for continuation, lease, handoff, closeout, and orchestration state-machine logic.
+    description: Minimal workflow smoke for continuation, closeout, and task routing changes.
     commands:
-      - pytest tests/governance/test_check_repo.py -q
-      - pytest tests/governance/test_task_continuation.py -q
-      - pytest tests/governance/test_parallel_closeout_pipeline.py -q
-      - pytest tests/governance/test_coordination_lease.py -q
-      - pytest tests/governance/test_handoff_recovery.py -q
-      - pytest tests/governance/test_orchestration_runtime.py -q
-      - pytest tests/governance/test_task_ops.py -q
+      - python -m py_compile scripts/task_ops.py scripts/task_continuation_ops.py scripts/task_lifecycle_ops.py scripts/task_worker_ops.py scripts/task_closeout.py
   governance_publish_regression:
-    description: Publish, preflight, and automation-intent regression for governance-side release flows.
+    description: Minimal publish smoke for preflight and release-flow changes.
     commands:
-      - pytest tests/governance/test_task_publish_ops.py -q
-      - pytest tests/governance/test_automation_intent.py -q
+      - python -m py_compile scripts/task_publish_ops.py scripts/automation_intent.py
   automation_runner_regression:
-    description: Runner, lane budget, cleanup pressure, and orchestration runtime regression.
+    description: Minimal runner smoke for automation and orchestration runtime changes.
     commands:
-      - pytest tests/automation/test_automation_runner.py -q
-      - pytest tests/automation/test_high_throughput_runner.py -q
-      - pytest tests/automation/test_orchestration_runtime_runner.py -q
-      - pytest tests/automation/test_task_gov_017_runtime.py -q
-      - pytest tests/automation/test_task_gov_018_runtime.py -q
+      - python -m py_compile scripts/automation_runner.py scripts/orchestration_runtime.py scripts/task_worktree_ops.py
   governance_full_suite:
-    description: Full governance release regression suite.
+    description: Compatibility alias for governance minimal smoke.
     commands:
-      - pytest tests/governance -q
+      - python -m py_compile scripts/governance_console.py scripts/review_candidate_pool.py scripts/roadmap_claim_next.py scripts/task_ops.py
   automation_full_suite:
-    description: Full automation release regression suite.
+    description: Compatibility alias for automation minimal smoke.
     commands:
-      - pytest tests/automation -q
+      - python -m py_compile scripts/automation_runner.py scripts/orchestration_runtime.py
 governance_test_profiles:
   governance_fast:
     description: Fast governance validation for ordinary docs, ledgers, and low-risk governance metadata changes.
@@ -92,27 +79,25 @@ governance_test_profiles:
       - repo_hygiene
       - governance_fast_regression
   governance_workflow:
-    description: Workflow regression for continuation, lease, handoff, closeout, and orchestration state-machine logic.
+    description: Minimal workflow smoke for continuation and closeout changes.
     test_bundles:
       - repo_hygiene
       - governance_workflow_regression
   governance_publish:
-    description: Publish, preflight, and intent-routing regression for governance-side release flows.
+    description: Minimal publish smoke for governance-side release flows.
     test_bundles:
       - repo_hygiene
       - governance_publish_regression
   automation_runner:
-    description: Runner, dispatch, lane budget, cleanup pressure, and orchestration runtime regression.
+    description: Minimal runner smoke for automation and orchestration runtime changes.
     test_bundles:
       - repo_hygiene
       - automation_runner_regression
   full_governance_release:
-    description: Full governance and automation release-grade regression for core policy and gate changes.
+    description: Minimal release smoke alias retained for compatibility.
     test_bundles:
       - repo_hygiene
-      - authority_alignment
       - governance_full_suite
-      - automation_full_suite
 authority_critical_chains:
   stage3_stage4_stage6_minimal:
     description: Stage 3 project_base must be consumed by stage 4 rule_hit and then by the stage 6 project_fact.

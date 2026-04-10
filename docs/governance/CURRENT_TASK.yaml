@@ -18,7 +18,6 @@ allowed_dirs:
 - src/governance/
 - tests/contracts/
 - tests/governance/
-- tests/automation/
 - scripts/
 - .codex/
 - output/
@@ -55,7 +54,6 @@ planned_write_paths:
 - src/governance/
 - tests/contracts/
 - tests/governance/
-- tests/automation/
 - scripts/
 - .codex/
 - output/
