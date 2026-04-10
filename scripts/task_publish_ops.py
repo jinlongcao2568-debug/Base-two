@@ -28,6 +28,16 @@ from governance_lib import (
     path_within_declared,
     task_map,
 )
+from control_plane_root import (
+    audit_full_clone_pool,
+    load_runtime_rollout_state,
+    note_runtime_rollout_audit,
+    published_governance_runtime_dirty_paths,
+    resolve_control_plane_root,
+    sync_runtime_rollout_state,
+    write_runtime_rollout_state,
+)
+from full_clone_pool import cmd_refresh_full_clone_pool
 from task_handoff import handoff_path, is_top_level_coordination_task
 from task_dirty_state import classify_task_dirty_state
 from task_rendering import find_task
@@ -494,6 +504,34 @@ def _blocked_publish_error(preflight_result: dict[str, Any]) -> GovernanceError:
     return GovernanceError("; ".join(blockers))
 
 
+def _maybe_trigger_runtime_rollout(root: Path, *, trigger: str) -> None:
+    control_root = resolve_control_plane_root(root)
+    if control_root != root.resolve():
+        print("[WARN] runtime rollout skipped; publish executed outside control plane")
+        return
+    rollout_state = sync_runtime_rollout_state(control_root, reason=trigger)
+    if not rollout_state.get("rollout_pending"):
+        return
+    dirty_runtime_paths = published_governance_runtime_dirty_paths(control_root)
+    if dirty_runtime_paths:
+        rollout_state["last_error"] = "runtime unpublished; publish or revert runtime files before rollout"
+        write_runtime_rollout_state(control_root, rollout_state)
+        print("[WARN] runtime rollout pending but runtime files are unpublished; refresh skipped")
+        return
+    try:
+        cmd_refresh_full_clone_pool(argparse.Namespace(slot_id=None))
+    except GovernanceError as error:
+        rollout_state = load_runtime_rollout_state(control_root)
+        rollout_state["last_error"] = str(error)
+        write_runtime_rollout_state(control_root, rollout_state)
+        print(f"[WARN] runtime rollout refresh failed: {error}")
+        return
+    audit = audit_full_clone_pool(control_root)
+    note_runtime_rollout_audit(control_root, audit=audit, reason=f"{trigger}-audit")
+    if audit.get("status") != "ready":
+        print("[WARN] runtime rollout audit blocked; dispatch remains locked")
+
+
 def cmd_publish_preflight(args: argparse.Namespace) -> int:
     root = find_repo_root()
     result = publish_preflight(root, action=args.action, task_id=args.task_id)
@@ -580,6 +618,7 @@ def cmd_publish_task_results(args: argparse.Namespace) -> int:
         raise GovernanceError(
             f"publish stopped after commit `{commit_hash}` and push to `{preflight_result['target_remote']}`: {error}"
         ) from error
+    _maybe_trigger_runtime_rollout(root, trigger="publish-task-results")
     print(
         f"[OK] published {task['task_id']} commit={commit_hash} "
         f"remote={preflight_result['target_remote']} pr={pr_url}"

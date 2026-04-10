@@ -19,11 +19,14 @@ from governance_lib import (
     load_task_registry,
     load_worktree_registry,
     load_yaml,
+    read_text,
     read_roadmap,
     sync_task_artifacts,
     task_parallelism_plan,
     validate_task,
+    write_text,
 )
+from governance_markdown import autofill_task_package, task_package_gaps
 from orchestration_runtime import record_session_event, runtime_status_for_task
 from task_coordination_lease import coordination_thread_id, current_session_id
 from task_handoff import ensure_handoff_file
@@ -360,6 +363,36 @@ def _build_task_from_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     return task
 
 
+def _ensure_task_package_complete(root: Path, task: dict[str, Any], *, candidate: dict[str, Any] | None = None) -> None:
+    task_path = root / task["task_file"]
+    if not task_path.exists():
+        update_task_file(root, task)
+    text = read_text(task_path)
+    updated = autofill_task_package(text, task, candidate=candidate)
+    if updated != text:
+        write_text(task_path, updated)
+        text = updated
+    gaps = task_package_gaps(text)
+    if gaps["missing"] or gaps["placeholder"]:
+        missing = ", ".join(gaps["missing"]) if gaps["missing"] else "none"
+        placeholders = ", ".join(gaps["placeholder"]) if gaps["placeholder"] else "none"
+        raise GovernanceError(
+            f"task package incomplete for {task['task_id']}; missing sections: {missing}; placeholder sections: {placeholders}"
+        )
+
+
+def _cleanup_task_artifacts(root: Path, task: dict[str, Any]) -> None:
+    handoff_path = root / "docs/governance/handoffs" / f"{task['task_id']}.yaml"
+    for relative in (task.get("task_file"), task.get("runlog_file")):
+        if not relative:
+            continue
+        path = root / relative
+        if path.exists():
+            path.unlink()
+    if handoff_path.exists():
+        handoff_path.unlink()
+
+
 def _activate_promoted_task(root: Path, registry: dict[str, Any], task: dict[str, Any]) -> None:
     if current_branch(root) != task["branch"]:
         raise GovernanceError(
@@ -391,6 +424,7 @@ def cmd_promote_candidate(args: argparse.Namespace) -> int:
         if existing is None:
             raise GovernanceError(f"existing-task candidate missing registry entry: {candidate['task_id']}")
         sync_task_artifacts(root, registry, [existing["task_id"]])
+        _ensure_task_package_complete(root, existing, candidate=candidate)
         if args.activate:
             _activate_promoted_task(root, registry, existing)
         record_session_event(
@@ -422,6 +456,14 @@ def cmd_promote_candidate(args: argparse.Namespace) -> int:
     update_task_file(root, task)
     update_runlog_file(root, task)
     ensure_handoff_file(root, task)
+    try:
+        _ensure_task_package_complete(root, task, candidate=candidate)
+    except GovernanceError:
+        tasks.remove(task)
+        registry["updated_at"] = iso_now()
+        dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+        _cleanup_task_artifacts(root, task)
+        raise
     sync_task_artifacts(root, registry, [task["task_id"]])
     if args.activate:
         _activate_promoted_task(root, registry, task)

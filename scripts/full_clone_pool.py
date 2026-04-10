@@ -21,6 +21,8 @@ from governance_lib import (
 from control_plane_root import (
     assess_full_clone_slot_runtime,
     audit_full_clone_pool,
+    note_runtime_rollout_audit,
+    note_runtime_rollout_refresh,
     resolve_control_plane_root,
     write_governance_runtime_stamp,
 )
@@ -251,6 +253,8 @@ def cmd_provision_full_clone_pool(args: argparse.Namespace) -> int:
         _provision_slot(root, slot, refresh=args.refresh)
         provisioned.append(slot["slot_id"])
     _write_pool(root, pool)
+    if args.refresh:
+        note_runtime_rollout_refresh(root, reason="refresh-full-clone-pool")
     if not provisioned:
         print("[OK] no full clone slot matched the request")
         return 0
@@ -268,6 +272,8 @@ def cmd_audit_full_clone_pool(args: argparse.Namespace) -> int:
         }
         payload["ledger_divergence_count"] = sum(1 for slot in payload["slots"] if slot["divergent"])
         payload["stale_runtime_count"] = sum(1 for slot in payload["slots"] if slot["runtime_drift"])
+    if not args.slot_id:
+        note_runtime_rollout_audit(root, audit=payload, reason="audit-full-clone-pool")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if payload["status"] == "ready" else 1
 

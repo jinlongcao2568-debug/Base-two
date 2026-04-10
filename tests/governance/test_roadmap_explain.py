@@ -22,6 +22,8 @@ def test_explain_candidate_returns_reason_taxonomy_and_release_forecast(tmp_path
     assert "release_forecast" in payload
     assert "source_authority" in payload
     assert "blocking_reason_codes" in payload
+    assert "why_now" in payload
+    assert "what_this_unlocks_next" in payload
 
 
 def test_explain_claim_decision_returns_selected_candidate(tmp_path: Path) -> None:
@@ -37,6 +39,8 @@ def test_explain_claim_decision_returns_selected_candidate(tmp_path: Path) -> No
     assert result.returncode == 0, result.stdout + result.stderr
     assert payload["selected_candidate_id"] is not None
     assert isinstance(payload["safe_candidates"], list)
+    assert payload["selected_why_now"] is not None
+    assert isinstance(payload["selected_unlocks"], list)
 
 
 def test_explain_release_chain_returns_downstream_chain(tmp_path: Path) -> None:

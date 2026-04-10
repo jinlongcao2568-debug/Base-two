@@ -29,6 +29,7 @@ EXECUTION_LEASES_FILE = Path("docs/governance/EXECUTION_LEASES.yaml")
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
 ROADMAP_CANDIDATES_FILE = Path(".codex/local/roadmap_candidates/index.yaml")
 GOVERNANCE_RUNTIME_STAMP_FILE = Path(".codex/local/governance_runtime/stamp.yaml")
+GOVERNANCE_RUNTIME_ROLLOUT_STATE_FILE = Path(".codex/local/governance_runtime/rollout_state.yaml")
 
 GOVERNANCE_RUNTIME_VERSION = "control_plane_runtime_v1"
 CANDIDATE_INDEX_FORMAT_VERSION = "roadmap_candidate_index_v2"
@@ -313,6 +314,143 @@ def write_governance_runtime_stamp(root: Path) -> dict[str, Any]:
     return stamp
 
 
+def runtime_rollout_state_defaults() -> dict[str, Any]:
+    return {
+        "version": "1.0",
+        "updated_at": None,
+        "revision": 0,
+        "rollout_pending": False,
+        "pending_since": None,
+        "required_runtime_hash": None,
+        "required_control_plane_head": None,
+        "last_successful_hash": None,
+        "last_successful_head": None,
+        "last_refresh_at": None,
+        "last_audit_at": None,
+        "last_error": None,
+        "last_detected_reason": None,
+    }
+
+
+def load_runtime_rollout_state(root: Path) -> dict[str, Any]:
+    path = root / GOVERNANCE_RUNTIME_ROLLOUT_STATE_FILE
+    if not path.exists():
+        return runtime_rollout_state_defaults()
+    payload = load_yaml(path) or {}
+    if not isinstance(payload, dict):
+        raise GovernanceError(f"runtime rollout state must be a mapping: {GOVERNANCE_RUNTIME_ROLLOUT_STATE_FILE}")
+    merged = runtime_rollout_state_defaults()
+    merged.update(payload)
+    merged["revision"] = int(merged.get("revision") or 0)
+    return merged
+
+
+def write_runtime_rollout_state(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    payload["revision"] = int(payload.get("revision") or 0) + 1
+    payload["updated_at"] = iso_now()
+    dump_yaml(root / GOVERNANCE_RUNTIME_ROLLOUT_STATE_FILE, payload)
+    return payload
+
+
+def _load_previous_runtime_stamp(root: Path) -> dict[str, Any] | None:
+    path = root / GOVERNANCE_RUNTIME_STAMP_FILE
+    if not path.exists():
+        return None
+    payload = load_yaml(path) or {}
+    return payload if isinstance(payload, dict) else None
+
+
+def sync_runtime_rollout_state(root: Path, *, reason: str | None = None) -> dict[str, Any]:
+    previous_stamp = _load_previous_runtime_stamp(root)
+    current_stamp = build_governance_runtime_stamp(root)
+    dump_yaml(root / GOVERNANCE_RUNTIME_STAMP_FILE, current_stamp)
+    state = load_runtime_rollout_state(root)
+    now = iso_now()
+    if not state.get("last_successful_hash") and not state.get("rollout_pending"):
+        baseline_hash = None
+        baseline_head = None
+        if previous_stamp:
+            baseline_hash = previous_stamp.get("governance_scripts_hash")
+            baseline_head = previous_stamp.get("control_plane_head")
+        state["last_successful_hash"] = baseline_hash or current_stamp.get("governance_scripts_hash")
+        state["last_successful_head"] = baseline_head or current_stamp.get("control_plane_head")
+    required_hash = current_stamp.get("governance_scripts_hash")
+    if required_hash and required_hash != state.get("last_successful_hash"):
+        previous_required = state.get("required_runtime_hash")
+        state["rollout_pending"] = True
+        state["required_runtime_hash"] = required_hash
+        state["required_control_plane_head"] = current_stamp.get("control_plane_head")
+        if not state.get("pending_since") or previous_required != required_hash:
+            state["pending_since"] = now
+        state["last_detected_reason"] = reason
+    write_runtime_rollout_state(root, state)
+    return state
+
+
+def mark_runtime_rollout_pending(root: Path, *, stamp: dict[str, Any] | None = None, reason: str | None = None) -> dict[str, Any]:
+    state = load_runtime_rollout_state(root)
+    stamp = stamp or build_governance_runtime_stamp(root)
+    required_hash = stamp.get("governance_scripts_hash")
+    previous_required = state.get("required_runtime_hash")
+    now = iso_now()
+    state["rollout_pending"] = True
+    state["required_runtime_hash"] = required_hash
+    state["required_control_plane_head"] = stamp.get("control_plane_head")
+    if not state.get("pending_since") or previous_required != required_hash:
+        state["pending_since"] = now
+    state["last_detected_reason"] = reason
+    write_runtime_rollout_state(root, state)
+    return state
+
+
+def clear_runtime_rollout_pending(
+    root: Path,
+    *,
+    stamp: dict[str, Any] | None = None,
+    last_refresh_at: str | None = None,
+    last_audit_at: str | None = None,
+) -> dict[str, Any]:
+    state = load_runtime_rollout_state(root)
+    stamp = stamp or build_governance_runtime_stamp(root)
+    state["rollout_pending"] = False
+    state["pending_since"] = None
+    state["required_runtime_hash"] = stamp.get("governance_scripts_hash")
+    state["required_control_plane_head"] = stamp.get("control_plane_head")
+    state["last_successful_hash"] = stamp.get("governance_scripts_hash")
+    state["last_successful_head"] = stamp.get("control_plane_head")
+    if last_refresh_at:
+        state["last_refresh_at"] = last_refresh_at
+    if last_audit_at:
+        state["last_audit_at"] = last_audit_at
+    state["last_error"] = None
+    write_runtime_rollout_state(root, state)
+    return state
+
+
+def note_runtime_rollout_refresh(root: Path, *, reason: str | None = None) -> dict[str, Any]:
+    state = sync_runtime_rollout_state(root, reason=reason)
+    state["last_refresh_at"] = iso_now()
+    state["last_error"] = None
+    write_runtime_rollout_state(root, state)
+    return state
+
+
+def note_runtime_rollout_audit(root: Path, *, audit: dict[str, Any], reason: str | None = None) -> dict[str, Any]:
+    stamp = build_governance_runtime_stamp(root)
+    state = sync_runtime_rollout_state(root, reason=reason)
+    state["last_audit_at"] = iso_now()
+    if audit.get("status") == "ready":
+        return clear_runtime_rollout_pending(
+            root,
+            stamp=stamp,
+            last_refresh_at=state.get("last_refresh_at"),
+            last_audit_at=state.get("last_audit_at"),
+        )
+    state["last_error"] = f"audit blocked: {audit.get('status')}"
+    write_runtime_rollout_state(root, state)
+    return state
+
+
 def _runtime_stamp_reasons(control_stamp: dict[str, Any], clone_root: Path) -> list[str]:
     clone_stamp = build_governance_runtime_stamp(clone_root)
     reasons: list[str] = []
@@ -585,7 +723,7 @@ def audit_full_clone_pool(root: Path) -> dict[str, Any]:
     claims = _load_registry(root / CLAIMS_FILE)
     tasks_by_id = _tasks_by_id(registry)
     claims_by_candidate = _claims_by_candidate(claims)
-    control_stamp = write_governance_runtime_stamp(root)
+    control_stamp = build_governance_runtime_stamp(root)
     dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
     control_candidate_ids = _control_candidate_ids(root)
     slots = [

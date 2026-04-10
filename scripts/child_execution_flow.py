@@ -26,6 +26,8 @@ from governance_lib import (
 )
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
+DISPATCH_BRIEF_DIR = Path("docs/governance/dispatch_briefs")
+EXECUTION_BRIEF_FILE = Path(".codex/local/EXECUTION_BRIEF.yaml")
 BASELINE_CHECKS = [
     f'python "{(SCRIPT_ROOT / "check_repo.py").as_posix()}"',
     f'python "{(SCRIPT_ROOT / "check_hygiene.py").as_posix()}"',
@@ -253,6 +255,9 @@ def mirror_governance_ledgers_to_worktree(
         source = root / relative_path
         if source.exists():
             write_text(worktree_path / relative_path, read_text(source))
+    brief_source = root / DISPATCH_BRIEF_DIR / f"{task['task_id']}.yaml"
+    if brief_source.exists():
+        write_text(worktree_path / EXECUTION_BRIEF_FILE, read_text(brief_source))
 
 
 def transient_child_paths(task: dict[str, Any]) -> set[str]:
@@ -261,6 +266,7 @@ def transient_child_paths(task: dict[str, Any]) -> set[str]:
         actual_path(str(ROADMAP_FILE)),
         actual_path(str(TASK_REGISTRY_FILE)),
         actual_path(str(WORKTREE_REGISTRY_FILE)),
+        actual_path(str(EXECUTION_BRIEF_FILE)),
         actual_path(task["task_file"]),
         actual_path(task["runlog_file"]),
     }

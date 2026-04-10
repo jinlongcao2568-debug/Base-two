@@ -6,7 +6,7 @@ from typing import Any
 
 from governance_lib import GovernanceError, configure_utf8_stdio, find_repo_root
 from roadmap_candidate_index import build_roadmap_candidate_index
-from roadmap_claim_next import claim_next
+from roadmap_claim_next import build_unlock_summary, build_why_now_summary, claim_next
 from roadmap_candidate_maintainer import refresh_once
 
 
@@ -30,12 +30,14 @@ def explain_candidate(root, candidate_id: str) -> dict[str, Any]:
         "status": candidate["status"],
         "claimable": candidate["claimable"],
         "takeover_mode": candidate.get("takeover_mode"),
+        "why_now": build_why_now_summary(candidate),
         "blocking_reason_codes": candidate.get("blocking_reason_codes", []),
         "blocking_reason_text": candidate.get("blocking_reason_text", []),
         "upstream_blocker_candidates": candidate.get("upstream_blocker_candidates", []),
         "release_evidence_required": candidate.get("release_evidence_required", []),
         "release_evidence_satisfied": candidate.get("release_evidence_satisfied", []),
         "release_forecast": candidate.get("release_forecast", {}),
+        "what_this_unlocks_next": build_unlock_summary(candidate),
         "active_conflict_set": candidate.get("active_conflict_set", []),
         "source_authority": candidate.get("source_authority"),
         "legacy_mode": candidate.get("legacy_mode"),
@@ -80,6 +82,8 @@ def explain_claim_decision(root) -> dict[str, Any]:
     return {
         "selected_candidate_id": None if selected is None else selected["candidate_id"],
         "selected_takeover_mode": None if selected is None else selected.get("takeover_mode"),
+        "selected_why_now": None if selected is None else build_why_now_summary(selected),
+        "selected_unlocks": [] if selected is None else build_unlock_summary(selected),
         "safe_candidates": [
             {
                 "candidate_id": candidate["candidate_id"],

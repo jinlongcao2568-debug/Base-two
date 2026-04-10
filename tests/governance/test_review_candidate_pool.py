@@ -3,9 +3,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 from .helpers import init_governance_repo, read_yaml, run_python, set_idle_control_plane, write_yaml
 from .test_roadmap_candidate_index import _candidate, _write_backlog
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+from control_plane_root import write_governance_runtime_stamp
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "review_candidate_pool.py"
@@ -385,6 +392,7 @@ def test_review_candidate_pool_blocks_ready_slot_stale_mirror(tmp_path: Path) ->
 def test_review_candidate_pool_reports_quarantined_runtime_without_global_stale_runtime_issue(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
+    write_governance_runtime_stamp(repo)
     clone_path = tmp_path / "clone-worker-01"
     write_yaml(
         repo / "docs/governance/FULL_CLONE_POOL.yaml",
@@ -442,8 +450,10 @@ def test_review_candidate_pool_reports_quarantined_runtime_without_global_stale_
     result = run_python(SCRIPT, repo)
     payload = json.loads(result.stdout)
 
-    assert result.returncode == 0
-    assert payload["status"] == "ready"
+    assert result.returncode == 1
+    assert payload["status"] == "blocked"
+    assert payload["runtime_rollout_pending"] is True
+    assert "runtime rollout pending" in payload["issues"]
     assert payload["ledger_divergence_count"] == 0
     assert payload["stale_runtime_count"] == 0
     assert payload["quarantined_runtime_count"] == 1

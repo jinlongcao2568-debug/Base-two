@@ -13,6 +13,7 @@ from control_plane_root import (
     load_full_clone_pool,
     published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
+    sync_runtime_rollout_state,
 )
 from governance_lib import configure_utf8_stdio, find_repo_root, load_current_task, load_task_registry, load_yaml
 from roadmap_candidate_maintainer import SUMMARY_FILE, refresh_once
@@ -50,6 +51,7 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     summary = refresh_once(control_root)
     pool_audit = audit_full_clone_pool(control_root)
     dirty_runtime_paths = published_governance_runtime_dirty_paths(control_root)
+    rollout_state = sync_runtime_rollout_state(control_root, reason="review-candidate-pool")
     current_task = load_current_task(control_root)
     registry = load_task_registry(control_root)
     claims = load_yaml(control_root / CLAIMS_FILE) if (control_root / CLAIMS_FILE).exists() else {"claims": []}
@@ -198,6 +200,8 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         issues.append("full clone pool is frozen")
     if dirty_runtime_paths:
         issues.append("governance runtime unpublished")
+    if rollout_state.get("rollout_pending"):
+        issues.append("runtime rollout pending")
     if int(pool_audit.get("stale_runtime_count") or 0) > 0:
         issues.append("stale runtime detected")
     if legacy_candidates:
@@ -207,6 +211,8 @@ def review_pool(control_root: Path) -> dict[str, Any]:
     elif str(pool_audit.get("pool_status") or "active") != "active":
         status = "blocked"
     elif dirty_runtime_paths:
+        status = "blocked"
+    elif rollout_state.get("rollout_pending"):
         status = "blocked"
     elif slot_issues:
         status = "blocked"
@@ -242,6 +248,13 @@ def review_pool(control_root: Path) -> dict[str, Any]:
         "ledger_divergences": ledger_divergences,
         "ledger_divergence_count": len(ledger_divergences),
         "dirty_governance_runtime_paths": dirty_runtime_paths,
+        "runtime_rollout_pending": bool(rollout_state.get("rollout_pending")),
+        "runtime_rollout_state": rollout_state,
+        "runtime_rollout_instructions": (
+            "Run: python scripts/task_ops.py refresh-full-clone-pool then python scripts/task_ops.py audit-full-clone-pool"
+            if rollout_state.get("rollout_pending")
+            else None
+        ),
         "stale_runtime_count": int(pool_audit.get("stale_runtime_count") or 0),
         "quarantined_runtime_count": int(pool_audit.get("quarantined_runtime_count") or 0),
         "quarantined_slot_count": int(pool_audit.get("quarantined_slot_count") or 0),

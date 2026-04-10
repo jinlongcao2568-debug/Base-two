@@ -30,6 +30,7 @@ from task_coordination_ops import cmd_handoff, cmd_release, cmd_takeover
 from task_coordination_planner import cmd_plan_coordination, cmd_promote_candidate
 from task_lifecycle_ops import (
     cmd_activate,
+    cmd_audit_task_packages,
     cmd_can_close,
     cmd_can_start,
     cmd_close,
@@ -455,6 +456,9 @@ def add_task_lifecycle_commands(subparsers) -> None:
     sync_parser = subparsers.add_parser("sync")
     sync_parser.add_argument("--write", action="store_true")
     sync_parser.set_defaults(func=cmd_sync)
+
+    audit_packages_parser = subparsers.add_parser("audit-task-packages")
+    audit_packages_parser.set_defaults(func=cmd_audit_task_packages)
 
     reconcile_parser = subparsers.add_parser("reconcile-ledgers")
     reconcile_parser.add_argument("--write", action="store_true")

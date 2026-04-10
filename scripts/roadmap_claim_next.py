@@ -21,7 +21,9 @@ from governance_lib import (
     load_task_registry,
     load_worktree_registry,
     load_yaml,
+    read_text,
     validate_task,
+    write_text,
 )
 from control_plane_root import (
     FULL_CLONE_POOL_FILE,
@@ -31,6 +33,7 @@ from control_plane_root import (
     load_execution_leases,
     load_full_clone_pool,
     published_governance_runtime_dirty_paths,
+    sync_runtime_rollout_state,
     resolve_control_plane_root,
     slot_by_id,
 )
@@ -38,6 +41,7 @@ from roadmap_candidate_index import ROADMAP_CANDIDATES_FILE, build_roadmap_candi
 from child_execution_flow import mirror_governance_ledgers_to_worktree, transient_child_paths
 from roadmap_execution_closeout import close_ready_execution_tasks
 from task_handoff import ensure_handoff_file
+from governance_markdown import autofill_task_package, task_package_gaps
 from task_rendering import update_runlog_file, update_task_file
 from task_worktree_ops import cmd_worktree_create, reuse_pool_slot_worktree
 
@@ -45,6 +49,7 @@ from task_worktree_ops import cmd_worktree_create, reuse_pool_slot_worktree
 CLAIMS_FILE = Path(".codex/local/roadmap_candidates/claims.yaml")
 LOCK_FILE = Path(".codex/local/roadmap_candidates/scheduler.lock")
 WORKTREE_POOL_FILE = Path("docs/governance/WORKTREE_POOL.yaml")
+DISPATCH_BRIEF_DIR = Path("docs/governance/dispatch_briefs")
 CLAIMABLE_STATUSES = {"ready", "resumable", "stale"}
 ACTIVE_TASK_STATUSES = {"doing", "review"}
 ACTIVE_WORKTREE_STATUSES = {"active", "paused"}
@@ -137,6 +142,77 @@ def _stale_after_minutes(root: Path) -> int:
 def _write_claims(root: Path, claims: dict[str, Any]) -> None:
     claims["updated_at"] = iso_now()
     dump_yaml(root / CLAIMS_FILE, claims)
+
+
+def build_why_now_summary(candidate: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": candidate.get("status"),
+        "claimable": candidate.get("claimable"),
+        "fresh_claimable": candidate.get("fresh_claimable"),
+        "takeover_claimable": candidate.get("takeover_claimable"),
+        "priority": candidate.get("priority"),
+        "rank": candidate.get("rank"),
+        "selection_score": candidate.get("selection_score"),
+        "blocking_reasons": list(candidate.get("blocking_reason_text") or []),
+        "blockers": list(candidate.get("blockers") or []),
+    }
+
+
+def build_unlock_summary(candidate: dict[str, Any]) -> list[str]:
+    return list(candidate.get("unlocks") or [])
+
+
+def _execution_brief_path(root: Path, task_id: str) -> Path:
+    return root / DISPATCH_BRIEF_DIR / f"{task_id}.yaml"
+
+
+def _cleanup_task_artifacts(root: Path, task: dict[str, Any]) -> None:
+    handoff_path = root / "docs/governance/handoffs" / f"{task['task_id']}.yaml"
+    for relative in (task.get("task_file"), task.get("runlog_file")):
+        if not relative:
+            continue
+        path = root / relative
+        if path.exists():
+            path.unlink()
+    if handoff_path.exists():
+        handoff_path.unlink()
+
+
+def _write_execution_brief(
+    root: Path,
+    *,
+    candidate: dict[str, Any],
+    task: dict[str, Any],
+    destination: Path,
+    args: argparse.Namespace,
+    now: datetime,
+) -> Path:
+    brief = {
+        "version": "execution_brief_v1",
+        "generated_at": _iso(now),
+        "candidate_id": candidate.get("candidate_id"),
+        "formal_task_id": task.get("task_id"),
+        "stage": task.get("stage"),
+        "branch": task.get("branch"),
+        "why_now": build_why_now_summary(candidate),
+        "depends_on": list(candidate.get("depends_on") or []),
+        "blocked_by": list(candidate.get("blockers") or candidate.get("blocking_reason_text") or []),
+        "allowed_dirs": list(task.get("allowed_dirs") or []),
+        "reserved_paths": list(task.get("reserved_paths") or []),
+        "required_tests": list(task.get("required_tests") or []),
+        "executor_target": {
+            "dispatch_target": getattr(args, "dispatch_target", "worktree_pool"),
+            "pool_slot_id": candidate.get("pool_slot_id"),
+            "worktree_path": str(destination).replace("\\", "/"),
+            "window_id": getattr(args, "window_id", None),
+        },
+        "what_this_unlocks_next": build_unlock_summary(candidate),
+        "closeout_path": f"python scripts/task_ops.py close --task-id {task.get('task_id')}",
+    }
+    path = _execution_brief_path(root, str(task.get("task_id") or "unknown"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    dump_yaml(path, brief)
+    return path
 
 
 def _claim_by_candidate(claims: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -725,10 +801,19 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
     update_task_file(root, task)
     update_runlog_file(root, task)
     ensure_handoff_file(root, task)
+    try:
+        _ensure_task_package_complete(root, task, candidate)
+    except GovernanceError:
+        tasks.remove(task)
+        registry["updated_at"] = iso_now()
+        dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+        _cleanup_task_artifacts(root, task)
+        raise
 
     if getattr(args, "dispatch_target", "worktree_pool") == "full_clone":
         slot = _assign_full_clone_slot(root, candidate, args, now)
         destination = Path(str(slot["path"])).resolve()
+        _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
         _upsert_full_clone_execution_entry(root, task, slot["slot_id"], str(destination).replace("\\", "/"))
         _sync_full_clone_slot_active(root, slot["slot_id"], task_id=task["task_id"], branch=task["branch"], now=now)
         return destination
@@ -744,9 +829,11 @@ def _promote_candidate_to_worktree(root: Path, candidate: dict[str, Any], args: 
             slot = _pool_slot_by_id(pool).get(candidate["pool_slot_id"])
             if slot is None:
                 raise GovernanceError(f"assigned worktree pool slot missing: {candidate['pool_slot_id']}")
+            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
             destination = reuse_pool_slot_worktree(root, task, slot, args.worker_owner)
             _write_worktree_pool(root, pool)
         else:
+            _write_execution_brief(root, candidate=candidate, task=task, destination=destination, args=args, now=now)
             cmd_worktree_create(argparse.Namespace(task_id=task["task_id"], path=str(destination), worker_owner=args.worker_owner))
     except Exception:
         _release_pool_slot(root, candidate.get("pool_slot_id"), now=now)
@@ -805,6 +892,13 @@ def claim_next(root: Path, args: argparse.Namespace) -> tuple[dict[str, Any] | N
                 claims = _load_claims(root)
                 _update_claim_after_takeover(claims, selected, args=args, destination=destination, now=now)
                 _write_claims(root, claims)
+                registry = load_task_registry(root)
+                task = next(
+                    task for task in registry.get("tasks", []) if task.get("task_id") == stale_claim.get("formal_task_id")
+                )
+                _ensure_task_package_complete(root, task, selected)
+                _write_execution_brief(root, candidate=selected, task=task, destination=destination, args=args, now=now)
+                mirror_governance_ledgers_to_worktree(root, destination, registry, load_worktree_registry(root), task)
             else:
                 destination = _promote_candidate_to_worktree(root, selected, args, now)
                 claims = _load_claims(root)
@@ -820,6 +914,15 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
         raise GovernanceError("claim-next must run from the main control plane; clone-side claim-next is frozen")
     if args.promote_task:
         args.write_claim = True
+    rollout_state = sync_runtime_rollout_state(root, reason="claim-next")
+    if rollout_state.get("rollout_pending"):
+        required_hash = rollout_state.get("required_runtime_hash") or "unknown"
+        pending_since = rollout_state.get("pending_since") or "unknown"
+        raise GovernanceError(
+            "runtime rollout pending; refresh and audit full-clone pool before dispatch "
+            f"(required_hash={required_hash} pending_since={pending_since}). "
+            "Run: python scripts/task_ops.py refresh-full-clone-pool then python scripts/task_ops.py audit-full-clone-pool"
+        )
     dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
     if dirty_runtime_paths:
         sample = ", ".join(dirty_runtime_paths[:4])
@@ -854,6 +957,24 @@ def cmd_claim_next(args: argparse.Namespace) -> int:
         f"takeover_mode={selected.get('takeover_mode', 'none')}"
     )
     return 0
+
+
+def _ensure_task_package_complete(root: Path, task: dict[str, Any], candidate: dict[str, Any] | None) -> None:
+    task_path = root / task["task_file"]
+    if not task_path.exists():
+        update_task_file(root, task)
+    text = read_text(task_path)
+    updated = autofill_task_package(text, task, candidate=candidate)
+    if updated != text:
+        write_text(task_path, updated)
+        text = updated
+    gaps = task_package_gaps(text)
+    if gaps["missing"] or gaps["placeholder"]:
+        missing = ", ".join(gaps["missing"]) if gaps["missing"] else "none"
+        placeholders = ", ".join(gaps["placeholder"]) if gaps["placeholder"] else "none"
+        raise GovernanceError(
+            f"task package incomplete for {task['task_id']}; missing sections: {missing}; placeholder sections: {placeholders}"
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:

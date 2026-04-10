@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 import subprocess
 
 from .helpers import TASK_OPS_SCRIPT, read_yaml, run_python, set_idle_control_plane, write_mvp_scope, write_yaml, init_governance_repo
 from .test_roadmap_candidate_index import _candidate, _write_backlog
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT / "scripts") not in sys.path:
+    sys.path.insert(0, str(ROOT / "scripts"))
+
+from control_plane_root import build_governance_runtime_stamp  # noqa: E402
 
 
 def _candidate_with_paths(candidate_id: str, *, priority: int, paths: list[str], protected_paths: list[str] | None = None) -> dict:
@@ -413,6 +420,42 @@ def test_claim_next_blocks_when_governance_runtime_is_dirty(tmp_path: Path) -> N
     assert "scripts/review_candidate_pool.py" in result.stdout
 
 
+def test_claim_next_blocks_when_runtime_rollout_pending(tmp_path: Path) -> None:
+    repo = init_governance_repo(tmp_path)
+    set_idle_control_plane(repo)
+    _write_backlog(repo, [_candidate_with_paths("stage1-core-contract", priority=100, paths=["src/stage1_orchestration/"])])
+    baseline = build_governance_runtime_stamp(repo)
+    write_yaml(
+        repo / ".codex/local/governance_runtime/rollout_state.yaml",
+        {
+            "version": "1.0",
+            "rollout_pending": False,
+            "last_successful_hash": baseline["governance_scripts_hash"],
+            "last_successful_head": baseline.get("control_plane_head"),
+        },
+    )
+    runtime_file = repo / "scripts/review_candidate_pool.py"
+    runtime_file.parent.mkdir(parents=True, exist_ok=True)
+    runtime_file.write_text(
+        "# runtime change for rollout pending claim-next test\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", "commit", "-m", "runtime change for rollout pending claim-next test"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    result = run_python(TASK_OPS_SCRIPT, repo, "claim-next")
+
+    assert result.returncode == 1
+    assert "runtime rollout pending" in result.stdout
+
+
 def test_claim_next_fails_fast_when_mvp_scope_mismatches_business_automation_scope(tmp_path: Path) -> None:
     repo = init_governance_repo(tmp_path)
     set_idle_control_plane(repo)
@@ -483,21 +526,6 @@ def test_claim_next_allows_healthy_ready_slot_when_another_slot_is_quarantined(t
     set_idle_control_plane(repo)
     blocked_clone = tmp_path / "clone-worker-01"
     _clone_repo(repo, blocked_clone)
-    runtime_file = repo / "scripts/control_plane_root.py"
-    runtime_file.parent.mkdir(parents=True, exist_ok=True)
-    runtime_file.write_text(
-        "# advance control runtime for quarantined claim-next test\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True, text=True)
-    subprocess.run(
-        ["git", "commit", "-m", "advance control runtime for quarantined claim-next test"],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
     ready_clone = tmp_path / "clone-worker-02"
     _clone_repo_on_idle_branch(repo, ready_clone, "codex/worker-02-idle")
     subprocess.run(

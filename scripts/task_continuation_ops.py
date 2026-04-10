@@ -29,6 +29,7 @@ from governance_lib import (
     load_task_registry,
     load_worktree_registry,
     load_yaml,
+    read_text,
     sync_task_artifacts,
     task_map,
     task_required_tests_for_matrix,
@@ -36,7 +37,9 @@ from governance_lib import (
     validate_task,
     worktree_map,
     write_roadmap,
+    write_text,
 )
+from governance_markdown import autofill_task_package, task_package_gaps
 from task_closeout import assess_live_closeout
 from task_coordination_lease import (
     assess_coordination_lease,
@@ -153,6 +156,24 @@ def _activate_task(task: dict[str, Any]) -> None:
     task["last_reported_at"] = iso_now()
     if task.get("activated_at") is None:
         task["activated_at"] = iso_now()
+
+
+def _ensure_task_package_complete(root: Path, task: dict[str, Any]) -> None:
+    task_path = root / task["task_file"]
+    if not task_path.exists():
+        update_task_file(root, task)
+    text = read_text(task_path)
+    updated = autofill_task_package(text, task, candidate=None)
+    if updated != text:
+        write_text(task_path, updated)
+        text = updated
+    gaps = task_package_gaps(text)
+    if gaps["missing"] or gaps["placeholder"]:
+        missing = ", ".join(gaps["missing"]) if gaps["missing"] else "none"
+        placeholders = ", ".join(gaps["placeholder"]) if gaps["placeholder"] else "none"
+        raise GovernanceError(
+            f"task package incomplete for {task['task_id']}; missing sections: {missing}; placeholder sections: {placeholders}"
+        )
 
 
 def _task_boundary_error(task: dict[str, Any]) -> str | None:
@@ -487,6 +508,8 @@ def _activate_successor(
     touched_task_ids = pause_other_doing_tasks(registry["tasks"], successor["task_id"])
     if current_task_id is not None and current_task_id not in touched_task_ids:
         touched_task_ids.append(current_task["task_id"])
+    update_task_file(root, successor)
+    _ensure_task_package_complete(root, successor)
     _activate_task(successor)
     update_task_file(root, successor)
     update_runlog_file(root, successor)

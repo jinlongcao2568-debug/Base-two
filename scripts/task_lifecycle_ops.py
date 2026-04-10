@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -35,17 +36,24 @@ from governance_lib import (
     validate_task,
     worktree_map,
     write_roadmap,
+    write_text,
 )
-from governance_markdown import extract_markdown_fields
+from governance_markdown import autofill_task_package, extract_markdown_fields, task_package_gaps
 from orchestration_runtime import record_session_event, runtime_status_for_task
 from control_plane_root import (
     CONTROL_PLANE_EXECUTOR_ID,
+    audit_full_clone_pool,
     close_execution_leases,
     default_full_clone_idle_branch,
     load_full_clone_pool,
+    load_runtime_rollout_state,
+    note_runtime_rollout_audit,
+    published_governance_runtime_dirty_paths,
     resolve_control_plane_root,
     slot_by_id,
     sync_execution_lease,
+    sync_runtime_rollout_state,
+    write_runtime_rollout_state,
 )
 from child_execution_flow import mirror_governance_ledgers_to_worktree
 from roadmap_claim_next import CLAIMS_FILE
@@ -108,6 +116,61 @@ def _refresh_candidate_cache_if_needed(root, task: dict[str, Any]) -> None:
     from roadmap_candidate_maintainer import refresh_once
 
     refresh_once(root)
+
+
+def _ensure_task_package_complete(root: Path, task: dict[str, Any], *, candidate: dict[str, Any] | None = None) -> None:
+    task_path = root / task["task_file"]
+    if not task_path.exists():
+        update_task_file(root, task)
+    text = read_text(task_path)
+    updated = autofill_task_package(text, task, candidate=candidate)
+    if updated != text:
+        write_text(task_path, updated)
+        text = updated
+    gaps = task_package_gaps(text)
+    if gaps["missing"] or gaps["placeholder"]:
+        missing = ", ".join(gaps["missing"]) if gaps["missing"] else "none"
+        placeholders = ", ".join(gaps["placeholder"]) if gaps["placeholder"] else "none"
+        raise GovernanceError(
+            f"task package incomplete for {task['task_id']}; missing sections: {missing}; placeholder sections: {placeholders}"
+        )
+
+
+def _cleanup_task_artifacts(root: Path, task: dict[str, Any]) -> None:
+    handoff_path = root / "docs/governance/handoffs" / f"{task['task_id']}.yaml"
+    for relative in (task.get("task_file"), task.get("runlog_file")):
+        if not relative:
+            continue
+        path = root / relative
+        if path.exists():
+            path.unlink()
+    if handoff_path.exists():
+        handoff_path.unlink()
+
+
+def _maybe_trigger_runtime_rollout(root: Path, *, trigger: str) -> None:
+    rollout_state = sync_runtime_rollout_state(root, reason=trigger)
+    if not rollout_state.get("rollout_pending"):
+        return
+    dirty_runtime_paths = published_governance_runtime_dirty_paths(root)
+    if dirty_runtime_paths:
+        rollout_state["last_error"] = "runtime unpublished; publish or revert runtime files before rollout"
+        write_runtime_rollout_state(root, rollout_state)
+        print("[WARN] runtime rollout pending but runtime files are unpublished; refresh skipped")
+        return
+    try:
+        from full_clone_pool import cmd_refresh_full_clone_pool
+        import argparse as _argparse
+
+        cmd_refresh_full_clone_pool(_argparse.Namespace(slot_id=None))
+    except GovernanceError as error:
+        rollout_state = load_runtime_rollout_state(root)
+        rollout_state["last_error"] = str(error)
+        write_runtime_rollout_state(root, rollout_state)
+        print(f"[WARN] runtime rollout refresh failed: {error}")
+        return
+    audit = audit_full_clone_pool(root)
+    note_runtime_rollout_audit(root, audit=audit, reason=f"{trigger}-audit")
 
 
 def cmd_new(args: argparse.Namespace) -> int:
@@ -229,6 +292,7 @@ def cmd_activate(args: argparse.Namespace) -> int:
     ensure_clean_worktree(root)
     if current_branch(root) != task["branch"]:
         raise GovernanceError(f"branch mismatch: expected {task['branch']}, got {current_branch(root)}")
+    _ensure_task_package_complete(root, task)
     touched_tasks = _activate_coordination_task(root, registry, worktrees, task, reason="activate")
     persist_activation_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, touched_tasks)
     write_handoff(
@@ -281,10 +345,19 @@ def cmd_queue_and_activate(args: argparse.Namespace) -> int:
     branch_action = _switch_or_create_branch(root, task["branch"])
     if created:
         tasks.append(task)
-    touched_tasks = _activate_coordination_task(root, registry, worktrees, task, reason="queue-and-activate")
     update_task_file(root, task)
     update_runlog_file(root, task)
     ensure_handoff_file(root, task)
+    try:
+        _ensure_task_package_complete(root, task)
+    except GovernanceError:
+        if created:
+            tasks.remove(task)
+            registry["updated_at"] = iso_now()
+            dump_yaml(root / "docs/governance/TASK_REGISTRY.yaml", registry)
+            _cleanup_task_artifacts(root, task)
+        raise
+    touched_tasks = _activate_coordination_task(root, registry, worktrees, task, reason="queue-and-activate")
     persist_activation_state(root, registry, worktrees, task, roadmap_frontmatter, roadmap_body, touched_tasks)
     write_handoff(
         root,
@@ -452,6 +525,8 @@ def cmd_close(args: argparse.Namespace) -> int:
         runtime_status="idle" if is_live_top_level_current else runtime_status_for_task(task),
         safe_write=True,
     )
+    if task.get("task_kind") == "coordination":
+        _maybe_trigger_runtime_rollout(root, trigger="close")
     print(f"[OK] closed {task['task_id']}")
     return 0
 
@@ -506,6 +581,32 @@ def cmd_can_close(args: argparse.Namespace) -> int:
         raise GovernanceError(f"required tests missing from runlog: {', '.join(missing)}")
     print(f"[OK] can-close {task['task_id']}")
     return 0
+
+
+def cmd_audit_task_packages(args: argparse.Namespace) -> int:
+    root = resolve_control_plane_root()
+    registry = load_task_registry(root)
+    incomplete: list[dict[str, Any]] = []
+    for task in registry.get("tasks", []):
+        task_path = root / task["task_file"]
+        text = read_text(task_path) if task_path.exists() else ""
+        gaps = task_package_gaps(text)
+        if gaps["missing"] or gaps["placeholder"]:
+            incomplete.append(
+                {
+                    "task_id": task["task_id"],
+                    "task_file": task.get("task_file"),
+                    "missing": gaps["missing"],
+                    "placeholder": gaps["placeholder"],
+                }
+            )
+    payload = {
+        "status": "ready" if not incomplete else "blocked",
+        "incomplete_count": len(incomplete),
+        "incomplete_tasks": incomplete,
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if not incomplete else 1
 
 
 def cmd_sync(args: argparse.Namespace) -> int:
