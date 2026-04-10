@@ -1,5 +1,5 @@
 version: '3.0'
-updated_at: '2026-04-10T09:28:19+08:00'
+updated_at: '2026-04-10T09:51:24+08:00'
 tasks:
 - task_id: TASK-AUTO-001
   title: 自动化开发一期：主干控制面 + 按任务大小自动分流
@@ -5013,3 +5013,43 @@ tasks:
   created_at: '2026-04-10T09:18:25+08:00'
   activated_at: '2026-04-10T09:23:24+08:00'
   closed_at: '2026-04-10T09:28:19+08:00'
+- task_id: TASK-GOV-087
+  title: Documentation entry index acceptance gates
+  status: done
+  task_kind: coordination
+  execution_mode: shared_coordination
+  parent_task_id: null
+  stage: governance-docs-entry-index-v1.1
+  branch: codex/TASK-GOV-087-docs-entry-index-gates
+  size_class: micro
+  automation_mode: assisted
+  worker_state: completed
+  blocked_reason: null
+  last_reported_at: '2026-04-10T09:51:24+08:00'
+  topology: single_worker
+  allowed_dirs:
+  - docs/
+  - README.md
+  reserved_paths:
+  - docs/contracts/
+  - src/
+  - db/migrations/
+  - tests/
+  planned_write_paths:
+  - docs/INDEX.md
+  - README.md
+  - docs/governance/
+  planned_test_paths: []
+  required_tests:
+  - python scripts/check_repo.py
+  - python scripts/check_hygiene.py src docs tests
+  task_file: docs/governance/tasks/TASK-GOV-087.md
+  runlog_file: docs/governance/runlogs/TASK-GOV-087-RUNLOG.md
+  lane_count: 1
+  lane_index: null
+  parallelism_plan_id: null
+  review_bundle_status: not_applicable
+  successor_state: immediate
+  created_at: '2026-04-10T09:43:50+08:00'
+  activated_at: '2026-04-10T09:43:50+08:00'
+  closed_at: '2026-04-10T09:51:24+08:00'

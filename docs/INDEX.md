@@ -28,6 +28,7 @@ When the control plane and a clone disagree, treat it as ledger divergence and r
 | Execution rules, governance discipline | `docs/baseline/AX9S_建设工程域研发_Codex_执行手册_中国落地售卖增强版_V1.4_2026-04-02.md` | Required before implementation |
 | Repository-scoped authority expansion | `docs/product/AUTHORITY_SPEC.md` | Must not conflict with baseline |
 | Live control-plane entry & file map | `docs/governance/README.md` | Live files and execution order |
+| Acceptance / release gates (验收/门禁) | `docs/governance/PR_CHECKLIST.md` + `docs/governance/TEST_MATRIX.yaml` | Review checklist and test gates |
 | Candidate pool + claim-next rules | `docs/governance/MODULAR_ROADMAP_SCHEDULER_DESIGN.md` | Claim rules and conflict locks |
 | Candidate schema & required fields | `docs/governance/ROADMAP_BACKLOG_SCHEMA.yaml` | Field contract and gating rules |
 | Single-ledger governance rules | `docs/governance/CONTROL_PLANE_SINGLE_LEDGER_PRINCIPLES.md` | Control-plane write authority |

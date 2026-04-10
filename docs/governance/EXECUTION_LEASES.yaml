@@ -1,6 +1,6 @@
 version: '1.0'
-updated_at: '2026-04-10T09:28:19+08:00'
-revision: 30
+updated_at: '2026-04-10T09:51:24+08:00'
+revision: 33
 leases:
 - lease_id: lease-task-gov-076-control-plane-main
   task_id: TASK-GOV-076
@@ -145,3 +145,16 @@ leases:
   started_at: '2026-04-10T09:23:24+08:00'
   heartbeat_at: '2026-04-10T09:28:19+08:00'
   closed_at: '2026-04-10T09:28:19+08:00'
+- lease_id: lease-task-gov-087-control-plane-main
+  task_id: TASK-GOV-087
+  task_kind: coordination
+  stage: governance-docs-entry-index-v1.1
+  branch: codex/TASK-GOV-087-docs-entry-index-gates
+  candidate_id: null
+  executor_id: control-plane-main
+  executor_type: control_plane
+  status: closed
+  owner_session_id: 019d74ea-c727-74c3-be18-f83f54a1be54
+  started_at: '2026-04-10T09:43:50+08:00'
+  heartbeat_at: '2026-04-10T09:51:24+08:00'
+  closed_at: '2026-04-10T09:51:24+08:00'
